@@ -1,7 +1,6 @@
 from typing import Union 
 
 import numpy as np
-import xarray as xr 
 
 
 class Skeleton():
@@ -30,18 +29,20 @@ class Skeleton():
         assert nodes.shape[0] == len(parents) == len(classes)
 
         self.nodes = nodes 
-        self._make_attributes(parents, classes) 
-
-    def _make_attributes(self, parents: np.ndarray, classes: Union[int, np.ndarray]=None):
-        assert node_num == len(classes)
-        self.attributes = np.zeros((self.node_num, 4), dtype=np.int)
+        
+        # the parents, first child and siblings should be missing initially. 
+        # The zero will all point to the first node.
+        self.attributes[:, 1:] = -1
         if classes:
             self.attributes[:, 0] = classes
         self.attributes[:, 1] = parents
+        self._update_child_and_sibling() 
 
+    def _update_child_and_sibling(self):
+        
 
     @classmethod
-    def from_swc(cls, file_name: str, sort_id: bool=True):
+    def from_swc(cls, file_name: str, sort_id: bool = True):
         """
         Parameters:
         ------------
@@ -50,12 +51,18 @@ class Skeleton():
             we can drop the node index column after order it. Our future
             analysis assumes that the nodes are ordered.
         """
-        data = np.loadtxt('../data/Nov10IR3e.CNG.swc')
+        data = np.loadtxt(file_name)
         if sort_id:
-            data = data[data[:,0].argsort()]
+            data = data[data[:, 0].argsort()]
+
+        # the swc file stores x,y,z,r 
+        # we are defining node array as r,z,y,x to be consistent with numpy indexing
+        nodes = np.fliplr(data[:, 2:6]).astype(np.float)
 
         # numpy index is from zero rather than 1
-        cls(data[:, 2:6], data[:, 7]-1, classes = data[:, 1])
+        parents = data[:, 7] - 1
+
+        cls(nodes, parents, classes=data[:, 1])
 
     @property
     def node_num(self):

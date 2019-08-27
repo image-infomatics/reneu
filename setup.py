@@ -5,6 +5,7 @@ import sys
 import re
 import setuptools
 from shutil import move
+import numpy 
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -46,7 +47,8 @@ ext_modules = [
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
-            get_pybind_include(user=True)
+            get_pybind_include(user=True),
+            numpy.get_include(),
         ],
         language='c++',
         extra_compile_args=[

@@ -1,3 +1,2 @@
 numpy
-xarray
 pybind11
