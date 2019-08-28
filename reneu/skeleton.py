@@ -1,6 +1,6 @@
 from typing import Union 
-
 import numpy as np
+from .lib.libreneu import update_first_child_and_sibling
 
 
 class Skeleton():
@@ -28,18 +28,22 @@ class Skeleton():
         assert nodes.shape[1] == 4
         assert nodes.shape[0] == len(parents) == len(classes)
 
-        self.nodes = nodes 
-        
+        self.nodes = nodes
+        node_num = nodes.shape[0] 
+
+        self.attributes = np.zeros((node_num, 4), dtype=np.float32) 
         # the parents, first child and siblings should be missing initially. 
         # The zero will all point to the first node.
         self.attributes[:, 1:] = -1
-        if classes:
+        if classes is not None:
             self.attributes[:, 0] = classes
         self.attributes[:, 1] = parents
         self._update_child_and_sibling() 
 
     def _update_child_and_sibling(self):
-        
+        # remove current child and sibling
+        self.attributes[:, 2:4] = -1 
+        update_first_child_and_sibling(self.attributes)
 
     @classmethod
     def from_swc(cls, file_name: str, sort_id: bool = True):
@@ -60,13 +64,16 @@ class Skeleton():
         nodes = np.fliplr(data[:, 2:6]).astype(np.float)
 
         # numpy index is from zero rather than 1
-        parents = data[:, 7] - 1
+        parents = data[:, 6] - 1
 
-        cls(nodes, parents, classes=data[:, 1])
+        return cls(nodes, parents, classes=data[:, 1])
 
     @property
     def node_num(self):
-        self.nodes.shape[0]
+        return self.nodes.shape[0]
+
+    def __len__(self):
+        return self.nodes.shape[0] 
 
 
 if __name__ == '__main__':
