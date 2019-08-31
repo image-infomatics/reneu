@@ -15,6 +15,12 @@
 namespace py = pybind11;
 using namespace xt::placeholders;  // required for `_` to work
 
+template<typename T>
+auto pytensor_to_numpy(xt::pytensor<T, 2>& tensor){
+    return py::buffer_info(tensor.data(), sizeof(T), py::format_descriptor<T>::format(), 2,
+                {tensor.shape(0), tensor.shape(1)}, {sizeof(T) * tensor.shape(1), sizeof(T)});
+
+}
 
 float squared_distance(xt::pytensor<float, 2>& nodes, int idx1, int idx2){
     auto node1 = xt::view(nodes, idx1, xt::range(_, 3));
@@ -33,7 +39,8 @@ auto split_attributes(xt::pytensor<int, 2>& att){
     return std::make_tuple(classes, parents, childs, siblings);
 }
 
-int update_first_child_and_sibling(xt::pytensor<int, 2>& att){
+template<typename Ta>
+auto update_first_child_and_sibling(xt::pytensor<Ta, 2>& att){
     auto [classes, parents, childs, siblings] = split_attributes(att);
     auto nodeNum = parents.size();
     // the columns are class, parents, fist child, sibling
@@ -52,7 +59,7 @@ int update_first_child_and_sibling(xt::pytensor<int, 2>& att){
     }
 
     // update siblings
-    for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
+    for (int nodeIdx = 0; nodeIdx < int(nodeNum); nodeIdx++){
         auto parentNodeIdx = parents( nodeIdx );
         auto currentSiblingNodeIdx = childs( parentNodeIdx );
         assert( currentSiblingNodeIdx >= 0 );
@@ -98,8 +105,8 @@ std::vector<int> get_children_node_indexes(xt::pytensor<int, 2>& att, int nodeId
     return childrenNodeIdxes;
 }
 
-
 auto downsample(xt::pytensor<float, 2>& nodes, xt::pytensor<int, 2>& att, float step){
+    std::cout<< "number of input nodes: " << nodes.shape(0) << std::endl;
     // this only works in C++17
     auto [classes, parents, childs, siblings] = split_attributes(att); 
 
@@ -214,7 +221,16 @@ auto downsample(xt::pytensor<float, 2>& nodes, xt::pytensor<int, 2>& att, float 
             newNode(k) = oldNode(k);
         }
     }
-    return std::make_tuple(newNodes, newAtt);
+
+    std::cout<< "shape of nodes: " << newNodes.shape(0) << std::endl;
+    std::cout<< "shape of attributes: " << newAtt.shape(0) << std::endl;
+    //auto pyNewNodes = pytensor_to_numpy<float>(newNodes);
+    //auto pyNewAtt = pytensor_to_numpy<int>(newAtt);
+    //auto pyNewNodes = py::array_t<float>(newNodes);
+    //auto pyNewAtt = py::array_t<int>(newAtt);
+    //return py::make_tuple(pyNewNodes, pyNewAtt);
+    return py::make_tuple(newNodes, newAtt);
+    //return py::make_tuple( newNodes.python_array(), newAtt.python_array() );
 }
 
 std::string skeleton_to_swc_string( xt::pytensor<float, 2> nodes, xt::pytensor<int, 2> att,
@@ -252,7 +268,7 @@ PYBIND11_MODULE(libreneu, m) {
            subtract
     )pbdoc";
 
-    m.def("update_first_child_and_sibling", &update_first_child_and_sibling, R"pbdoc(
+    m.def("update_first_child_and_sibling", &update_first_child_and_sibling<int>, R"pbdoc(
         update first child and sibling
     )pbdoc");
 

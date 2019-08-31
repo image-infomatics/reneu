@@ -9,5 +9,5 @@ def test_skeleton():
     assert len(sk) == 2277
     print('number of nodes: ', len(sk))
 
-    #sk = sk.downsample(step=1)
+    sk.downsample(step=1)
     sk.to_swc('/tmp/{}.swc'.format(NEURON_NAME))

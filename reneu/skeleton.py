@@ -43,7 +43,7 @@ class Skeleton():
 
         node_num = nodes.shape[0] 
 
-        attributes = np.zeros((node_num, 4), dtype=np.float32) 
+        attributes = np.zeros((node_num, 4), dtype=np.int32) 
         # the parents, first child and siblings should be missing initially. 
         # The zero will all point to the first node.
         attributes[:, 1:] = -1
@@ -108,10 +108,15 @@ class Skeleton():
         # our downsample function changes the value of nodes and families
         if not modify_in_place:
             nodes = np.copy( self.nodes )
+        else:
+            nodes = self.nodes
 
-        nodes, attributes = downsample(self.nodes, self.attributes)
-        return Skeleton(nodes, attributes)
+        assert nodes.dtype == np.float32
+        assert self.attributes.dtype == np.int32
 
+        newNodes, newAttributes = downsample(nodes, self.attributes, step)
+        self.nodes = newNodes
+        self.attributes = newAttributes
 
 if __name__ == '__main__':
     from time import process_time
