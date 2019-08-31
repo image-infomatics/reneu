@@ -7,6 +7,7 @@ import setuptools
 from shutil import move
 import numpy 
 
+
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 with open(os.path.join(PACKAGE_DIR, 'requirements.txt')) as f:
@@ -86,6 +87,7 @@ def cpp_flag(compiler):
 
     raise RuntimeError('Unsupported compiler -- at least C++11 support '
                        'is needed!')
+
 
 
 class BuildExt(build_ext):
