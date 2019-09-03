@@ -45,7 +45,7 @@ private:
     // 7 - custom 
     // normally the type is int
     xt::xtensor<int, 2> attributes;
-    
+
     auto get_classes(){
         return xt::view(this->attributes, xt::all(), 0);
     }
@@ -61,6 +61,11 @@ private:
     auto get_siblings(){
         return xt::view(this->attributes, xt::all(), 3);
     }
+
+    template<typename Ti>
+    auto get_node( Ti nodeIdx ){
+        return xt::view(this->nodes, nodeIdx, xt::all());
+    } 
 
     auto update_first_child_and_sibling(){
         auto parents = this->get_parents();
@@ -218,10 +223,9 @@ public:
     }
 
     bool is_branching_node(int nodeIdx){
-        auto att = this->attributes;
-        auto childNodeIdx = att(nodeIdx, 2 );
+        auto childNodeIdx = this->attributes(nodeIdx, 2 );
         // if child have sibling, then this is a branching node
-        return  att(childNodeIdx, 3) > 0;
+        return  this->attributes(childNodeIdx, 3) > 0;
     }
 
     auto get_node_num(){
@@ -297,11 +301,11 @@ public:
                     startNodeIdx = walkingNodeIdx;
                     // adjust the coordinate and radius by mean of nearest nodes;
                     auto parentNodeIdx = parents( walkingNodeIdx );
-                    auto parentNode = xt::view(nodes, parentNodeIdx, xt::all());
-                    auto walkingNode = xt::view(nodes, walkingNodeIdx, xt::all());
+                    auto parentNode = get_node(parentNodeIdx);
+                    auto walkingNode = get_node(walkingNodeIdx);
                     if (!is_terminal_node(walkingNodeIdx)){
                         auto childNodeIdx = childs( walkingNodeIdx );
-                        auto childNode = xt::view(nodes, childNodeIdx, xt::all());
+                        auto childNode = get_node(childNodeIdx);
                         // compute the mean of x,y,z,r to smooth the skeleton
                         walkingNode = (parentNode + walkingNode + childNode) / 3;
                     } else {
@@ -311,6 +315,7 @@ public:
                 }
             }
 
+            // reach a branching/terminal node 
             // add all children nodes as seeds
             // if reaching the terminal and there is no children
             // nothing will be added
@@ -322,7 +327,6 @@ public:
 
         assert( selectedNodeIdxes.size() == selectedParentNodeIdxes.size() );
         assert( selectedNodeIdxes.size() > 0 );
-        assert( selectedParentNodeIdxes[0] == -2 );
 
         auto newNodeNum = selectedNodeIdxes.size();
         std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
