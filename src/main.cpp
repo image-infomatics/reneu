@@ -46,7 +46,7 @@ PYBIND11_MODULE(xiuli, m) {
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
     py::class_<xiuli::neuron::Skeleton>(m, "Skeleton")
         .def(py::init<std::string>())
-        .def("__len__", &xiuli::neuron::Skeleton::get_nodes_num)
+        .def("__len__", &xiuli::neuron::Skeleton::get_node_num)
         .def("downsample", &xiuli::neuron::Skeleton::downsample)
         .def("write_swc", &xiuli::neuron::Skeleton::write_swc);
 

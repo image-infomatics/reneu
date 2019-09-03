@@ -225,7 +225,7 @@ public:
         return  att(childNodeIdx, 3) > 0;
     }
 
-    auto get_nodes_num(){
+    auto get_node_num(){
         return this->nodes.shape(0);
     }
 
@@ -252,19 +252,19 @@ public:
         auto childs = this->get_childs();
         auto siblings = this->get_siblings();
 
+        auto nodeNum = this->get_node_num();
         auto stepSquared = step * step;
 
         // start from the root nodes
         std::vector<int> rootNodeIdxes = {};
-        for (std::size_t nodeIdx=0; nodeIdx<parents.shape(0); nodeIdx++){
+        for (std::size_t nodeIdx=0; nodeIdx<nodeNum; nodeIdx++){
             if (is_root_node(nodeIdx)){
                 rootNodeIdxes.push_back( nodeIdx );
             }
         }
+        assert( !rootNodeIdxes.empty() );
+
         auto seedNodeIdxes = rootNodeIdxes;
-        // initialize the seed node parent indexes
-        std::vector<int> seedNodeParentIdxes = {};
-        seedNodeParentIdxes.assign( seedNodeIdxes.size(), -1 );
 
         // we select some nodes out as new neuron
         // this selection should include all the seed node indexes
@@ -275,9 +275,8 @@ public:
         while( !seedNodeIdxes.empty() ){
             auto walkingNodeIdx = seedNodeIdxes.back();
             seedNodeIdxes.pop_back();
-            auto parentNodeIdx = seedNodeParentIdxes.back();
-            seedNodeParentIdxes.pop_back();
-
+            
+            // the start of measurement
             auto startNodeIdx = walkingNodeIdx;
 
             // walk through a segment
@@ -287,11 +286,7 @@ public:
                 walkingNodeIdx = childs[ walkingNodeIdx ];
                 // use squared distance to avoid sqrt computation.
                 float d2 = squared_distance(startNodeIdx, walkingNodeIdx);
-                if (d2 < stepSquared){
-                    // keep walking and continue search
-                    // current node becomes parent and will give birth of children
-                    parentNodeIdx = walkingNodeIdx;
-                } else {
+                if (d2 > stepSquared){
                     // have enough walking distance, will include this node in new skeleton
                     selectedNodeIdxes.push_back( walkingNodeIdx );
                     selectedParentNodeIdxes.push_back( startNodeIdx );
@@ -299,13 +294,13 @@ public:
                     // now we restart walking again
                     startNodeIdx = walkingNodeIdx;
                     // adjust the coordinate and radius by mean of nearest nodes;
+                    auto parentNodeIdx = parents( walkingNodeIdx );
                     auto parentNode = xt::view(nodes, parentNodeIdx, xt::all());
                     auto walkingNode = xt::view(nodes, walkingNodeIdx, xt::all());
-                    if (!is_branching_node(walkingNodeIdx) && 
-                        !is_terminal_node(walkingNodeIdx)){
+                    if (!is_terminal_node(walkingNodeIdx)){
                         auto childNodeIdx = childs( walkingNodeIdx );
                         auto childNode = xt::view(nodes, childNodeIdx, xt::all());
-                        // compute the mean of r,z,y,x to smooth the skeleton
+                        // compute the mean of x,y,z,r to smooth the skeleton
                         walkingNode = (parentNode + walkingNode + childNode) / 3;
                     } else {
                         // this node is the terminal node, do not have child
@@ -317,15 +312,18 @@ public:
             // add all children nodes as seeds
             // if reaching the terminal and there is no children
             // nothing will be added
-            std::vector<int> childrenNodeIdxes = get_children_node_indexes(walkingNodeIdx);
+            std::vector<int> childrenNodeIdxes = this->get_children_node_indexes(walkingNodeIdx);
             for (std::size_t i=0; i<childrenNodeIdxes.size(); i++){
                 seedNodeIdxes.push_back( childrenNodeIdxes[i] );
-                seedNodeParentIdxes.push_back( parentNodeIdx );
             }
         }
 
         assert( selectedNodeIdxes.size() == selectedParentNodeIdxes.size() );
+        assert( selectedNodeIdxes.size() > 0 );
+
         auto newNodeNum = selectedNodeIdxes.size();
+        std::cout<< "node number after downsampling: " << newNodeNum << std::endl;
+
         xt::xtensor<int, 2> newAtt = xt::zeros<int>({newNodeNum}) - 1;
 
         // find new node classes
@@ -355,14 +353,13 @@ public:
         for (std::size_t i = 0; i<newNodeNum; i++){
             auto oldNodeIdx = selectedNodeIdxes[i];
             auto oldNode = xt::view(nodes, oldNodeIdx, xt::all());
-            auto newNode = xt::view(newNodes, i, xt::all());
-            for (std::size_t k=0; k<oldNode.size(); k++){
-                newNode(k) = oldNode(k);
-            }
+            newNodes(i, 0) = oldNode(0);
+            newNodes(i, 1) = oldNode(1);
+            newNodes(i, 2) = oldNode(2);
+            newNodes(i, 3) = oldNode(3);
         }
 
-        std::cout<< "shape of nodes: " << newNodes.shape(0) << std::endl;
-        std::cout<< "shape of attributes: " << newAtt.shape(0) << std::endl;
+        std::cout<< "number of new nodes: " << newNodes.shape(0) << std::endl;
         //auto pyNewNodes = xtensor_to_numpy<float>(newNodes);
         //auto pyNewAtt = xtensor_to_numpy<int>(newAtt);
         //auto pyNewNodes = py::array_t<float>(newNodes);
@@ -374,7 +371,8 @@ public:
         // find new first child and siblings.
         this->nodes = newNodes;
         this->attributes = newAtt;
-        update_first_child_and_sibling();
+        this->update_first_child_and_sibling();
+        assert( any(xt::view(newAtt, xt::all(), 2) >= 0 ) );
         return 0;
     }
         
