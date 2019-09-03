@@ -268,7 +268,10 @@ public:
         assert( !rootNodeIdxes.empty() );
 
         auto seedNodeIdxes = rootNodeIdxes;
-
+        // initialize the seed node parent indexes
+        std::vector<int> seedNodeParentIdxes = {};
+        seedNodeParentIdxes.assign( seedNodeIdxes.size(), -2 );
+        
         // we select some nodes out as new neuron
         // this selection should include all the seed node indexes
         std::vector<int> selectedNodeIdxes = {};
@@ -276,14 +279,15 @@ public:
         std::vector<int> selectedParentNodeIdxes = {};
 
         while( !seedNodeIdxes.empty() ){
-            auto walkingNodeIdx = seedNodeIdxes.back();
+            auto startNodeIdx = seedNodeIdxes.back();
+            auto startNodeParentIdx = seedNodeParentIdxes.back();
             seedNodeIdxes.pop_back();
-            
-            // the start of measurement
-            auto startNodeIdx = walkingNodeIdx;
+            seedNodeParentIdxes.pop_back();
             selectedNodeIdxes.push_back( startNodeIdx );
-            auto parentNodeIdx = parents( startNodeIdx );
-            selectedParentNodeIdxes.push_back( parentNodeIdx );
+            selectedParentNodeIdxes.push_back( startNodeParentIdx );
+           
+            // the start of measurement
+            auto walkingNodeIdx = startNodeIdx;
 
             // walk through a segment
             while (!is_branching_node(walkingNodeIdx) && 
@@ -314,6 +318,9 @@ public:
                     }
                 }
             }
+            // add current node 
+            selectedNodeIdxes.push_back( walkingNodeIdx );
+            selectedParentNodeIdxes.push_back( startNodeIdx );
 
             // reach a branching/terminal node 
             // add all children nodes as seeds
@@ -322,6 +329,7 @@ public:
             std::vector<int> childrenNodeIdxes = this->get_children_node_indexes(walkingNodeIdx);
             for (std::size_t i=0; i<childrenNodeIdxes.size(); i++){
                 seedNodeIdxes.push_back( childrenNodeIdxes[i] );
+                seedNodeParentIdxes.push_back( walkingNodeIdx );
             }
         }
 
