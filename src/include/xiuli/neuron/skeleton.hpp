@@ -170,7 +170,7 @@ public:
             xt::xtensor<float, 2>::shape_type nodesShape = {nodeNum, 4};
             nodes = xt::zeros<float>( nodesShape );
             xt::xtensor<int, 2>::shape_type attributesShape = {nodeNum, 4};
-            attributes = xt::zeros<int>( attributesShape );
+            attributes = xt::zeros<int>( attributesShape ) - 1;
             for (std::size_t i = 0; i<nodeNum; i++){
                 // we do sort here!
                 auto oldIdx = newIdx2oldIdx( i );
@@ -178,11 +178,14 @@ public:
                 nodes(i, 1) = ys[ oldIdx ];
                 nodes(i, 2) = zs[ oldIdx ];
                 nodes(i, 3) = rs[ oldIdx ];
-                attributes[i, 0] = classes[i];
+                attributes(i, 0) = classes[i];
                 // swc node id is 1-based
-                attributes[i, 1] = parents[i] - 1;
+                attributes(i, 1) = parents[i] - 1;
             }
             this->update_first_child_and_sibling();
+
+            auto childs = this->get_childs();
+            assert( xt::any( childs >= 0 ) );
         }else{
             std::cout << "can not open file: " << file_name << std::endl;
         }
@@ -198,6 +201,14 @@ public:
 //        xt::pytensor<int, 2> pyattributes = this->attributes;
 //        return pyattributes;
 //    }
+
+    auto get_nodes(){
+        return this->nodes;
+    }
+
+    auto get_attributes(){
+        return this->attributes;
+    }
 
     bool is_root_node(int nodeIdx){
         return this->attributes(nodeIdx, 1) < 0;
@@ -235,7 +246,6 @@ public:
     auto downsample(float step){
         auto nodes = this->nodes;
         auto att = this->attributes;
-        std::cout<< "number of input nodes: " << nodes.shape(0) << std::endl;
 
         auto classes = this->get_classes();
         auto parents = this->get_parents();
