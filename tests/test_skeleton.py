@@ -14,7 +14,7 @@ def test_skeleton():
     assert len(sk) == 2277
     print('number of nodes: ', len(sk))
 
-    sk.downsample(1.0)
+    sk.downsample(5.0)
     start = time.process_time()
     sk.write_swc('/tmp/{}.swc'.format(NEURON_NAME), 3)
     print('time elapse of write swc: ', time.process_time() - start)

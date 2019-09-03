@@ -9,7 +9,6 @@
 #include <tuple>
 #include <ctime>
 #include <chrono>
-#include <pybind11/embed.h> // everything needed for embedding
 #include <pybind11/pybind11.h>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xview.hpp"
@@ -73,8 +72,8 @@ private:
 
         // clean up the child and siblings
         for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++){
-            childs(nodeIdx) = -1;
-            siblings(nodeIdx) = -1;
+            childs(nodeIdx) = -2;
+            siblings(nodeIdx) = -2;
         }
 
         // update childs
@@ -322,9 +321,10 @@ public:
         assert( selectedNodeIdxes.size() > 0 );
 
         auto newNodeNum = selectedNodeIdxes.size();
-        std::cout<< "node number after downsampling: " << newNodeNum << std::endl;
+        std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
 
-        xt::xtensor<int, 2> newAtt = xt::zeros<int>({newNodeNum}) - 1;
+        xt::xtensor<int, 2>::shape_type newAttShape = {newNodeNum, 4};
+        xt::xtensor<int, 2> newAtt = xt::zeros<int>(newAttShape) - 2;
 
         // find new node classes
         for (std::size_t i=0; i<newNodeNum; i++){
