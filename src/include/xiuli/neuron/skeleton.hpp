@@ -277,6 +277,9 @@ public:
             
             // the start of measurement
             auto startNodeIdx = walkingNodeIdx;
+            selectedNodeIdxes.push_back( startNodeIdx );
+            auto parentNodeIdx = parents( startNodeIdx );
+            selectedParentNodeIdxes.push_back( parentNodeIdx );
 
             // walk through a segment
             while (!is_branching_node(walkingNodeIdx) && 
@@ -319,6 +322,7 @@ public:
 
         assert( selectedNodeIdxes.size() == selectedParentNodeIdxes.size() );
         assert( selectedNodeIdxes.size() > 0 );
+        assert( selectedParentNodeIdxes[0] == -2 );
 
         auto newNodeNum = selectedNodeIdxes.size();
         std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
@@ -336,7 +340,7 @@ public:
         // the parent node index is pointing to old nodes
         // we need to update the node index to new nodes
         // update_parents(selectedParentNodeIdxes, selectedNodeIdxes);
-        std::map<int, int> oldNodeIdx2newNodeIdx = {};
+        std::map<int, int> oldNodeIdx2newNodeIdx = {{-2, -2}};
         for (std::size_t newNodeIdx=0; newNodeIdx<newNodeNum; newNodeIdx++){
             auto oldNodeIdx = selectedNodeIdxes[ newNodeIdx ];
             oldNodeIdx2newNodeIdx[ oldNodeIdx ] = newNodeIdx;
@@ -344,7 +348,7 @@ public:
         for (std::size_t i = 0; i<newNodeNum; i++){
             auto oldNodeIdx = selectedParentNodeIdxes[i];
             auto newNodeIdx = oldNodeIdx2newNodeIdx[ oldNodeIdx ];
-            selectedParentNodeIdxes[i] = newNodeIdx;
+            newAtt(i, 1) = newNodeIdx;
         }
 
         // create new nodes
@@ -359,15 +363,6 @@ public:
             newNodes(i, 3) = oldNode(3);
         }
 
-        std::cout<< "number of new nodes: " << newNodes.shape(0) << std::endl;
-        //auto pyNewNodes = xtensor_to_numpy<float>(newNodes);
-        //auto pyNewAtt = xtensor_to_numpy<int>(newAtt);
-        //auto pyNewNodes = py::array_t<float>(newNodes);
-        //auto pyNewAtt = py::array_t<int>(newAtt);
-        //return py::make_tuple(pyNewNodes, pyNewAtt);
-        //return py::make_tuple(newNodes, newAtt);
-        //return py::make_tuple( newNodes.python_array(), newAtt.python_array() );
-        
         // find new first child and siblings.
         this->nodes = newNodes;
         this->attributes = newAtt;

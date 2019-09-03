@@ -56,7 +56,10 @@ ext_modules = [
             '-O3',
             # this is not working
             #'-o chunkflow/lib/libchunkflow.so'
-        ]),
+        ],
+        # monitor the code change and rebuild
+        depends = ['src/*'],
+    ),
 ]
 
 
