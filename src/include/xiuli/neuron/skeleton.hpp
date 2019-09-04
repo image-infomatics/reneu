@@ -259,7 +259,7 @@ public:
 
         auto nodeNum = this->get_node_num();
 
-        std::cout<< "downsampling step: " << step <<std::endl;
+        //std::cout<< "downsampling step: " << step <<std::endl;
         auto stepSquared = step * step;
 
         // start from the root nodes
@@ -341,7 +341,7 @@ public:
         assert( selectedNodeIdxes.size() > 0 );
 
         auto newNodeNum = selectedNodeIdxes.size();
-        std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
+        //std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
 
         xt::xtensor<int, 2>::shape_type newAttShape = {newNodeNum, 4};
         xt::xtensor<int, 2> newAtt = xt::zeros<int>(newAttShape) - 2;
