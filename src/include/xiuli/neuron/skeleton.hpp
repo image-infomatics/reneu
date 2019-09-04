@@ -386,6 +386,16 @@ public:
         assert( any(xt::view(newAtt, xt::all(), 2) >= 0 ) );
         return 0;
     }
+
+    auto get_path_length(){
+        float pathLength = 0;
+        auto parents = get_parents();
+        for (std::size_t i = 0; i<get_node_num(); i++){
+            auto parentIdx = parents( i );
+            pathLength += std::sqrt( squared_distance( i, parentIdx ) ); 
+        }
+        return pathLength;
+    }
         
     int write_swc( std::string file_name, const int precision = 3){
         std::ofstream myfile (file_name, std::ios::out);
