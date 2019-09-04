@@ -54,6 +54,7 @@ ext_modules = [
         language='c++',
         extra_compile_args=[
             '-O3',
+            '-ffast-math'
             # this is not working
             #'-o chunkflow/lib/libchunkflow.so'
         ],

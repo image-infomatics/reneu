@@ -1,10 +1,8 @@
 from os.path import join as joinpath
 from os.path import dirname
 import time
-#import numpy as np
 from math import isclose
 
-#from reneu.skeleton import Skeleton
 from reneu.lib.xiuli import XSkeleton
 from reneu.skeleton import Skeleton
 
