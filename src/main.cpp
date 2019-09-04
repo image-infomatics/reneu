@@ -5,6 +5,7 @@
 #include "xiuli/neuron/skeleton.hpp"
 
 namespace py = pybind11;
+namespace xn = xiuli::neuron;
 
 //class PySkeleton : public xiuli::neuron::Skeleton{
 //public:
@@ -33,14 +34,17 @@ PYBIND11_MODULE(xiuli, m) {
     )pbdoc";
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
-    py::class_<xiuli::neuron::Skeleton>(m, "Skeleton")
+    py::class_<xiuli::neuron::Skeleton>(m, "XSkeleton")
+        .def(py::init<xt::pytensor<float, 2>, xt::pytensor<int, 2>>())
+        .def(py::init<xt::pytensor<float, 2>>())
         .def(py::init<std::string>())
-        .def_property_readonly("nodes", &xiuli::neuron::Skeleton::get_nodes)
-        .def_property_readonly("attributes", &xiuli::neuron::Skeleton::get_attributes)
-        .def_property_readonly("path_length", &xiuli::neuron::Skeleton::get_path_length)
-        .def("__len__", &xiuli::neuron::Skeleton::get_node_num)
-        .def("downsample", &xiuli::neuron::Skeleton::downsample)
-        .def("write_swc", &xiuli::neuron::Skeleton::write_swc);
+        .def_property_readonly("nodes", &xn::Skeleton::get_nodes)
+        .def_property_readonly("attributes", &xn::Skeleton::get_attributes)
+        .def_property_readonly("path_length", &xn::Skeleton::get_path_length)
+        .def("update_first_child_and_sibling", &xn::Skeleton::update_first_child_and_sibling)
+        .def("__len__", &xn::Skeleton::get_node_num)
+        .def("downsample", &xn::Skeleton::downsample)
+        .def("write_swc", &xn::Skeleton::write_swc);
 
 
 #ifdef VERSION_INFO
