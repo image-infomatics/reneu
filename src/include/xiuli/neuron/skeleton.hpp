@@ -1,6 +1,5 @@
 #pragma once
 
-#include "xiuli/utils/string.hpp"
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -14,12 +13,12 @@
 #include "xtensor/xview.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor/xadapt.hpp"
-//#define FORCE_IMPORT_ARRAY
-//#include "xtensor-python/pytensor.hpp"     // Numpy bindings
+#include "xiuli/utils/string.hpp"
+#include "xtensor-python/pytensor.hpp"     // Numpy bindings
+
 
 namespace py = pybind11;
 using namespace xt::placeholders;  // required for `_` to work
-
 using namespace xiuli::utils;
 
 // use the c++17 nested namespace
@@ -47,30 +46,51 @@ private:
     xt::xtensor<int, 2> attributes;
 
     auto get_classes(){
-        return xt::view(this->attributes, xt::all(), 0);
+        return xt::view(attributes, xt::all(), 0);
     }
 
     auto get_parents(){
-        return xt::view(this->attributes, xt::all(), 1);
+        return xt::view(attributes, xt::all(), 1);
     }
 
     auto get_childs(){
-        return xt::view(this->attributes, xt::all(), 2);
+        return xt::view(attributes, xt::all(), 2);
     }
 
     auto get_siblings(){
-        return xt::view(this->attributes, xt::all(), 3);
+        return xt::view(attributes, xt::all(), 3);
     }
 
     template<typename Ti>
     auto get_node( Ti nodeIdx ){
-        return xt::view(this->nodes, nodeIdx, xt::all());
+        return xt::view(nodes, nodeIdx, xt::all());
     } 
 
+    auto squared_distance(int idx1, int idx2){
+        auto node1 = get_node(idx1);
+        auto node2 = get_node(idx2);
+        return  (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
+                (node1(1) - node2(1)) * (node1(1) - node2(1)) +
+                (node1(2) - node2(2)) * (node1(2) - node2(2));
+    }
+
+    template<typename Tn>
+    auto initialize_nodes_and_attributes(Tn nodeNum){
+        // create nodes and attributes
+        xt::xtensor<float, 2>::shape_type nodesShape = {nodeNum, 4};
+        nodes = xt::zeros<float>( nodesShape );
+        xt::xtensor<int, 2>::shape_type attributesShape = {nodeNum, 4};
+        // root node id is -2 rather than -1.
+        attributes = xt::zeros<int>( attributesShape ) - 2;
+    }
+
+public:
+    virtual ~Skeleton() = default;
+    
     auto update_first_child_and_sibling(){
-        auto parents = this->get_parents();
-        auto childs = this->get_childs();
-        auto siblings = this->get_siblings();
+        auto parents = get_parents();
+        auto childs = get_childs();
+        auto siblings = get_siblings();
 
         auto nodeNum = parents.size();
         // the columns are class, parents, fist child, sibling
@@ -107,33 +127,40 @@ private:
         }
         return 0;
     }
-    
-    template<typename T>
-    auto xtensor_to_numpy(xt::xtensor<T, 2>& tensor){
-        return py::buffer_info(tensor.data(), sizeof(T), py::format_descriptor<T>::format(), 2,
-                    {tensor.shape(0), tensor.shape(1)}, {sizeof(T) * tensor.shape(1), sizeof(T)});
+ 
+    Skeleton( xt::pytensor<float, 2> nodes_, xt::pytensor<int, 2> attributes_):
+        nodes( nodes_ ), attributes( attributes_ ){
+            update_first_child_and_sibling();
+        }
 
-    }
+    Skeleton( xt::pytensor<float, 2> swcArray ){
+        // this input array should follow the format of swc file
+        assert(swcArray.shape(1) == 7);
+        auto nodeNum = swcArray.shape(0);
+        initialize_nodes_and_attributes( nodeNum );
+        
+        auto xids = xt::view(swcArray, xt::all(), 0);
+        auto newIdx2oldIdx = xt::argsort(xids);
 
-    auto squared_distance(int idx1, int idx2){
-        auto node1 = get_node(idx1);
-        auto node2 = get_node(idx2);
-        return  (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
-                (node1(1) - node2(1)) * (node1(1) - node2(1)) +
-                (node1(2) - node2(2)) * (node1(2) - node2(2));
-    }
-
-public:
-    virtual ~Skeleton() = default;
-
-    Skeleton( xt::xtensor<float, 2> nodes_, xt::xtensor<int, 2> attributes_):
-        nodes( nodes_ ), attributes( attributes_ ){}
-
-    Skeleton( xt::xtensor<double, 2> data ){
-        std::logic_error("Function not yet implemented");
+        // construct the nodes and attributes
+        initialize_nodes_and_attributes(nodeNum);
+        
+        for (std::size_t i = 0; i<nodeNum; i++){
+            // we do sort here!
+            auto oldIdx = newIdx2oldIdx( i );
+            attributes(i, 0) = swcArray( oldIdx, 1 );
+            nodes(i, 0) = swcArray( oldIdx, 2 );
+            nodes(i, 1) = swcArray( oldIdx, 3 );
+            nodes(i, 2) = swcArray( oldIdx, 4 );
+            nodes(i, 3) = swcArray( oldIdx, 5 );
+            // swc node id is 1-based
+            attributes(i, 1) = swcArray( oldIdx, 6 ) - 1;
+        }
+        update_first_child_and_sibling();
     }
 
     Skeleton( std::string file_name ){
+        std::cerr<< "this function is pretty slow and should be speed up using memory map!" << std::endl;
         std::ifstream myfile(file_name, std::ios::in);
 
         if (myfile.is_open()){
@@ -172,12 +199,9 @@ public:
             auto xids = xt::adapt(ids, shape);
             auto newIdx2oldIdx = xt::argsort(xids);
 
-            // create nodes and attributes
-            xt::xtensor<float, 2>::shape_type nodesShape = {nodeNum, 4};
-            nodes = xt::zeros<float>( nodesShape );
-            xt::xtensor<int, 2>::shape_type attributesShape = {nodeNum, 4};
-            // root node id is -2 rather than -1.
-            attributes = xt::zeros<int>( attributesShape ) - 2;
+            // construct the nodes and attributes
+            initialize_nodes_and_attributes(nodeNum);
+            
             for (std::size_t i = 0; i<nodeNum; i++){
                 // we do sort here!
                 auto oldIdx = newIdx2oldIdx( i );
@@ -189,50 +213,39 @@ public:
                 // swc node id is 1-based
                 attributes(i, 1) = parents[ oldIdx ];
             }
-            this->update_first_child_and_sibling();
+            update_first_child_and_sibling();
 
-            auto childs = this->get_childs();
+            auto childs = get_childs();
             assert( xt::any( childs >= 0 ) );
         }else{
             std::cout << "can not open file: " << file_name << std::endl;
         }
     }
-
-
-//    auto get_nodes_as_numpy_array(){
-//        xt::pytensor<float, 2> pynodes = this->nodes;
-//        return pynodes;
-//    }
-//
-//    auto get_attributes_as_numpy_array(){
-//        xt::pytensor<int, 2> pyattributes = this->attributes;
-//        return pyattributes;
-//    }
-
+    
     auto get_nodes(){
-        return this->nodes;
+        return nodes;
     }
 
     auto get_attributes(){
-        return this->attributes;
+        return attributes;
     }
 
     bool is_root_node(int nodeIdx){
-        return this->attributes(nodeIdx, 1) < 0;
+        return attributes(nodeIdx, 1) < 0;
     }
 
     bool is_terminal_node(int nodeIdx){
-        return this->attributes(nodeIdx, 2 ) < 0;
+        return attributes(nodeIdx, 2 ) < 0;
     }
 
     bool is_branching_node(int nodeIdx){
-        auto childNodeIdx = this->attributes(nodeIdx, 2 );
+        auto childNodeIdx = attributes(nodeIdx, 2 );
         // if child have sibling, then this is a branching node
-        return  this->attributes(childNodeIdx, 3) > 0;
+        return  attributes(childNodeIdx, 3) > 0;
     }
 
     auto get_node_num(){
-        return this->nodes.shape(0);
+        return nodes.shape(0);
     }
 
     std::vector<int> get_children_node_indexes(int nodeIdx){
@@ -249,15 +262,14 @@ public:
     }
 
     auto downsample(float step){
-        auto nodes = this->nodes;
-        auto att = this->attributes;
+        auto att = attributes;
 
-        auto classes = this->get_classes();
-        auto parents = this->get_parents();
-        auto childs = this->get_childs();
-        auto siblings = this->get_siblings();
+        auto classes = get_classes();
+        auto parents = get_parents();
+        auto childs = get_childs();
+        auto siblings = get_siblings();
 
-        auto nodeNum = this->get_node_num();
+        auto nodeNum = get_node_num();
 
         //std::cout<< "downsampling step: " << step <<std::endl;
         auto stepSquared = step * step;
@@ -330,7 +342,7 @@ public:
             // add all children nodes as seeds
             // if reaching the terminal and there is no children
             // nothing will be added
-            std::vector<int> childrenNodeIdxes = this->get_children_node_indexes(walkingNodeIdx);
+            std::vector<int> childrenNodeIdxes = get_children_node_indexes(walkingNodeIdx);
             for (std::size_t i=0; i<childrenNodeIdxes.size(); i++){
                 seedNodeIdxes.push_back( childrenNodeIdxes[i] );
                 seedNodeParentIdxes.push_back( walkingNodeIdx );
@@ -380,9 +392,9 @@ public:
         }
 
         // find new first child and siblings.
-        this->nodes = newNodes;
-        this->attributes = newAtt;
-        this->update_first_child_and_sibling();
+        nodes = newNodes;
+        attributes = newAtt;
+        update_first_child_and_sibling();
         assert( any(xt::view(newAtt, xt::all(), 2) >= 0 ) );
         return 0;
     }
@@ -402,9 +414,8 @@ public:
         myfile.precision(precision);
 
         if (myfile.is_open()){       
-            auto classes = this->get_classes();
-            auto parents = this->get_parents();
-            auto nodes = this->nodes; 
+            auto classes = get_classes();
+            auto parents = get_parents();
             auto nodeNum = nodes.shape(0);
 
             // add some commented header
