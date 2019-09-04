@@ -76,32 +76,33 @@ private:
         // the columns are class, parents, fist child, sibling
 
         // clean up the child and siblings
-        for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++){
-            childs(nodeIdx) = -2;
-            siblings(nodeIdx) = -2;
-        }
+        childs = -2;
+        siblings = -2;
 
         // update childs
         for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++){
             auto parentNodeIdx = parents( nodeIdx );
-            childs( parentNodeIdx ) = nodeIdx;
+            if (parentNodeIdx >= 0)
+                childs( parentNodeIdx ) = nodeIdx;
         }
 
         // update siblings
         for (int nodeIdx = 0; nodeIdx < int(nodeNum); nodeIdx++){
             auto parentNodeIdx = parents( nodeIdx );
-            auto currentSiblingNodeIdx = childs( parentNodeIdx );
-            assert( currentSiblingNodeIdx >= 0 );
-            if (currentSiblingNodeIdx != nodeIdx){
-                // look for an empty sibling spot to fill in
-                auto nextSiblingNodeIdx = siblings(currentSiblingNodeIdx);
-                while (nextSiblingNodeIdx >= 0){
-                    currentSiblingNodeIdx = nextSiblingNodeIdx;
-                    // move forward to look for empty sibling spot
-                    nextSiblingNodeIdx = siblings( currentSiblingNodeIdx );
+            if (parentNodeIdx >= 0){
+                auto currentSiblingNodeIdx = childs( parentNodeIdx );
+                assert( currentSiblingNodeIdx >= 0 );
+                if (currentSiblingNodeIdx != nodeIdx){
+                    // look for an empty sibling spot to fill in
+                    auto nextSiblingNodeIdx = siblings(currentSiblingNodeIdx);
+                    while (nextSiblingNodeIdx >= 0){
+                        currentSiblingNodeIdx = nextSiblingNodeIdx;
+                        // move forward to look for empty sibling spot
+                        nextSiblingNodeIdx = siblings( currentSiblingNodeIdx );
+                    }
+                    // finally, we should find an empty spot
+                    siblings( currentSiblingNodeIdx ) = nodeIdx; 
                 }
-                // finally, we should find an empty spot
-                siblings( currentSiblingNodeIdx ) = nodeIdx; 
             }
         }
         return 0;
@@ -114,12 +115,12 @@ private:
 
     }
 
-    float squared_distance(int idx1, int idx2){
-        auto node1 = xt::view(this->nodes, idx1, xt::range(_, 3));
-        auto node2 = xt::view(this->nodes, idx2, xt::range(_, 3));
-        return (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
-            (node1(1) - node2(1)) * (node1(1) - node2(1)) +
-            (node1(2) - node2(2)) * (node1(2) - node2(2));
+    auto squared_distance(int idx1, int idx2){
+        auto node1 = get_node(idx1);
+        auto node2 = get_node(idx2);
+        return  (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
+                (node1(1) - node2(1)) * (node1(1) - node2(1)) +
+                (node1(2) - node2(2)) * (node1(2) - node2(2));
     }
 
 public:
@@ -150,14 +151,15 @@ public:
 
             while ( std::getline(myfile, line) ){
                 std::vector<std::string> parts = xiuli::utils::split(line, "\\s+"_re);
-                if (!parts.empty() && parts[0][0] != '#'){
+                if (parts.size()==7 && parts[0][0] != '#'){
                     ids.push_back( std::stoi( parts[0] ) );
                     classes.push_back( std::stoi( parts[1] ) );
                     xs.push_back( std::stof( parts[2] ) );
                     ys.push_back( std::stof( parts[3] ) );
                     zs.push_back( std::stof( parts[4] ) );
                     rs.push_back( std::stof( parts[5] ) );
-                    parents.push_back( std::stoi( parts[6] ) );
+                    // swc is 1-based, and we are 0-based here.
+                    parents.push_back( std::stoi( parts[6] ) - 1);
                 }                
             }
             assert(ids.size() == parents.size());
@@ -174,7 +176,8 @@ public:
             xt::xtensor<float, 2>::shape_type nodesShape = {nodeNum, 4};
             nodes = xt::zeros<float>( nodesShape );
             xt::xtensor<int, 2>::shape_type attributesShape = {nodeNum, 4};
-            attributes = xt::zeros<int>( attributesShape ) - 1;
+            // root node id is -2 rather than -1.
+            attributes = xt::zeros<int>( attributesShape ) - 2;
             for (std::size_t i = 0; i<nodeNum; i++){
                 // we do sort here!
                 auto oldIdx = newIdx2oldIdx( i );
@@ -182,9 +185,9 @@ public:
                 nodes(i, 1) = ys[ oldIdx ];
                 nodes(i, 2) = zs[ oldIdx ];
                 nodes(i, 3) = rs[ oldIdx ];
-                attributes(i, 0) = classes[i];
+                attributes(i, 0) = classes[ oldIdx ];
                 // swc node id is 1-based
-                attributes(i, 1) = parents[i] - 1;
+                attributes(i, 1) = parents[ oldIdx ];
             }
             this->update_first_child_and_sibling();
 
@@ -233,9 +236,8 @@ public:
     }
 
     std::vector<int> get_children_node_indexes(int nodeIdx){
-        auto att = this->attributes;
-        auto childs = xt::view(att, xt::all(), 2);
-        auto siblings = xt::view(att, xt::all(), 3);
+        auto childs = get_childs();
+        auto siblings = get_siblings();
 
         std::vector<int> childrenNodeIdxes = {};
         auto childNodeIdx = childs( nodeIdx );
@@ -256,6 +258,8 @@ public:
         auto siblings = this->get_siblings();
 
         auto nodeNum = this->get_node_num();
+
+        std::cout<< "downsampling step: " << step <<std::endl;
         auto stepSquared = step * step;
 
         // start from the root nodes
@@ -296,7 +300,7 @@ public:
                 walkingNodeIdx = childs[ walkingNodeIdx ];
                 // use squared distance to avoid sqrt computation.
                 float d2 = squared_distance(startNodeIdx, walkingNodeIdx);
-                if (d2 > stepSquared){
+                if (d2 >= stepSquared){
                     // have enough walking distance, will include this node in new skeleton
                     selectedNodeIdxes.push_back( walkingNodeIdx );
                     selectedParentNodeIdxes.push_back( startNodeIdx );

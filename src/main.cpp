@@ -6,19 +6,6 @@
 
 namespace py = pybind11;
 
-template<typename T>
-auto pytensor_to_numpy(xt::pytensor<T, 2>& tensor){
-    return py::buffer_info(tensor.data(), sizeof(T), py::format_descriptor<T>::format(), 2,
-                {tensor.shape(0), tensor.shape(1)}, {sizeof(T) * tensor.shape(1), sizeof(T)});
-
-}
-
-template<typename T, std::size_t N>
-auto xtensor_to_numpy_array(xt::xtensor<T, N>& tensor){
-    xt::pytensor<T, N> pyarray = tensor;
-    return pyarray;
-}
-
 //class PySkeleton : public xiuli::neuron::Skeleton{
 //public:
 //    // inherit the constructor
@@ -34,18 +21,22 @@ PYBIND11_MODULE(xiuli, m) {
     xt::import_numpy();
 
     m.doc() = R"pbdoc(
-        Pybind11 example plugin
+        xiuli package
         -----------------------
-        .. currentmodule:: python_example
+        .. currentclass:: Skeleton
         .. autosummary::
            :toctree: _generate
-           add
-           subtract
+           nodes
+           attributes
+           downsample
+           write_swc
     )pbdoc";
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
     py::class_<xiuli::neuron::Skeleton>(m, "Skeleton")
         .def(py::init<std::string>())
+        .def_property_readonly("nodes", &xiuli::neuron::Skeleton::get_nodes)
+        .def_property_readonly("attributes", &xiuli::neuron::Skeleton::get_attributes)
         .def("__len__", &xiuli::neuron::Skeleton::get_node_num)
         .def("downsample", &xiuli::neuron::Skeleton::downsample)
         .def("write_swc", &xiuli::neuron::Skeleton::write_swc);
