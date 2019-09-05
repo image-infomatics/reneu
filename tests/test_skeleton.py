@@ -2,12 +2,14 @@ from os.path import join as joinpath
 from os.path import dirname
 import time
 from math import isclose
+import numpy as np
+
 
 from reneu.lib.xiuli import XSkeleton
 from reneu.skeleton import Skeleton
 
 NEURON_NAME = 'Nov10IR3e.CNG'
-#NEURON_NAME = '77337930247110714'
+NEURON_NAME = '77337930247110714'
 file_name = joinpath(dirname(__file__), '../data/{}.swc'.format(NEURON_NAME))
 
 def test_xskeleton():
@@ -50,13 +52,22 @@ def test_skeleton():
     start = time.process_time()
     sk = Skeleton.from_swc( file_name )
     print('time elapse in python read_swc: ', time.process_time()-start)
-    
+
     node_num1 = len(sk)
     if NEURON_NAME == 'Nov10IR3e.CNG':
         sk.downsample(2.0)
     elif NEURON_NAME == '77337930247110714':
+        print('read from precomputed')
+        binary_file_name = joinpath(dirname(__file__), '../data/{}'.format(NEURON_NAME))
+        with open(binary_file_name, mode='rb') as file:
+            skelbuf = file.read()
+        sk2 = Skeleton.from_precomputed( skelbuf );
+        # assert sk == sk2
+        sk2.write_swc('/tmp/77337930247110714.swc', 3)
+        
         sk.downsample(1000.0)
         assert len(sk) == 1476
+ 
     node_num2 = len(sk)
     print('downsampled from {} nodes to {} nodes.'.format(node_num1, node_num2))
     
