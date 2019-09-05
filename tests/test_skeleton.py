@@ -2,6 +2,8 @@ from os.path import join as joinpath
 from os.path import dirname
 import time
 from math import isclose
+import numpy as np
+
 
 from reneu.lib.xiuli import XSkeleton
 from reneu.skeleton import Skeleton
@@ -41,25 +43,34 @@ def test_xskeleton():
     node_num2 = len(sk)
     print('downsampled from {} nodes to {} nodes.'.format(node_num1, node_num2))
 
-    start = time.process_time()
-    sk.write_swc('/tmp/{}.swc'.format(NEURON_NAME), 3)
-    print('time elapse of write swc: ', time.process_time() - start)
 
 def test_skeleton():
     print('\ntest inherited skeleton class in python...')
     start = time.process_time()
     sk = Skeleton.from_swc( file_name )
     print('time elapse in python read_swc: ', time.process_time()-start)
-    
+
     node_num1 = len(sk)
     if NEURON_NAME == 'Nov10IR3e.CNG':
         sk.downsample(2.0)
     elif NEURON_NAME == '77337930247110714':
         sk.downsample(1000.0)
         assert len(sk) == 1476
+    
     node_num2 = len(sk)
     print('downsampled from {} nodes to {} nodes.'.format(node_num1, node_num2))
-    
+     
+    start = time.process_time()
+    temp_file_name = '/tmp/{}.swc'.format(NEURON_NAME)
+    sk.to_swc(temp_file_name, 3)
+    print('time elapse of write swc: ', time.process_time() - start)
+    sk2 = Skeleton.from_swc( temp_file_name )
+    assert sk == sk2
+
+    skelbuf = sk.to_precomputed()
+    sk3 = Skeleton.from_precomputed( skelbuf );
+    assert sk == sk3
+   
     print('path length: ', sk.path_length)
 
     print('number of nodes: ', len(sk))
