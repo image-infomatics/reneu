@@ -251,6 +251,36 @@ public:
         return nodes.shape(0);
     }
 
+    auto get_edge_num(){
+        auto nodeNum = get_node_num();
+        auto parents = get_parents();
+        std::size_t edgeNum = 0;
+        for (std::size_t i = 0; i<nodeNum; i++){
+            if (parents( i ) >= 0){
+                edgeNum += 1;
+            }
+        }
+        return edgeNum;
+    }
+
+    auto get_edges(){
+        auto edgeNum = get_edge_num();
+        xt::xtensor<std::uint32_t, 2>::shape_type edgesShape = {edgeNum, 2};
+        xt::xtensor<std::uint32_t, 2> edges = xt::zeros<std::uint32_t>( edgesShape );
+
+        auto parents = get_parents();
+        std::size_t edgeIdx = 0;
+        for (std::size_t i = 0; i<get_node_num(); i++){
+            auto parentIdx = parents( i );
+            if (parentIdx >= 0 ){
+                edges( edgeIdx, 0 ) = i;
+                edges( edgeIdx, 1 ) = parentIdx;
+                edgeIdx += 1;
+            }
+        }
+        return edges;
+    }
+
     std::vector<int> get_children_node_indexes(int nodeIdx){
         auto childs = get_childs();
         auto siblings = get_siblings();

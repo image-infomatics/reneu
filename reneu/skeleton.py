@@ -2,6 +2,7 @@ from typing import Union
 import numpy as np
 from .lib.xiuli import XSkeleton
 import struct
+from io import BytesIO
 
 
 class Skeleton(XSkeleton):
@@ -138,7 +139,26 @@ class Skeleton(XSkeleton):
         nodes = np.column_stack((vertices, radii))
         return cls.from_nodes_and_parents(nodes, parents, classes)
 
+    def to_precomputed(self):
+        nodes = self.nodes.astype(np.float32)
+        node_num = self.nodes.shape[0]
+        classes = self.attributes[:, 0].astype(np.uint8)
+        edges = self.edges.astype( np.uint32 )
+        edge_num = edges.shape[0]
+
+        result = BytesIO()
+        result.write(struct.pack('<II', node_num, edge_num))
+        result.write( nodes[:, :3].tobytes('C') )
+        result.write( edges.tobytes('C') )
+        # write radii
+        result.write( nodes[:, 3].tobytes('C') )
+        # write node types
+        result.write( classes.tobytes('C') )
+        return result.getvalue()
+
+
+
     def __eq__(self, other):
         assert isinstance( other, Skeleton )
-        return  np.ma.allequal(self.nodes, other.nodes) and np.ma.allequal( 
+        return  np.ma.allclose(self.nodes, other.nodes, atol=0.001) and np.ma.allequal( 
                                     self.attributes, other.attributes )
