@@ -41,7 +41,6 @@ PYBIND11_MODULE(xiuli, m) {
         .def_property_readonly("nodes", &xn::Skeleton::get_nodes)
         .def_property_readonly("attributes", &xn::Skeleton::get_attributes)
         .def_property_readonly("path_length", &xn::Skeleton::get_path_length)
-        .def("update_first_child_and_sibling", &xn::Skeleton::update_first_child_and_sibling)
         .def("__len__", &xn::Skeleton::get_node_num)
         .def("downsample", &xn::Skeleton::downsample)
         .def("write_swc", &xn::Skeleton::write_swc);

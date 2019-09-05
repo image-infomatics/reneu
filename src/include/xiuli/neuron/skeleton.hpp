@@ -21,6 +21,9 @@ namespace py = pybind11;
 using namespace xt::placeholders;  // required for `_` to work
 using namespace xiuli::utils;
 
+using NodesType = xt::xtensor<float, 2>;
+using AttributesType = xt::xtensor<int, 2>;
+
 // use the c++17 nested namespace
 namespace xiuli::neuron{
 
@@ -29,7 +32,7 @@ class Skeleton{
 private:
     // node array (N x 4), the rows are nodes, the columns are x,y,z,r
     // normally the type is float
-    xt::xtensor<float, 2> nodes;
+    NodesType nodes;
     
     // attributes of nodes (N x 4), 
     // the columns are node type, parent, first child, sibling
@@ -43,7 +46,7 @@ private:
     // 6 - end point
     // 7 - custom 
     // normally the type is int
-    xt::xtensor<int, 2> attributes;
+    AttributesType attributes;
 
     auto get_classes(){
         return xt::view(attributes, xt::all(), 0);
@@ -77,15 +80,12 @@ private:
     template<typename Tn>
     auto initialize_nodes_and_attributes(Tn nodeNum){
         // create nodes and attributes
-        xt::xtensor<float, 2>::shape_type nodesShape = {nodeNum, 4};
+        NodesType::shape_type nodesShape = {nodeNum, 4};
         nodes = xt::zeros<float>( nodesShape );
-        xt::xtensor<int, 2>::shape_type attributesShape = {nodeNum, 4};
+        AttributesType::shape_type attributesShape = {nodeNum, 4};
         // root node id is -2 rather than -1.
         attributes = xt::zeros<int>( attributesShape ) - 2;
     }
-
-public:
-    virtual ~Skeleton() = default;
     
     auto update_first_child_and_sibling(){
         auto parents = get_parents();
@@ -128,6 +128,9 @@ public:
         return 0;
     }
  
+public:
+    virtual ~Skeleton() = default;
+
     Skeleton( xt::pytensor<float, 2> nodes_, xt::pytensor<int, 2> attributes_):
         nodes( nodes_ ), attributes( attributes_ ){
             update_first_child_and_sibling();
@@ -355,8 +358,8 @@ public:
         auto newNodeNum = selectedNodeIdxes.size();
         //std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
 
-        xt::xtensor<int, 2>::shape_type newAttShape = {newNodeNum, 4};
-        xt::xtensor<int, 2> newAtt = xt::zeros<int>(newAttShape) - 2;
+        AttributesType::shape_type newAttShape = {newNodeNum, 4};
+        AttributesType newAtt = xt::zeros<int>(newAttShape) - 2;
 
         // find new node classes
         for (std::size_t i=0; i<newNodeNum; i++){
@@ -380,8 +383,8 @@ public:
         }
 
         // create new nodes
-        xt::xtensor<float, 2>::shape_type newNodesShape = {newNodeNum, 4};
-        xt::xtensor<float, 2> newNodes = xt::zeros<float>( newNodesShape );
+        NodesType::shape_type newNodesShape = {newNodeNum, 4};
+        NodesType newNodes = xt::zeros<float>( newNodesShape );
         for (std::size_t i = 0; i<newNodeNum; i++){
             auto oldNodeIdx = selectedNodeIdxes[i];
             auto oldNode = xt::view(nodes, oldNodeIdx, xt::all());
