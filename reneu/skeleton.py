@@ -150,10 +150,15 @@ class Skeleton(XSkeleton):
         result.write(struct.pack('<II', node_num, edge_num))
         result.write( nodes[:, :3].tobytes('C') )
         result.write( edges.tobytes('C') )
+
         # write radii
-        result.write( nodes[:, 3].tobytes('C') )
+        radii = nodes[:, 3]
+        if not np.ma.allequal(radii, 0) or not np.ma.allequal(classes, 0):
+            result.write( nodes[:, 3].tobytes('C') )
+        
         # write node types
-        result.write( classes.tobytes('C') )
+        if not np.ma.allequal(classes, 0):
+            result.write( classes.tobytes('C') )
         return result.getvalue()
 
 
