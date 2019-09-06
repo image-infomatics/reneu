@@ -37,7 +37,7 @@ RUN apt-get update --fix-missing \
 #ENV CPLUS_INCLUDE_PATH "/opt/anaconda3/include/python3.7m":$CPLUS_INCLUDE_PATH
 ENV CPLUS_INCLUDE_PATH "/opt/anaconda3/envs/reneu/include":$CPLUS_INCLUDE_PATH
 ENV CPLUS_INCLUDE_PATH "/opt/anaconda3/envs/reneu/include/python3.7m":$CPLUS_INCLUDE_PATH
-ENV CPLUS_INCLUDE_PATH "$HOME/workspace/reneu/src/include":$CPLUS_INCLUDE_PATH
+ENV CPLUS_INCLUDE_PATH "$HOME/workspace/reneu/include":$CPLUS_INCLUDE_PATH
 
 WORKDIR $HOME/workspace/reneu
 RUN exec bash \

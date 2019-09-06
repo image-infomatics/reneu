@@ -8,7 +8,6 @@
 #include <tuple>
 #include <ctime>
 #include <chrono>
-#include <pybind11/pybind11.h>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xsort.hpp"
@@ -16,10 +15,8 @@
 #include "xiuli/utils/string.hpp"
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 
-
-namespace py = pybind11;
-using namespace xt::placeholders;  // required for `_` to work
 using namespace xiuli::utils;
+using namespace xt::placeholders;  // required for `_` to work
 
 using NodesType = xt::xtensor<float, 2>;
 using AttributesType = xt::xtensor<int, 2>;
