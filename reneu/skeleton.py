@@ -161,8 +161,6 @@ class Skeleton(XSkeleton):
             result.write( classes.tobytes('C') )
         return result.getvalue()
 
-
-
     def __eq__(self, other):
         assert isinstance( other, Skeleton )
         return  np.ma.allclose(self.nodes, other.nodes, atol=0.001) and np.ma.allequal( 

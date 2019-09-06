@@ -1,0 +1,12 @@
+.cache
+.ropeproject
+.env
+.dat
+.json
+jwu
+dist 
+build
+*.egg-info
+__pycache__
+*.ipynb
+tmp/
