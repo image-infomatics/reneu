@@ -1,6 +1,6 @@
 from typing import Union 
 import numpy as np
-from .lib.xiuli import XSkeleton
+from .lib.libxiuli import XSkeleton
 import struct
 from io import BytesIO
 

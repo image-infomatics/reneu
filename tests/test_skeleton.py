@@ -5,7 +5,7 @@ from math import isclose
 import numpy as np
 
 
-from reneu.lib.xiuli import XSkeleton
+from reneu.lib.libxiuli import XSkeleton
 from reneu.skeleton import Skeleton
 
 NEURON_NAME = 'Nov10IR3e.CNG'

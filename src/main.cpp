@@ -18,7 +18,7 @@ namespace xn = xiuli::neuron;
 //    PySkeleton(xiuli::neuron::Skeleton &&base) : xiuli::neuron::Skeleton(std::move(base)) {}
 //};
 
-PYBIND11_MODULE(xiuli, m) {
+PYBIND11_MODULE(libxiuli, m) {
     xt::import_numpy();
 
     m.doc() = R"pbdoc(
