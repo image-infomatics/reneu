@@ -45,28 +45,28 @@ private:
     // normally the type is int
     AttributesType attributes;
 
-    auto get_classes(){
+    inline auto get_classes(){
         return xt::view(attributes, xt::all(), 0);
     }
 
-    auto get_parents(){
+    inline auto get_parents(){
         return xt::view(attributes, xt::all(), 1);
     }
 
-    auto get_childs(){
+    inline auto get_childs(){
         return xt::view(attributes, xt::all(), 2);
     }
 
-    auto get_siblings(){
+    inline auto get_siblings(){
         return xt::view(attributes, xt::all(), 3);
     }
 
     template<typename Ti>
-    auto get_node( Ti nodeIdx ){
+    inline auto get_node( Ti nodeIdx ){
         return xt::view(nodes, nodeIdx, xt::all());
     } 
 
-    auto squared_distance(int idx1, int idx2){
+    inline auto squared_distance(int idx1, int idx2){
         auto node1 = get_node(idx1);
         auto node2 = get_node(idx2);
         return  (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
@@ -75,7 +75,7 @@ private:
     }
 
     template<typename Tn>
-    auto initialize_nodes_and_attributes(Tn nodeNum){
+    inline auto initialize_nodes_and_attributes(Tn nodeNum){
         // create nodes and attributes
         NodesType::shape_type nodesShape = {nodeNum, 4};
         nodes = xt::zeros<float>( nodesShape );
@@ -222,29 +222,29 @@ public:
         }
     }
     
-    auto get_nodes(){
+    inline auto get_nodes(){
         return nodes;
     }
 
-    auto get_attributes(){
+    inline auto get_attributes(){
         return attributes;
     }
 
-    bool is_root_node(int nodeIdx){
+    inline bool is_root_node(int nodeIdx){
         return attributes(nodeIdx, 1) < 0;
     }
 
-    bool is_terminal_node(int nodeIdx){
+    inline bool is_terminal_node(int nodeIdx){
         return attributes(nodeIdx, 2 ) < 0;
     }
 
-    bool is_branching_node(int nodeIdx){
+    inline bool is_branching_node(int nodeIdx){
         auto childNodeIdx = attributes(nodeIdx, 2 );
         // if child have sibling, then this is a branching node
         return  attributes(childNodeIdx, 3) > 0;
     }
 
-    auto get_node_num(){
+    inline auto get_node_num(){
         return nodes.shape(0);
     }
 

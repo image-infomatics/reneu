@@ -2,21 +2,12 @@
 #include "xtensor/xtensor.hpp"
 #define FORCE_IMPORT_ARRAY
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
-#include "xiuli/neuron/skeleton.hpp"
+#include "xiuli/xiuli.hpp"
+
 
 namespace py = pybind11;
 namespace xn = xiuli::neuron;
-
-//class PySkeleton : public xiuli::neuron::Skeleton{
-//public:
-//    // inherit the constructor
-//    using Skeleton::Skeleton;
-//};
-//class PySkeleton : public xiuli::neuron::Skeleton {
-//public:
-//    using xiuli::neuron::Skeleton;
-//    PySkeleton(xiuli::neuron::Skeleton &&base) : xiuli::neuron::Skeleton(std::move(base)) {}
-//};
+namespace xnn = xn::nblast;
 
 PYBIND11_MODULE(libxiuli, m) {
     xt::import_numpy();
@@ -34,7 +25,7 @@ PYBIND11_MODULE(libxiuli, m) {
     )pbdoc";
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
-    py::class_<xiuli::neuron::Skeleton>(m, "XSkeleton")
+    py::class_<xn::Skeleton>(m, "XSkeleton")
         .def(py::init<xt::pytensor<float, 2>, xt::pytensor<int, 2>>())
         .def(py::init<xt::pytensor<float, 2>>())
         .def(py::init<std::string>())
@@ -46,6 +37,13 @@ PYBIND11_MODULE(libxiuli, m) {
         .def("downsample", &xn::Skeleton::downsample)
         .def("write_swc", &xn::Skeleton::write_swc);
 
+    py::class_<xnn::ScoreTable>(m, "XNBLASTScoreTable")
+        .def(py::init())
+        .def(py::init<const std::string>())
+        .def(py::init<const xt::pytensor<float, 2>>())
+        .def_property_readonly("table", &xnn::ScoreTable::get_pytable)
+        // python do not have single precision number!
+        .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(&xnn::ScoreTable::operator()), "get table item");
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
