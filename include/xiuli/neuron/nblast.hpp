@@ -9,14 +9,12 @@
 #include "xtensor/xview.hpp"
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xtensor/xcsv.hpp"
+#include "xiuli/utils/math.hpp"
 
-
-using namespace xt::placeholders;  // required for `_` to work
 
 // use the c++17 nested namespace
 namespace xiuli::neuron::nblast{
 
-using NodesType = xt::xtensor<float, 2>;
 using TableType = xt::xtensor_fixed<float, xt::xshape<21, 10>>; 
 using DistThresholdsType = xt::xtensor_fixed<float, xt::xshape<22>>; 
 using ADPThresholdsType = xt::xtensor_fixed<float, xt::xshape<11>>; 
@@ -26,7 +24,8 @@ class ScoreTable{
 
 private:
     TableType table;
-    const DistThresholdsType distThresholds = {0., 0.75, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40, std::numeric_limits<float>::max()};
+    const DistThresholdsType distThresholds = {0., 0.75, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 
+                                        12, 14, 16, 20, 25, 30, 40, std::numeric_limits<float>::max()};
     const ADPThresholdsType adpThresholds = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
     template<std::size_t N>
@@ -76,6 +75,31 @@ public:
     inline auto operator()(const std::tuple<float, float> &slice){
         return this->operator()(std::get<0>(slice), std::get<1>(slice));
     }
-};
+}; // ScoreTable class 
+
+template<std::size_t N>
+class VectorCloud{
+private:
+    xt::xtensor_fixed<float, xt::xshape<N, 3>> nodes;
+    xt::xtensor_fixed<float, xt::xshape<N, 3>> vectors;
+
+public:
+    VectorCloud( xt::xtensor<float, 2> nodes_, xt::xtensor<float, 2> vectors_): 
+        nodes(xt::view(nodes_, xt::all(), xt::range(0, 3))), vectors(vectors_){
+        assert( nodes.shape == vectors.shape );
+    }
+
+    VectorCloud( xt::xtensor<float, 2> nodes_ ){
+        auto nodes = xt::view(nodes_, xt::all(), xt::range(0, 3));
+        // compute the first principle component as the main direction
+
+        VectorCloud( nodes, vectors );
+    }
+
+    //auto query_by(xt::xtensor<float, 1> &node){
+
+    //}
+
+}; // VectorCloud class
 
 } // end of namespace xiuli::neuron::nblast

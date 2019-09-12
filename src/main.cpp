@@ -3,6 +3,7 @@
 #define FORCE_IMPORT_ARRAY
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xiuli/xiuli.hpp"
+#include "xiuli/utils/math.hpp"
 
 
 namespace py = pybind11;
@@ -23,6 +24,8 @@ PYBIND11_MODULE(libxiuli, m) {
            downsample
            write_swc
     )pbdoc";
+
+    m.def("pca_first_component", &xiuli::utils::py_pca_first_component); 
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
     py::class_<xn::Skeleton>(m, "XSkeleton")
