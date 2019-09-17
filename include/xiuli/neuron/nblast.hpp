@@ -143,11 +143,11 @@ private:
         xt::xtensor<float, 1>::shape_type shape1D = {nearestNodeNum};
         xt::xtensor<std::size_t, 1> nearestNodeIndexes = xt::empty<std::size_t>(shape1D);
         xt::xtensor<float, 1> distances = xt::empty<std::size_t>(shape1D);
+        nf::KNNResultSet<float> resultSet( nearestNodeNum );
+        resultSet.init(nearestNodeIndexes.data(), distances.data());
         
         xt::xtensor<float, 2>::shape_type shape = {nearestNodeNum, 3};
         NodesType nearestNodes = xt::empty<float>(shape);
-        nf::KNNResultSet<float> resultSet( nearestNodeNum );
-        resultSet.init(nearestNodeIndexes.data(), distances.data());
 
         xt::xtensor<float, 2>::shape_type vshape = {nodeNum, 3};
         vectors = xt::empty<float>( vshape );
@@ -190,11 +190,51 @@ public:
         construct_vectors( nearestNodeNum );
     }
 
+    inline auto size(){
+        return nodes.shape(0);
+    }
+
+    inline auto get_nodes(){
+        return nodes;
+    }
+
+    //inline auto get_kdtree(){
+    //    return kdtree;
+    //}
+
     inline auto get_vectors(){
         return vectors;
     }
-    //auto query_by(xt::xtensor<float, 1> &node){
-    //}
+
+    auto query_by(VectorCloud &query, ScoreTable &scoreTable){
+        // raw NBLAST is accumulated by query nodes
+        float rawScore = 0;
+
+        float distance = 0;
+        float absoluteDotProduct = 0;
+        std::size_t nearestNodeIdx = 0; 
+        nf::KNNResultSet<float> resultSet( 1 );
+        resultSet.init(&nearestNodeIdx, &distance);
+
+        auto queryNodes = query.get_nodes();
+        for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
+            auto queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
+            // find the best match node in target and get physical distance
+            kdtree.findNeighbors(resultSet, queryNode.data(), nf::SearchParams(1));
+            
+            // compute the absolute dot product between the principle vectors
+            auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
+            auto targetVector = xt::view(vectors, nearestNodeIdx);
+            auto dot = xt::linalg::dot(queryVector, targetVector);
+            assert( dot.size() == 1 );
+            absoluteDotProduct = std::abs(dot(0));
+            //absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
+
+            // lookup the score table and accumulate the score
+            rawScore += scoreTable( distance,  absoluteDotProduct);
+        }
+        return rawScore; 
+    }
 
 }; // VectorCloud class
 
