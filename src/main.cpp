@@ -47,6 +47,11 @@ PYBIND11_MODULE(libxiuli, m) {
         .def_property_readonly("table", &xnn::ScoreTable::get_pytable)
         // python do not have single precision number!
         .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(&xnn::ScoreTable::operator()), "get table item");
+    
+    py::class_<xnn::VectorCloud>(m, "XVectorCloud")
+        .def(py::init<const xt::pytensor<float, 2>, const std::size_t>())
+        .def_property_readonly("vectors", &xnn::VectorCloud::get_vectors);
+
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

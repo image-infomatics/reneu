@@ -10,14 +10,17 @@
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xtensor/xcsv.hpp"
 #include "xiuli/utils/math.hpp"
-
+#include "nanoflann.hpp"
 
 // use the c++17 nested namespace
 namespace xiuli::neuron::nblast{
 
+using NodesType = xt::xtensor<float, 2>;
 using TableType = xt::xtensor_fixed<float, xt::xshape<21, 10>>; 
 using DistThresholdsType = xt::xtensor_fixed<float, xt::xshape<22>>; 
 using ADPThresholdsType = xt::xtensor_fixed<float, xt::xshape<11>>; 
+
+namespace nf = nanoflann;
 
 
 class ScoreTable{
@@ -77,27 +80,116 @@ public:
     }
 }; // ScoreTable class 
 
-template<std::size_t N>
+/**
+ * \brief adapt nodes to nanoflann datastructure without copy
+ */
+struct NodesAdaptor{
+    const NodesType &nodes; //!< A const ref to the data set origin
+
+    // the constructor that sets the data set source
+    NodesAdaptor(const NodesType &nodes_) : nodes(nodes_) {}
+
+    // CRTP helper method
+    inline const NodesType& derived() const { return nodes; }
+
+    // Must return the number of data points
+    inline std::size_t kdtree_get_point_count() const { return derived().shape(0); }
+
+    float kdtree_distance(const float *p, const std::size_t idx_q, std::size_t size) const{
+        //assert(size == 3);
+        return std::sqrt(std::pow(p[0] - nodes(idx_q, 0), 2) +  
+                         std::pow(p[1] - nodes(idx_q, 1), 2) +
+                         std::pow(p[2] - nodes(idx_q, 2), 2));   
+    }
+
+    // Returns the dim'th component of the idx'th point in the class:
+    // Since this is inlined and the "dim" argument is typically an immediate value,
+    // the "if/else's" are actually solved at compile time.
+    inline float kdtree_get_pt(const std::size_t idx, const std::size_t dim) const{
+        if (dim==0) return derived()(idx, 0);
+        else if (dim==1) return derived()(idx, 1);
+        else if (dim==2) return derived()(idx, 2);
+        else std::unexpected();
+    } 
+
+    // Optional bounding-box computation: return false to default to a standard bbox computation loop.
+	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+	template <class BBOX>
+	bool kdtree_get_bbox(BBOX& /*bb*/) const { return false; }
+}; // end of NodesAdaptor
+
+typedef NodesAdaptor Nodes2KD;
+
 class VectorCloud{
+
 private:
-    xt::xtensor_fixed<float, xt::xshape<N, 3>> nodes;
-    xt::xtensor_fixed<float, xt::xshape<N, 3>> vectors;
+    typedef nf::KDTreeSingleIndexAdaptor<
+            nf::L2_Simple_Adaptor<float, Nodes2KD>,
+            Nodes2KD, 3 /* dim */> my_kd_tree_t;
+
+    NodesType nodes;
+    xt::xtensor<float, 2> vectors;
+    // the adaptor
+    Nodes2KD nodes2kd;
+    my_kd_tree_t kdtree;
 
 public:
-    VectorCloud( xt::xtensor<float, 2> nodes_, xt::xtensor<float, 2> vectors_): 
-        nodes(xt::view(nodes_, xt::all(), xt::range(0, 3))), vectors(vectors_){
-        assert( nodes.shape == vectors.shape );
+    // our nodes array contains radius direction, but we do not need it.
+    VectorCloud( NodesType &nodes_, const std::size_t nearestNodeNum = 20 )
+        : nodes(nodes_),
+          nodes2kd(nodes),
+          kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
+    {
+        auto nodeNum = nodes.shape(0);
+
+        kdtree.buildIndex();
+        
+        // find the nearest k nodes and compute the first principle component as the main direction
+        xt::xtensor<float, 1>::shape_type shape1D = {nearestNodeNum};
+        xt::xtensor<std::size_t, 1> nearestNodeIndexes = xt::empty<std::size_t>(shape1D);
+        xt::xtensor<float, 1> distances = xt::empty<std::size_t>(shape1D);
+        
+        xt::xtensor<float, 2>::shape_type shape = {nearestNodeNum, 3};
+        NodesType nearestNodes = xt::empty<float>(shape);
+        nf::KNNResultSet<float> resultSet( nearestNodeNum );
+        resultSet.init(nearestNodeIndexes.data(), distances.data());
+
+        xt::xtensor<float, 2>::shape_type vshape = {nodeNum, 3};
+        vectors = xt::empty<float>( vshape );
+
+        for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
+            auto node = xt::view(nodes, nodeIdx, xt::range(0, 3));
+            kdtree.findNeighbors( resultSet, node.data(), nf::SearchParams(nearestNodeNum) );    
+
+            for (std::size_t i = 0; i < nearestNodeNum; i++){
+                auto nearestNodeIdx = nearestNodeIndexes(i);
+                //nearestNodes(i, xt::all()) = nodes(nearestNodeIdx, xt::range(0,3));
+                nearestNodes(i, 0) = nodes(nearestNodeIdx, 0);
+                nearestNodes(i, 1) = nodes(nearestNodeIdx, 1);
+                nearestNodes(i, 2) = nodes(nearestNodeIdx, 2);
+            }
+            // use the first principle component as the main direction
+            //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
+            auto direction = xiuli::utils::pca_first_component( nearestNodes );
+            vectors(nodeIdx, 0) = direction(0);
+            vectors(nodeIdx, 1) = direction(1);
+            vectors(nodeIdx, 2) = direction(2);
+        }
+    }
+    
+    VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
+        : nodes(nodes_),
+          nodes2kd(nodes),
+          kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
+    {
+        VectorCloud( nodes, nearestNodeNum );
     }
 
-    VectorCloud( xt::xtensor<float, 2> nodes_ ){
-        auto nodes = xt::view(nodes_, xt::all(), xt::range(0, 3));
-        // compute the first principle component as the main direction
-
-        VectorCloud( nodes, vectors );
+    inline auto get_vectors(){
+        return vectors;
     }
-
     //auto query_by(xt::xtensor<float, 1> &node){
-
     //}
 
 }; // VectorCloud class
