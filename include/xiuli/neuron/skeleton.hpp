@@ -128,12 +128,12 @@ private:
 public:
     virtual ~Skeleton() = default;
 
-    Skeleton( xt::pytensor<float, 2> nodes_, xt::pytensor<int, 2> attributes_):
+    Skeleton( const xt::pytensor<float, 2> &nodes_, const xt::pytensor<int, 2> &attributes_):
         nodes( nodes_ ), attributes( attributes_ ){
             update_first_child_and_sibling();
         }
 
-    Skeleton( xt::pytensor<float, 2> swcArray ){
+    Skeleton( const xt::pytensor<float, 2> &swcArray ){
         // this input array should follow the format of swc file
         assert(swcArray.shape(1) == 7);
         auto nodeNum = swcArray.shape(0);
@@ -159,7 +159,7 @@ public:
         update_first_child_and_sibling();
     }
 
-    Skeleton( std::string file_name ){
+    Skeleton( const std::string &file_name ){
         std::cerr<< "this function is pretty slow and should be speed up using memory map!" << std::endl;
         std::ifstream myfile(file_name, std::ios::in);
 

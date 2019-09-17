@@ -13,7 +13,7 @@ namespace xiuli::utils{
 /**
  * \brief compute the principle component, only return the first component to save some computation.
  */
-inline auto pca_first_component(xt::xtensor<float, 2> sample){
+auto pca_first_component(xt::xtensor<float, 2> sample){
     auto nodeNum = sample.shape(0);
     sample -= xt::mean(sample, {0});
     sample /= std::sqrt( nodeNum - 1 );
@@ -30,14 +30,18 @@ inline auto pca_first_component(xt::xtensor<float, 2> sample){
             maxIdx = i;
         }
     }
-
-    //xt::xtensor<float, 1> ret = xt::view(D, maxIdx, xt::all());
-    //return ret;
-    return xt::view(D, maxIdx, xt::all());
+    
+    //return xt::view(D, maxIdx, xt::all());
+    xt::xtensor<float, 1> ret = xt::view(D, maxIdx, xt::all());
+    return ret;
 }
 
 inline auto py_pca_first_component(xt::pytensor<float, 2> pysample){
-    return pca_first_component( pysample );
+    xt::xtensor<float, 2> sample = pysample;
+    auto pca = pca_first_component( sample );
+    // we have to transform to a real xtensor to return as numpy array
+    //xt::xtensor<float, 1> ret = pca;
+    return pca;
 }
 
 } // namespace xiuli::utils

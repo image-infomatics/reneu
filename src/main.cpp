@@ -29,9 +29,9 @@ PYBIND11_MODULE(libxiuli, m) {
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
     py::class_<xn::Skeleton>(m, "XSkeleton")
-        .def(py::init<xt::pytensor<float, 2>, xt::pytensor<int, 2>>())
-        .def(py::init<xt::pytensor<float, 2>>())
-        .def(py::init<std::string>())
+        .def(py::init<const xt::pytensor<float, 2>, const xt::pytensor<int, 2>>())
+        .def(py::init<const xt::pytensor<float, 2>>())
+        .def(py::init<const std::string>())
         .def_property_readonly("nodes", &xn::Skeleton::get_nodes)
         .def_property_readonly("attributes", &xn::Skeleton::get_attributes)
         .def_property_readonly("path_length", &xn::Skeleton::get_path_length)

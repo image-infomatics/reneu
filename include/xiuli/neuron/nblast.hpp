@@ -134,13 +134,7 @@ private:
     Nodes2KD nodes2kd;
     my_kd_tree_t kdtree;
 
-public:
-    // our nodes array contains radius direction, but we do not need it.
-    VectorCloud( NodesType &nodes_, const std::size_t nearestNodeNum = 20 )
-        : nodes(nodes_),
-          nodes2kd(nodes),
-          kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
-    {
+    auto construct_vectors( const std::size_t &nearestNodeNum ){
         auto nodeNum = nodes.shape(0);
 
         kdtree.buildIndex();
@@ -177,13 +171,23 @@ public:
             vectors(nodeIdx, 2) = direction(2);
         }
     }
+
+public:
+    // our nodes array contains radius direction, but we do not need it.
+    VectorCloud( NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
+        : nodes(nodes_),
+          nodes2kd(nodes),
+          kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
+    {
+        construct_vectors( nearestNodeNum );
+    }
     
     VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
         : nodes(nodes_),
           nodes2kd(nodes),
           kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
     {
-        VectorCloud( nodes, nearestNodeNum );
+        construct_vectors( nearestNodeNum );
     }
 
     inline auto get_vectors(){

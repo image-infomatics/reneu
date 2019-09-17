@@ -111,6 +111,10 @@ class BuildExt(build_ext):
         l_opts['unix'] += darwin_opts
 
     def build_extensions(self):
+        # remove the compilation warning. 
+        # This flag only works with C rather than C++
+        self.compiler.compiler_so.remove('-Wstrict-prototypes')
+
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
         link_opts = self.l_opts.get(ct, [])
@@ -130,7 +134,8 @@ class BuildExt(build_ext):
             ext.extra_compile_args = opts
             ext.extra_link_args = link_opts
 
-        build_ext.build_extensions(self)
+        super().build_extensions()
+        #build_ext.build_extensions(self)
 
 
 setup(
