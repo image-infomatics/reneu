@@ -56,7 +56,7 @@ ext_modules = [
             '-O3',
             '-ffast-math'
             # this is not working
-            #'-o chunkflow/lib/libchunkflow.so'
+            #'-o reneu/lib/libxiuli.so'
         ],
         # monitor the code change and rebuild
         depends = ['src/*'],

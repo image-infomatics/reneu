@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "xtensor/xtensor.hpp"
 #define FORCE_IMPORT_ARRAY
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
@@ -46,7 +47,8 @@ PYBIND11_MODULE(libxiuli, m) {
         .def(py::init<const xt::pytensor<float, 2>>())
         .def_property_readonly("table", &xnn::ScoreTable::get_pytable)
         // python do not have single precision number!
-        .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(&xnn::ScoreTable::operator()), "get table item");
+        .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(
+                                    &xnn::ScoreTable::operator()), "get table item");
     
     py::class_<xnn::VectorCloud>(m, "XVectorCloud")
         .def(py::init<const xt::pytensor<float, 2>, const std::size_t>())
@@ -55,7 +57,9 @@ PYBIND11_MODULE(libxiuli, m) {
         .def("query_by", &xnn::VectorCloud::query_by);
 
     py::class_<xnn::NBLASTScoreMatrix>(m, "XNBLASTScoreMatrix")
-        .def(py::init<const py::list &, const xnn::ScoreTable &>())
+        //.def(py::init<const py::list &, const xnn::ScoreTable &>())
+        // Note that the conversion from python list to std::vector has copy overhead
+        .def(py::init<const std::vector<xnn::VectorCloud> &, const xnn::ScoreTable &>())
         .def_property_readonly("raw_score_matrix", &xnn::NBLASTScoreMatrix::get_raw_score_matrix)
         .def_property_readonly("normalized_score_matrix", 
                                 &xnn::NBLASTScoreMatrix::get_normalized_score_matrix)

@@ -59,7 +59,13 @@ private:
 public:
     ScoreTable(const xt::pytensor<float, 2> &table_): table(table_){}
 
-    ScoreTable( const std::string fileName = std::filesystem::current_path() / "../../../data/smat_fcwb.csv"){
+    ScoreTable( const std::string fileName ){
+        std::ifstream in(fileName); 
+        table = xt::load_csv<float>( in );
+    }
+
+    ScoreTable(){
+        std::string fileName = std::filesystem::current_path() / "../../../data/smat_fcwb.csv";
         std::ifstream in(fileName); 
         table = xt::load_csv<float>( in );
     }
@@ -80,7 +86,7 @@ public:
         return table( distIdx, adpIdx );
     }
 
-    inline auto operator()(const std::tuple<float, float> &slice) const {
+    inline auto operator()(const std::tuple<float, float> &slice){
         return this->operator()(std::get<0>(slice), std::get<1>(slice));
     }
 
@@ -134,16 +140,13 @@ private:
             nf::L2_Simple_Adaptor<float, Nodes2KD>,
             Nodes2KD, 3 /* dim */> my_kd_tree_t;
 
+    //my_kd_tree_t () = default;
+
     NodesType nodes;
     xt::xtensor<float, 2> vectors;
-    // the adaptor
-    Nodes2KD nodes2kd;
-    my_kd_tree_t kdtree;
-
     auto construct_vectors( const std::size_t &nearestNodeNum ){
         auto nodeNum = nodes.shape(0);
 
-        kdtree.buildIndex();
         
         // find the nearest k nodes and compute the first principle component as the main direction
         xt::xtensor<float, 1>::shape_type shape1D = {nearestNodeNum};
@@ -179,6 +182,9 @@ private:
     }
 
 public:
+    // the adaptor
+    Nodes2KD nodes2kd;
+    my_kd_tree_t kdtree;
 
     inline auto size() const {
         return nodes.shape(0);
@@ -192,13 +198,13 @@ public:
         return vectors;
     }
 
-    auto get_nodes2kd() const {
-        return nodes2kd;
-    }
+    //auto get_nodes2kd() const {
+    //    return nodes2kd;
+    //}
 
-    auto get_kdtree() const{
-        return kdtree;
-    }
+    //auto get_kdtree() const{
+    //    return kdtree;
+    //}
 
     // our nodes array contains radius direction, but we do not need it.
     VectorCloud( NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
@@ -206,6 +212,7 @@ public:
           nodes2kd(nodes),
           kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
     {
+        kdtree.buildIndex();
         construct_vectors( nearestNodeNum );
     }
     
@@ -214,12 +221,22 @@ public:
           nodes2kd(nodes),
           kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
     {
+        kdtree.buildIndex();
         construct_vectors( nearestNodeNum );
     }
 
-    VectorCloud( const VectorCloud & other ){
-        nodes = other.get_nodes();
-        nodes2kd = other.get_nodes2kd();
+    VectorCloud( const VectorCloud & other )
+        :nodes(other.get_nodes()), 
+        vectors(other.get_vectors()), 
+        nodes2kd(other.get_nodes()),
+        kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
+    {
+        // this has overhead of recomputation
+        // since kdtree do not have default constructor and copy assignment operator,
+        // we can not directly copy it from other, but have to recompute it
+        // I have created an issue here:
+        // https://github.com/jlblancoc/nanoflann/issues/114
+        kdtree.buildIndex();
     }
 
     auto query_by(const VectorCloud &query, const ScoreTable &scoreTable) const {
@@ -241,10 +258,10 @@ public:
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
             auto targetVector = xt::view(vectors, nearestNodeIdx);
-            auto dot = xt::linalg::dot(queryVector, targetVector);
-            assert( dot.size() == 1 );
-            absoluteDotProduct = std::abs(dot(0));
-            //absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
+            //auto dot = xt::linalg::dot(queryVector, targetVector);
+            //assert( dot.size() == 1 );
+            //absoluteDotProduct = std::abs(dot(0));
+            absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
 
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct);
@@ -274,6 +291,10 @@ public:
             }
         }
     }
+
+    //NBLASTScoreMatrix( const py::list &vectorClouds, const ScoreTable scoreTable ){
+    //    
+    //}
 
     //NBLASTScoreMatrix(  const std::vector<xiuli::neuron::Skeleton> &skeletonList, 
     //                    const ScoreTable &scoreTable){
