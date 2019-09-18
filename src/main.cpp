@@ -51,7 +51,8 @@ PYBIND11_MODULE(libxiuli, m) {
     py::class_<xnn::VectorCloud>(m, "XVectorCloud")
         .def(py::init<const xt::pytensor<float, 2>, const std::size_t>())
         .def_property_readonly("vectors", &xnn::VectorCloud::get_vectors)
-        .def("__len__", &xnn::VectorCloud::size);
+        .def("__len__", &xnn::VectorCloud::size)
+        .def("query_by", &xnn::VectorCloud::query_by);
 
 
 #ifdef VERSION_INFO

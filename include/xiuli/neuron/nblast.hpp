@@ -27,8 +27,12 @@ class ScoreTable{
 
 private:
     TableType table;
-    const DistThresholdsType distThresholds = {0., 0.75, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 
-                                        12, 14, 16, 20, 25, 30, 40, std::numeric_limits<float>::max()};
+    //const DistThresholdsType distThresholds = {0., 0.75, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 
+    //                                    12, 14, 16, 20, 25, 30, 40, std::numeric_limits<float>::max()};
+    // this is using nanometer rather than micron
+    const DistThresholdsType distThresholds = {1000., 750, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 
+                                        12000, 14000, 16000, 20000, 25000, 30000, 40000, std::numeric_limits<float>::max()};
+
     const ADPThresholdsType adpThresholds = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
     template<std::size_t N>
