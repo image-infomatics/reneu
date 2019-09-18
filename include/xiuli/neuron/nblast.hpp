@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>       // std::numeric_limits
 #include <filesystem>
+#include <pybind11/pybind11.h>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xfixed.hpp"
 #include "xtensor/xview.hpp"
@@ -21,7 +22,7 @@ using DistThresholdsType = xt::xtensor_fixed<float, xt::xshape<22>>;
 using ADPThresholdsType = xt::xtensor_fixed<float, xt::xshape<11>>; 
 
 namespace nf = nanoflann;
-
+namespace py = pybind11;
 
 class ScoreTable{
 
@@ -36,7 +37,7 @@ private:
     const ADPThresholdsType adpThresholds = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
     template<std::size_t N>
-    auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, const float &value ){
+    auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, const float &value ) const {
         std::size_t start = 0;
         // Note that the last one index is N-1 rather than N_
         // This is following python indexing style, the last index is uninclusive
@@ -63,7 +64,7 @@ public:
         table = xt::load_csv<float>( in );
     }
 
-    inline auto get_pytable(){
+    inline auto get_pytable() const {
         // xtensor_fixed can not be converted to pytensor directly
         return xt::xtensor<float, 2>(table);
     }
@@ -73,15 +74,16 @@ public:
      * \param dist: physical distance
      * \param dp: absolute dot product of vectors
      */
-    inline auto operator()(const float &dist, const float &adp){
+    inline auto operator()(const float &dist, const float &adp) const {
         std::size_t distIdx = binary_search( distThresholds, dist );
         std::size_t adpIdx = binary_search( adpThresholds, adp );
         return table( distIdx, adpIdx );
     }
 
-    inline auto operator()(const std::tuple<float, float> &slice){
+    inline auto operator()(const std::tuple<float, float> &slice) const {
         return this->operator()(std::get<0>(slice), std::get<1>(slice));
     }
+
 }; // ScoreTable class 
 
 /**
@@ -177,6 +179,27 @@ private:
     }
 
 public:
+
+    inline auto size() const {
+        return nodes.shape(0);
+    }
+
+    inline auto get_nodes() const {
+        return nodes;
+    }
+
+    inline auto get_vectors() const {
+        return vectors;
+    }
+
+    auto get_nodes2kd() const {
+        return nodes2kd;
+    }
+
+    auto get_kdtree() const{
+        return kdtree;
+    }
+
     // our nodes array contains radius direction, but we do not need it.
     VectorCloud( NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
         : nodes(nodes_),
@@ -194,23 +217,12 @@ public:
         construct_vectors( nearestNodeNum );
     }
 
-    inline auto size(){
-        return nodes.shape(0);
+    VectorCloud( const VectorCloud & other ){
+        nodes = other.get_nodes();
+        nodes2kd = other.get_nodes2kd();
     }
 
-    inline auto get_nodes(){
-        return nodes;
-    }
-
-    //inline auto get_kdtree(){
-    //    return kdtree;
-    //}
-
-    inline auto get_vectors(){
-        return vectors;
-    }
-
-    auto query_by(VectorCloud &query, ScoreTable &scoreTable){
+    auto query_by(const VectorCloud &query, const ScoreTable &scoreTable) const {
         // raw NBLAST is accumulated by query nodes
         float rawScore = 0;
 
@@ -241,5 +253,67 @@ public:
     }
 
 }; // VectorCloud class
+
+class NBLASTScoreMatrix{
+private:
+// the rows are targets, the columns are queries
+xt::xtensor<float, 2> rawScoreMatrix;
+
+public:
+    NBLASTScoreMatrix(  const std::vector<VectorCloud> &vectorClouds, 
+                        const ScoreTable &scoreTable){
+        std::size_t vcNum = vectorClouds.size();
+        xt::xtensor<float, 2>::shape_type shape = {vcNum, vcNum};
+        rawScoreMatrix = xt::empty<float>( shape );
+
+        for (std::size_t targetIdx = 0; targetIdx<vcNum; targetIdx++){
+            VectorCloud target = vectorClouds[ targetIdx ];
+            for (std::size_t queryIdx = targetIdx; queryIdx<vcNum; queryIdx++){
+                auto query = vectorClouds[ queryIdx ];
+                rawScoreMatrix( targetIdx, queryIdx ) = target.query_by( query, scoreTable ); 
+            }
+        }
+    }
+
+    //NBLASTScoreMatrix(  const std::vector<xiuli::neuron::Skeleton> &skeletonList, 
+    //                    const ScoreTable &scoreTable){
+    //    
+    //}
+
+    inline auto get_neuron_number() const {
+        return rawScoreMatrix.shape(0);
+    }
+
+    inline auto get_raw_score_matrix() const {
+        return rawScoreMatrix;
+    }
+
+    /*
+     * \brief normalized by the self score of query
+     */
+    inline auto get_normalized_score_matrix() const {
+        xt::xtensor<float, 2> normalizedScoreMatrix = xt::zeros_like(rawScoreMatrix);
+        for (std::size_t queryIdx = 0; queryIdx<get_neuron_number(); queryIdx++){
+            auto selfQueryScore = rawScoreMatrix( queryIdx, queryIdx );
+            for (std::size_t targetIdx = 0; targetIdx<get_neuron_number(); targetIdx++){
+                normalizedScoreMatrix(targetIdx, queryIdx) = rawScoreMatrix(targetIdx, queryIdx) / selfQueryScore;
+            }
+        }
+        return normalizedScoreMatrix; 
+    }
+
+    inline auto get_mean_score_matrix() const {
+        auto normalizedScoreMatrix = get_normalized_score_matrix();
+        auto meanScoreMatrix = xt::ones_like( normalizedScoreMatrix );
+        for (std::size_t targetIdx = 0; targetIdx<get_neuron_number(); targetIdx++){
+            for (std::size_t queryIdx = targetIdx+1; queryIdx<get_neuron_number(); queryIdx++){
+                meanScoreMatrix(targetIdx, queryIdx) = (normalizedScoreMatrix(targetIdx, queryIdx) + 
+                                                        normalizedScoreMatrix(queryIdx, targetIdx)) / 2;
+                meanScoreMatrix(queryIdx, targetIdx) = meanScoreMatrix(targetIdx, queryIdx);
+            }
+        }
+        return meanScoreMatrix;
+    }
+};
 
 } // end of namespace xiuli::neuron::nblast

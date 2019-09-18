@@ -54,6 +54,15 @@ PYBIND11_MODULE(libxiuli, m) {
         .def("__len__", &xnn::VectorCloud::size)
         .def("query_by", &xnn::VectorCloud::query_by);
 
+    py::class_<xnn::NBLASTScoreMatrix>(m, "XNBLASTScoreMatrix")
+        .def(py::init<const py::list &, const xnn::ScoreTable &>())
+        .def_property_readonly("raw_score_matrix", &xnn::NBLASTScoreMatrix::get_raw_score_matrix)
+        .def_property_readonly("normalized_score_matrix", 
+                                &xnn::NBLASTScoreMatrix::get_normalized_score_matrix)
+        .def_property_readonly("mean_score_matrix", 
+                                &xnn::NBLASTScoreMatrix::get_mean_score_matrix);
+        
+
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
