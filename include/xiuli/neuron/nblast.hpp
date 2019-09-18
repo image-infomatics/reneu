@@ -147,6 +147,7 @@ private:
     auto construct_vectors( const std::size_t &nearestNodeNum ){
         auto nodeNum = nodes.shape(0);
 
+        kdtree.buildIndex();
         
         // find the nearest k nodes and compute the first principle component as the main direction
         xt::xtensor<float, 1>::shape_type shape1D = {nearestNodeNum};
@@ -186,6 +187,7 @@ public:
     Nodes2KD nodes2kd;
     my_kd_tree_t kdtree;
 
+
     inline auto size() const {
         return nodes.shape(0);
     }
@@ -212,7 +214,6 @@ public:
           nodes2kd(nodes),
           kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
     {
-        kdtree.buildIndex();
         construct_vectors( nearestNodeNum );
     }
     
@@ -221,7 +222,6 @@ public:
           nodes2kd(nodes),
           kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
     {
-        kdtree.buildIndex();
         construct_vectors( nearestNodeNum );
     }
 
