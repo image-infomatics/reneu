@@ -8,10 +8,10 @@
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xfixed.hpp"
 #include "xtensor/xview.hpp"
+#include "xtensor/xindex_view.hpp"
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xtensor/xcsv.hpp"
 #include "xiuli/utils/math.hpp"
-#include "nanoflann.hpp"
 
 // use the c++17 nested namespace
 namespace xiuli::neuron::nblast{
@@ -92,55 +92,82 @@ public:
 
 }; // ScoreTable class 
 
-/**
- * \brief adapt nodes to nanoflann datastructure without copy
- */
-struct NodesAdaptor{
-    const NodesType &nodes; //!< A const ref to the data set origin
+// KDTree
+class AbstractKDNode{};
 
-    // the constructor that sets the data set source
-    NodesAdaptor(const NodesType &nodes_) : nodes(nodes_) {}
+using KDNodePtr = std::shared_ptr<AbstractKDNode>;
 
-    // CRTP helper method
-    inline const NodesType& derived() const { return nodes; }
+class KDLeafNode: public AbstractKDNode{
+private:
+    xt::xtensor<std::size_t, 1> nodeIndices;
 
-    // Must return the number of data points
-    inline std::size_t kdtree_get_point_count() const { return derived().shape(0); }
+public:
+    KDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : nodeIndices(nodeIndices_){}
+};
 
-    float kdtree_distance(const float *p, const std::size_t idx_q, std::size_t size) const{
-        //assert(size == 3);
-        return std::sqrt(std::pow(p[0] - nodes(idx_q, 0), 2) +  
-                         std::pow(p[1] - nodes(idx_q, 1), 2) +
-                         std::pow(p[2] - nodes(idx_q, 2), 2));   
+class KDInsideNode: public AbstractKDNode{
+public: 
+
+private:
+    std::size_t middleNodeIndex;
+    KDNodePtr left;
+    KDNodePtr right;
+
+public:
+    KDInsideNode()=default;
+    KDInsideNode(const std::size_t &middleNodeIndex_, KDNodePtr left_, KDNodePtr right_):
+        middleNodeIndex(middleNodeIndex_), left(left_), right(right_){};
+}; // KDNode class
+
+template<const std::size_t K=10>
+class KDTree{
+private:
+    KDNodePtr root;
+    const NodesType nodes;
+    const std::size_t medianIndex;
+
+    KDNodePtr make_kdtree_node(const xt::xtensor<float, 1> &coords, std::size_t &dim){
+        // find the median value index
+        auto sortedIndices = xt::argpartition(coords, medianIndex);
+        auto middleNodeIndex = sortedIndices[medianIndex];
+
+        // recursively loop the dimension in 3D
+        if(dim==3)
+            dim = 0;
+        else
+            dim += 1;
+        
+        if (medianIndex > K){
+            coords = xt::view(nodes, xt::all(), dim);
+            auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
+            auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
+            auto leftCoords = xt::index_view(coords, leftIndices);
+            auto rightCoords = xt::index_view(coords, rightIndices);
+            KDNodePtr leftNodePtr = make_kdtree_node( leftCoords, dim );
+            KDNodePtr rightNodePtr = make_kdtree_node( rightCoords, dim );
+        } else {
+            // include all the nodes as a leaf
+            leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex);
+            rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
+            KDNodePtr leftNodePtr = std::make_shared<AbstractKDNode>( KDLeafNode(leftIndices) );
+            KDNodePtr rightNodePtr = std::make_shared<AbstractKDNode>( KDLeafNode(rightIndices) );
+        }
+
+        return std::make_shared<AbstractKDNode>(KDInsideNode(newIndex, leftNodePtr, rightNodePtr));
     }
 
-    // Returns the dim'th component of the idx'th point in the class:
-    // Since this is inlined and the "dim" argument is typically an immediate value,
-    // the "if/else's" are actually solved at compile time.
-    inline float kdtree_get_pt(const std::size_t idx, const std::size_t dim) const{
-        if (dim==0) return derived()(idx, 0);
-        else if (dim==1) return derived()(idx, 1);
-        else if (dim==2) return derived()(idx, 2);
-        else std::unexpected();
-    } 
+public:
+    KDTree<std::size_t K>(const NodesType &nodes_): nodes(nodes_){
+        medianIndex = nodes.shape(0) / 2;
+        // start from first dimension
+        std::size_t dim = 0;
 
-    // Optional bounding-box computation: return false to default to a standard bbox computation loop.
-	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
-	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
-	template <class BBOX>
-	bool kdtree_get_bbox(BBOX& /*bb*/) const { return false; }
-}; // end of NodesAdaptor
-
-typedef NodesAdaptor Nodes2KD;
+    }
+}; // KDTree class
 
 class VectorCloud{
 
 private:
-    typedef nf::KDTreeSingleIndexAdaptor<
-            nf::L2_Simple_Adaptor<float, Nodes2KD>,
-            Nodes2KD, 3 /* dim */> my_kd_tree_t;
-
-    //my_kd_tree_t () = default;
 
     NodesType nodes;
     xt::xtensor<float, 2> vectors;
