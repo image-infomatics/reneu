@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>       // std::numeric_limits
 #include <filesystem>
+#include <memory>
 #include <pybind11/pybind11.h>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xfixed.hpp"
@@ -111,8 +112,9 @@ public:
     KDNodePtr rightNodePtr;
 
     KDInsideNode()=default;
-    KDInsideNode(const std::size_t &middleNodeIndex_, KDNodePtr left_, KDNodePtr right_):
-        middleNodeIndex(middleNodeIndex_), left(left_), right(right_){};
+    KDInsideNode(const std::size_t &middleNodeIndex_, 
+                    KDNodePtr leftNodePtr_, KDNodePtr rightNodePtr_):
+    middleNodeIndex(middleNodeIndex_), leftNodePtr(leftNodePtr_), rightNodePtr(rightNodePtr_){};
 }; // KDNode class
 using KDInsideNodePtr = std::shared_ptr<KDInsideNode>;
 
@@ -120,8 +122,8 @@ class KDTree{
 private:
     KDNodePtr root;
     const NodesType nodes;
-    const std::size_t K;
-    auto next_dim(std::size_t &dim){
+    const std::size_t nearestNodeNum;
+    auto next_dim(std::size_t &dim) const {
         if(dim==3)
             dim = 0;
         else
@@ -138,7 +140,7 @@ private:
 
         // recursively loop the dimension in 3D
         next_dim(dim);       
-        if (medianIndex > K){
+        if (medianIndex > nearestNodeNum){
             auto coords = xt::view(nodes, xt::all(), dim);
             auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
             auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
@@ -148,66 +150,96 @@ private:
             KDNodePtr rightNodePtr = make_kdtree_node( rightCoords, dim );
         } else {
             // include all the nodes as a leaf
-            auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex);
+            auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
             auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
-            KDNodePtr leftNodePtr = std::make_shared<KDLeafNode>( KDLeafNode(leftIndices) );
-            KDNodePtr rightNodePtr = std::make_shared<KDLeafNode>( KDLeafNode(rightIndices) );
+            KDNodePtr leftNodePtr = std::make_shared<KDLeafNode>( leftIndices );
+            KDNodePtr rightNodePtr = std::make_shared<KDLeafNode>( rightIndices );
         }
 
         return std::make_shared<AbstractKDNode>(KDInsideNode(middleNodeIndex, leftNodePtr, rightNodePtr));
     }
 
-    std::tuple<std::size_t, float> search_nearest_node_in_kdtree(KDNodePtr kdNodePtr,
-                                        const xt::xtensor<float, 1> &queryNode, std::size_t &dim){
+    std::vector<std::pair<std::size_t, float>> search_nearest_nodes_in_kdtree (
+                KDNodePtr kdNodePtr,
+                const xt::xtensor<float, 1> &queryNode, std::size_t &dim, 
+                const std::size_t &nearestNodeNum=1) const {
         // use dynamic_cast to check the class
-        if( KDInsideNodePtr kdInsideNodePtr = dynamic_cast<KDInsideNode*>( kdNodePtr ) ){
+        if( KDInsideNodePtr kdInsideNodePtr = 
+                            std::static_pointer_cast<KDInsideNode>( kdNodePtr ) ){
             // compare with the median value
             if (queryNode(dim) < nodes(kdInsideNodePtr->middleNodeIndex, dim)){
                 // continue checking left nodes
                 auto leftNodePtr = kdInsideNodePtr->leftNodePtr;
                 next_dim(dim);
-                return search_nearest_node_in_kdtree(leftNodePtr, queryNode, dim);
+                return search_nearest_nodes_in_kdtree(leftNodePtr, queryNode, dim);
             } else {
                 auto rightNodePtr = kdInsideNodePtr->rightNodePtr;
                 next_dim(dim);
-                return search_nearest_node_in_kdtree(rightNodePtr, queryNode, dim);
+                return search_nearest_nodes_in_kdtree(rightNodePtr, queryNode, dim);
             }
-        } else {
-            KDLeafNodePtr kdLeafNodePtr = dynamic_cast<KDLeafNode*>( kdNodePtr );
+        } else if (KDLeafNodePtr kdLeafNodePtr = 
+                            std::static_pointer_cast<KDLeafNode>( kdNodePtr ) ){
 
             // this is a leaf node, we have to compute the distance one by one
             auto nodeIndices = kdLeafNodePtr->nodeIndices;
-            // use squared distance to avoid sqrt computation
-            float minSquaredDist = std::numeric_limits<float>::max();
-            std::size_t nearestNodeIndex = 0;
-            for (auto i : nodeIndices){
-                auto node = xt::view(nodes, i, xt::range(0, 3));
-                float squaredDist = xt::norm_sq(node, queryNode);
-                if (squaredDist < minSquaredDist){
-                    nearestNodeIndex = i;
-                    minSquaredDist = squaredDist;
+            std::vector<std::pair<std::size_t, float>> ret = {};
+            if (nearestNodeNum == 1){
+                // use squared distance to avoid sqrt computation
+                float minSquaredDist = std::numeric_limits<float>::max();
+                std::size_t nearestNodeIndex = 0;
+                for (auto i : nodeIndices){
+                    auto node = xt::view(nodes, i, xt::range(0, 3));
+                    float squaredDist = xt::norm_sq(node - queryNode)(0);
+                    if (squaredDist < minSquaredDist){
+                        nearestNodeIndex = i;
+                        minSquaredDist = squaredDist;
+                    }
                 }
+                float minDist = std::sqrt(minSquaredDist);
+                ret.push_back( std::make_pair( nearestNodeIndex, minDist ) );
+                return ret;
+            } else if (((nearestNodeNum - nodeIndices.size())>= -1) && 
+                      ((nearestNodeNum - nodeIndices.size())<=  1) && nearestNodeNum>1){
+                // return the whole leaf as an approximation 
+                // Note that this will make it inconsistent with KDTree result, but faster
+                ret.reserve( nodeIndices.size() );
+                for (auto i : nodeIndices){
+                    auto node = xt::view(nodes, i, xt::range(0, 3));
+                    float dist = xt::norm_l2( node - queryNode )(0);
+                    ret.push_back( std::pair(i, dist) );
+                }
+                return ret;
+            } else {
+                std::cerr<< "only support nearest node number 1 or close to K"<<std::endl;
             }
-            float minDist = std::sqrt(minSquaredDist);
-            return std::make_tuple(nearestNodeIndex, minDist);
+        } else {
+            std::cerr<< "kdNodePtr is not pointing to correct type!" <<std::endl;
         }
     }
 
 public:
-    KDTree(const NodesType &nodes_, const std::size_t K_=20): nodes(nodes_), K(K_){
+    KDTree(const NodesType &nodes_, const std::size_t nearestNodeNum_=20): 
+            nodes(nodes_), nearestNodeNum(nearestNodeNum_){
         // start from first dimension
         std::size_t dim = 0;
         auto coords = xt::view(nodes, xt::all(), dim);
         root = make_kdtree_node( coords, dim );
     }
 
-    auto get_nearest_node(const xt::xtensor<float, 1> &queryNode, const std::size_t &dim=0){
+    auto get_nearest_node(const xt::xtensor<float, 1> &queryNode) const {
+        std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0,3));
-        return search_nearest_node_in_kdtree(root, queryNodeCoord);
+        auto results = search_nearest_nodes_in_kdtree(root, queryNodeCoord, dim, 1);
+        assert( 1 == results.size() );
+        return results[0];
     }
-    
 
-
+    auto get_k_nearest_nodes(const xt::xtensor<float, 1> &queryNode, 
+                                        const std::size_t &nearestNodeNum=20) const {
+        std::size_t dim = 0;
+        auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
+        return search_nearest_nodes_in_kdtree(root, queryNodeCoord, dim, nearestNodeNum);
+    } 
 }; // KDTree class
 
 class VectorCloud{
@@ -217,7 +249,7 @@ private:
     NodesType nodes;
     xt::xtensor<float, 2> vectors;
     KDTree kdtree;
-    auto construct_vectors(const std::size_t &nearestNodeNum){
+    auto construct_vectors(const std::size_t &nearestNodeNum=20){
         auto nodeNum = nodes.shape(0);
         
         // find the nearest k nodes and compute the first principle component as the main direction
@@ -229,14 +261,13 @@ private:
 
         for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
             auto node = xt::view(nodes, nodeIdx, xt::range(0, 3));
-            kdtree.findNeighbors( resultSet, node.data(), nf::SearchParams(nearestNodeNum) );    
-
+            auto nearestNeighbors = kdtree.get_k_nearest_nodes(node, nearestNodeNum);
             for (std::size_t i = 0; i < nearestNodeNum; i++){
-                auto nearestNodeIdx = nearestNodeIndexes(i);
+                auto nearestNodeIndex = nearestNeighbors[i].first;
                 //nearestNodes(i, xt::all()) = nodes(nearestNodeIdx, xt::range(0,3));
-                nearestNodes(i, 0) = nodes(nearestNodeIdx, 0);
-                nearestNodes(i, 1) = nodes(nearestNodeIdx, 1);
-                nearestNodes(i, 2) = nodes(nearestNodeIdx, 2);
+                nearestNodes(i, 0) = nodes(nearestNodeIndex, 0);
+                nearestNodes(i, 1) = nodes(nearestNodeIndex, 1);
+                nearestNodes(i, 2) = nodes(nearestNodeIndex, 2);
             }
             // use the first principle component as the main direction
             //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
@@ -268,40 +299,24 @@ public:
     }
     
     VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_),
+        : nodes(nodes_), kdtree(KDTree(nodes_, nearestNodeNum))
     {
         construct_vectors( nearestNodeNum );
     }
 
-    VectorCloud( const VectorCloud & other )
-        :nodes(other.get_nodes()), 
-        vectors(other.get_vectors()), 
-        nodes2kd(other.get_nodes()),
-        kdtree(3 /*dim*/, nodes2kd, nf::KDTreeSingleIndexAdaptorParams(10 /*max leaf*/))
-    {
-        // this has overhead of recomputation
-        // since kdtree do not have default constructor and copy assignment operator,
-        // we can not directly copy it from other, but have to recompute it
-        // I have created an issue here:
-        // https://github.com/jlblancoc/nanoflann/issues/114
-        kdtree.buildIndex();
-    }
-
-    auto query_by(const VectorCloud &query, const ScoreTable &scoreTable) const {
+    auto query_by(VectorCloud &query, const ScoreTable &scoreTable) const {
         // raw NBLAST is accumulated by query nodes
         float rawScore = 0;
 
         float distance = 0;
         float absoluteDotProduct = 0;
         std::size_t nearestNodeIdx = 0; 
-        nf::KNNResultSet<float> resultSet( 1 );
-        resultSet.init(&nearestNodeIdx, &distance);
 
-        auto queryNodes = query.get_nodes();
+        NodesType queryNodes = query.get_nodes();
         for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
-            auto queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
+            xt::xtensor<float, 1> queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
             // find the best match node in target and get physical distance
-            kdtree.findNeighbors(resultSet, queryNode.data(), nf::SearchParams(1));
+            auto nearestNodeDist = kdtree.get_nearest_node( queryNode ).second;
             
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
@@ -312,7 +327,7 @@ public:
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
 
             // lookup the score table and accumulate the score
-            rawScore += scoreTable( distance,  absoluteDotProduct);
+            rawScore += scoreTable( nearestNodeDist,  absoluteDotProduct );
         }
         return rawScore; 
     }
