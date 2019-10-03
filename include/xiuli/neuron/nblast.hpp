@@ -94,12 +94,17 @@ public:
 }; // ScoreTable class 
 
 // KDTree
-class AbstractKDNode{};
+class AbstractKDNode{
+public:
+    // we need to make base class polymorphic for dynamic cast
+    virtual ~AbstractKDNode() = default;
+};
 
 using KDNodePtr = std::shared_ptr<AbstractKDNode>;
 
 class KDLeafNode: public AbstractKDNode{
 public:
+    ~KDLeafNode() = default;
     xt::xtensor<std::size_t, 1> nodeIndices;
     KDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : nodeIndices(nodeIndices_){}
 };
@@ -107,11 +112,11 @@ using KDLeafNodePtr = std::shared_ptr<KDLeafNode>;
 
 class KDInsideNode: public AbstractKDNode{
 public: 
+    ~KDInsideNode() = default;
     std::size_t middleNodeIndex;
     KDNodePtr leftNodePtr;
     KDNodePtr rightNodePtr;
 
-    KDInsideNode()=default;
     KDInsideNode(const std::size_t &middleNodeIndex_, 
                     KDNodePtr leftNodePtr_, KDNodePtr rightNodePtr_):
     middleNodeIndex(middleNodeIndex_), leftNodePtr(leftNodePtr_), rightNodePtr(rightNodePtr_){};
@@ -165,7 +170,7 @@ private:
                 const std::size_t &nearestNodeNum=1) const {
         // use dynamic_cast to check the class
         if( KDInsideNodePtr kdInsideNodePtr = 
-                            std::static_pointer_cast<KDInsideNode>( kdNodePtr ) ){
+                            std::dynamic_pointer_cast<KDInsideNode>( kdNodePtr ) ){
             // compare with the median value
             if (queryNode(dim) < nodes(kdInsideNodePtr->middleNodeIndex, dim)){
                 // continue checking left nodes
@@ -178,7 +183,7 @@ private:
                 return search_nearest_nodes_in_kdtree(rightNodePtr, queryNode, dim);
             }
         } else if (KDLeafNodePtr kdLeafNodePtr = 
-                            std::static_pointer_cast<KDLeafNode>( kdNodePtr ) ){
+                            std::dynamic_pointer_cast<KDLeafNode>( kdNodePtr ) ){
 
             // this is a leaf node, we have to compute the distance one by one
             auto nodeIndices = kdLeafNodePtr->nodeIndices;
