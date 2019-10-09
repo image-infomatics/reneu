@@ -93,41 +93,41 @@ public:
 
 }; // ScoreTable class 
 
-// KDTree
-class AbstractKDNode{
+// ThreeDTree
+class AbstractThreeDNode{
 public:
     // we need to make base class polymorphic for dynamic cast
-    virtual ~AbstractKDNode() = default;
+    virtual ~AbstractThreeDNode() = default;
 };
 
-using KDNodePtr = std::shared_ptr<AbstractKDNode>;
+using ThreeDNodePtr = std::shared_ptr<AbstractThreeDNode>;
 
-class KDLeafNode: public AbstractKDNode{
+class ThreeDLeafNode: public AbstractThreeDNode{
 public:
-    ~KDLeafNode() = default;
+    ~ThreeDLeafNode() = default;
     xt::xtensor<std::size_t, 1> nodeIndices;
-    KDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : nodeIndices(nodeIndices_){}
+    ThreeDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : nodeIndices(nodeIndices_){}
 };
-using KDLeafNodePtr = std::shared_ptr<KDLeafNode>;
+using ThreeDLeafNodePtr = std::shared_ptr<ThreeDLeafNode>;
 
-class KDInsideNode: public AbstractKDNode{
+class ThreeDInsideNode: public AbstractThreeDNode{
 public: 
-    ~KDInsideNode() = default;
+    ~ThreeDInsideNode() = default;
     std::size_t middleNodeIndex;
-    KDNodePtr leftNodePtr;
-    KDNodePtr rightNodePtr;
+    ThreeDNodePtr leftNodePtr;
+    ThreeDNodePtr rightNodePtr;
 
-    KDInsideNode(const std::size_t &middleNodeIndex_, 
-                    KDNodePtr leftNodePtr_, KDNodePtr rightNodePtr_):
+    ThreeDInsideNode(const std::size_t &middleNodeIndex_, 
+                    ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_):
     middleNodeIndex(middleNodeIndex_), leftNodePtr(leftNodePtr_), rightNodePtr(rightNodePtr_){};
-}; // KDNode class
-using KDInsideNodePtr = std::shared_ptr<KDInsideNode>;
+}; // ThreeDNode class
+using ThreeDInsideNodePtr = std::shared_ptr<ThreeDInsideNode>;
 
-class KDTree{
+class ThreeDTree{
 private:
-    KDNodePtr root;
+    ThreeDNodePtr root;
     const NodesType nodes;
-    const std::size_t nearestNodeNum;
+    const std::size_t leafSize;
     auto next_dim(std::size_t &dim) const {
         if(dim==3)
             dim = 0;
@@ -135,58 +135,58 @@ private:
             dim += 1;
     }
 
-    KDNodePtr make_kdtree_node(const xt::xtensor<float, 1> &coords, std::size_t &dim){
+    ThreeDNodePtr make_ThreeDtree_node(const xt::xtensor<float, 1> &coords, std::size_t &dim){
         // find the median value index
         const auto medianIndex = coords.size() / 2;
         auto sortedIndices = xt::argpartition(coords, medianIndex);
         auto middleNodeIndex = sortedIndices(medianIndex);
 
-        KDNodePtr leftNodePtr, rightNodePtr;
+        ThreeDNodePtr leftNodePtr, rightNodePtr;
 
         // recursively loop the dimension in 3D
         next_dim(dim);       
-        if (medianIndex > nearestNodeNum){
+        if (medianIndex > leafSize){
             auto coords = xt::view(nodes, xt::all(), dim);
             auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
             auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
             auto leftCoords = xt::index_view(coords, leftIndices);
             auto rightCoords = xt::index_view(coords, rightIndices);
-            KDNodePtr leftNodePtr = make_kdtree_node( leftCoords, dim );
-            KDNodePtr rightNodePtr = make_kdtree_node( rightCoords, dim );
+            ThreeDNodePtr leftNodePtr = make_ThreeDtree_node( leftCoords, dim );
+            ThreeDNodePtr rightNodePtr = make_ThreeDtree_node( rightCoords, dim );
         } else {
             // include all the nodes as a leaf
             auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
             auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
-            KDNodePtr leftNodePtr = std::make_shared<KDLeafNode>( leftIndices );
-            KDNodePtr rightNodePtr = std::make_shared<KDLeafNode>( rightIndices );
+            ThreeDNodePtr leftNodePtr = std::make_shared<ThreeDLeafNode>( leftIndices );
+            ThreeDNodePtr rightNodePtr = std::make_shared<ThreeDLeafNode>( rightIndices );
         }
 
-        return std::make_shared<AbstractKDNode>(KDInsideNode(middleNodeIndex, leftNodePtr, rightNodePtr));
+        return std::make_shared<AbstractThreeDNode>(ThreeDInsideNode(middleNodeIndex, leftNodePtr, rightNodePtr));
     }
 
-    std::vector<std::pair<std::size_t, float>> search_nearest_nodes_in_kdtree (
-                KDNodePtr kdNodePtr,
+    std::vector<std::pair<std::size_t, float>> search_nearest_nodes_in_ThreeDtree (
+                ThreeDNodePtr ThreeDNodePtr,
                 const xt::xtensor<float, 1> &queryNode, std::size_t &dim, 
                 const std::size_t &nearestNodeNum=1) const {
         // use dynamic_cast to check the class
-        if( KDInsideNodePtr kdInsideNodePtr = 
-                            std::dynamic_pointer_cast<KDInsideNode>( kdNodePtr ) ){
+        if( ThreeDInsideNodePtr ThreeDInsideNodePtr = 
+                            std::dynamic_pointer_cast<ThreeDInsideNode>( ThreeDNodePtr ) ){
             // compare with the median value
-            if (queryNode(dim) < nodes(kdInsideNodePtr->middleNodeIndex, dim)){
+            if (queryNode(dim) < nodes(ThreeDInsideNodePtr->middleNodeIndex, dim)){
                 // continue checking left nodes
-                auto leftNodePtr = kdInsideNodePtr->leftNodePtr;
+                auto leftNodePtr = ThreeDInsideNodePtr->leftNodePtr;
                 next_dim(dim);
-                return search_nearest_nodes_in_kdtree(leftNodePtr, queryNode, dim);
+                return search_nearest_nodes_in_ThreeDtree(leftNodePtr, queryNode, dim);
             } else {
-                auto rightNodePtr = kdInsideNodePtr->rightNodePtr;
+                auto rightNodePtr = ThreeDInsideNodePtr->rightNodePtr;
                 next_dim(dim);
-                return search_nearest_nodes_in_kdtree(rightNodePtr, queryNode, dim);
+                return search_nearest_nodes_in_ThreeDtree(rightNodePtr, queryNode, dim);
             }
-        } else if (KDLeafNodePtr kdLeafNodePtr = 
-                            std::dynamic_pointer_cast<KDLeafNode>( kdNodePtr ) ){
+        } else if (ThreeDLeafNodePtr ThreeDLeafNodePtr = 
+                            std::dynamic_pointer_cast<ThreeDLeafNode>( ThreeDNodePtr ) ){
 
             // this is a leaf node, we have to compute the distance one by one
-            auto nodeIndices = kdLeafNodePtr->nodeIndices;
+            auto nodeIndices = ThreeDLeafNodePtr->nodeIndices;
             std::vector<std::pair<std::size_t, float>> ret = {};
             if (nearestNodeNum == 1){
                 // use squared distance to avoid sqrt computation
@@ -206,7 +206,7 @@ private:
             } else if (((nearestNodeNum - nodeIndices.size())>= -1) && 
                       ((nearestNodeNum - nodeIndices.size())<=  1) && nearestNodeNum>1){
                 // return the whole leaf as an approximation 
-                // Note that this will make it inconsistent with KDTree result, but faster
+                // Note that this will make it inconsistent with ThreeDTree result, but faster
                 ret.reserve( nodeIndices.size() );
                 for (auto i : nodeIndices){
                     auto node = xt::view(nodes, i, xt::range(0, 3));
@@ -218,23 +218,23 @@ private:
                 std::cerr<< "only support nearest node number 1 or close to K"<<std::endl;
             }
         } else {
-            std::cerr<< "kdNodePtr is not pointing to correct type!" <<std::endl;
+            std::cerr<< "ThreeDNodePtr is not pointing to correct type!" <<std::endl;
         }
     }
 
 public:
-    KDTree(const NodesType &nodes_, const std::size_t nearestNodeNum_=20): 
-            nodes(nodes_), nearestNodeNum(nearestNodeNum_){
+    ThreeDTree(const NodesType &nodes_, const std::size_t leafSize_=10): 
+            nodes(nodes_), leafSize(leafSize_){
         // start from first dimension
         std::size_t dim = 0;
         auto coords = xt::view(nodes, xt::all(), dim);
-        root = make_kdtree_node( coords, dim );
+        root = make_ThreeDtree_node( coords, dim );
     }
 
     auto get_nearest_node(const xt::xtensor<float, 1> &queryNode) const {
         std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0,3));
-        auto results = search_nearest_nodes_in_kdtree(root, queryNodeCoord, dim, 1);
+        auto results = search_nearest_nodes_in_ThreeDtree(root, queryNodeCoord, dim, 1);
         assert( 1 == results.size() );
         return results[0];
     }
@@ -243,9 +243,9 @@ public:
                                         const std::size_t &nearestNodeNum=20) const {
         std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
-        return search_nearest_nodes_in_kdtree(root, queryNodeCoord, dim, nearestNodeNum);
+        return search_nearest_nodes_in_ThreeDtree(root, queryNodeCoord, dim, nearestNodeNum);
     } 
-}; // KDTree class
+}; // ThreeDTree class
 
 class VectorCloud{
 
@@ -253,7 +253,7 @@ private:
 
     NodesType nodes;
     xt::xtensor<float, 2> vectors;
-    KDTree kdtree;
+    ThreeDTree ThreeDtree;
     auto construct_vectors(const std::size_t &nearestNodeNum=20){
         auto nodeNum = nodes.shape(0);
         
@@ -266,7 +266,7 @@ private:
 
         for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
             auto node = xt::view(nodes, nodeIdx, xt::range(0, 3));
-            auto nearestNeighbors = kdtree.get_k_nearest_nodes(node, nearestNodeNum);
+            auto nearestNeighbors = ThreeDtree.get_k_nearest_nodes(node, nearestNodeNum);
             for (std::size_t i = 0; i < nearestNodeNum; i++){
                 auto nearestNodeIndex = nearestNeighbors[i].first;
                 //nearestNodes(i, xt::all()) = nodes(nearestNodeIdx, xt::range(0,3));
@@ -298,13 +298,13 @@ public:
 
     // our nodes array contains radius direction, but we do not need it.
     VectorCloud( NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), kdtree(KDTree(nodes_, nearestNodeNum))
+        : nodes(nodes_), ThreeDtree(ThreeDTree(nodes_, nearestNodeNum))
     {
         construct_vectors( nearestNodeNum );
     }
     
     VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), kdtree(KDTree(nodes_, nearestNodeNum))
+        : nodes(nodes_), ThreeDtree(ThreeDTree(nodes_, nearestNodeNum))
     {
         construct_vectors( nearestNodeNum );
     }
@@ -321,7 +321,7 @@ public:
         for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
             xt::xtensor<float, 1> queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
             // find the best match node in target and get physical distance
-            auto nearestNodeDist = kdtree.get_nearest_node( queryNode ).second;
+            auto nearestNodeDist = ThreeDtree.get_nearest_node( queryNode ).second;
             
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
