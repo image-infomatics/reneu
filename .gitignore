@@ -103,5 +103,4 @@ venv.bak/
 
 .vscode/
 tmp/
-net/
-scripts/
+data/
