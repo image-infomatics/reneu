@@ -4,6 +4,11 @@ Morphology and connectivity analysis for real neural network
 
 # Development
 
+compile C++ backend
+
+    python setup.py develop
+
 export conda environment
 
     conda env export > environment.yml
+
