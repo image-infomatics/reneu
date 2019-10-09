@@ -103,7 +103,5 @@ venv.bak/
 
 .vscode/
 tmp/
-data/
-jwu/
 net/
 scripts/
