@@ -2,7 +2,6 @@ from os.path import join as joinpath
 from os.path import dirname
 import time
 from math import isclose
-import numpy as np
 
 
 from reneu.lib.xiuli import XSkeleton
@@ -63,6 +62,10 @@ def test_skeleton():
     start = time.process_time()
     temp_file_name = '/tmp/{}.swc'.format(NEURON_NAME)
     sk.to_swc(temp_file_name, 3)
+
+    with open(temp_file_name) as f:
+        assert f.read() == sk.to_swc_str(3)
+
     print('time elapse of write swc: ', time.process_time() - start)
     sk2 = Skeleton.from_swc( temp_file_name )
     assert sk == sk2

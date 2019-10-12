@@ -8,6 +8,7 @@
 #include <tuple>
 #include <ctime>
 #include <chrono>
+#include <iomanip>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xsort.hpp"
@@ -438,7 +439,34 @@ public:
         }
         return pathLength;
     }
-        
+    
+    std::string to_swc_str( const int precision = 3 ){
+        std::ostringstream swc;
+        swc << std::fixed;
+        swc << std::setprecision( precision );
+        auto classes = get_classes();
+        auto parents = get_parents();
+        auto nodeNum = nodes.shape(0);
+
+        // add some commented header
+        auto now = std::chrono::system_clock::now();
+        auto now_t = std::chrono::system_clock::to_time_t( now );
+        swc << "# Created using reneu at " << std::ctime(&now_t) << 
+            "# https://github.com/jingpengw/reneu \n";
+
+        for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++ ){
+            // index, class, x, y, z, r, parent
+            swc << nodeIdx+1 << " " << classes(nodeIdx) << " " 
+                << std::fixed << nodes(nodeIdx, 0) << " " 
+                << std::fixed << nodes(nodeIdx, 1) << " " 
+                << std::fixed << nodes(nodeIdx, 2) << " " 
+                << std::fixed << nodes(nodeIdx, 3) << " " 
+                << parents(nodeIdx)+1 << "\n";
+        }
+
+        return swc.str();
+    }
+
     int write_swc( std::string file_name, const int precision = 3){
         std::ofstream myfile (file_name, std::ios::out);
         myfile.precision(precision);
