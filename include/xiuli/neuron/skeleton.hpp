@@ -438,7 +438,7 @@ public:
         }
         return pathLength;
     }
-        
+
     int write_swc( std::string file_name, const int precision = 3){
         std::ofstream myfile (file_name, std::ios::out);
         myfile.precision(precision);
