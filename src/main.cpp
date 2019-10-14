@@ -39,6 +39,7 @@ PYBIND11_MODULE(libxiuli, m) {
         .def_property_readonly("edges", &xn::Skeleton::get_edges)
         .def("__len__", &xn::Skeleton::get_node_num)
         .def("downsample", &xn::Skeleton::downsample)
+        .def("to_swc_str", &xn::Skeleton::to_swc_str)
         .def("write_swc", &xn::Skeleton::write_swc);
 
     py::class_<xnn::ScoreTable>(m, "XNBLASTScoreTable")
