@@ -14,6 +14,7 @@
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xtensor/xcsv.hpp"
 #include "xiuli/utils/math.hpp"
+#include "xiuli/utils/kd_tree.hpp"
 
 // use the c++17 nested namespace
 namespace xiuli::neuron::nblast{
@@ -93,244 +94,13 @@ public:
 
 }; // ScoreTable class 
 
-// ThreeDTree
-class AbstractThreeDNode{
-public:
-    // we need to make base class polymorphic for dynamic cast
-    virtual ~AbstractThreeDNode() = default;
-    virtual std::size_t size() const;
-    virtual xt::xtensor<std::size_t, 1> get_node_indices() const;
-    virtual void fill_node_indices(xt::xtensor<std::size_t, 1> &nodeIndicesBuffer, 
-                                    std::size_t &filledNum) const;
-};
-
-using ThreeDNodePtr = std::shared_ptr<AbstractThreeDNode>;
-
-class ThreeDLeafNode: public AbstractThreeDNode{
-public:
-    ~ThreeDLeafNode() = default;
-    xt::xtensor<std::size_t, 1> nodeIndices;
-
-    ThreeDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : 
-                                            nodeIndices(nodeIndices_){}
-
-    std::size_t size() const {
-        return nodeIndices.size();
-    }
-
-    xt::xtensor<std::size_t, 1> get_node_indices() const {
-        return nodeIndices;
-    }
-
-    void fill_node_indices(xt::xtensor<std::size_t, 1> &nodeIndicesBuffer, 
-                                                        std::size_t &filledNum){
-        for (std::size_t i=0; i<nodeIndices.size(); i++){
-            nodeIndicesBuffer( i + filledNum ) = nodeIndices(i);
-        }
-    }
-};
-using ThreeDLeafNodePtr = std::shared_ptr<ThreeDLeafNode>;
-
-class ThreeDInsideNode: public AbstractThreeDNode{
-public: 
-    ~ThreeDInsideNode() = default;
-    std::size_t middleNodeIndex;
-    ThreeDNodePtr leftNodePtr;
-    ThreeDNodePtr rightNodePtr;
-    std::size_t nodeNum;
-
-    ThreeDInsideNode(const std::size_t &middleNodeIndex_, 
-            ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_, std::size_t nodeNum_):
-            middleNodeIndex(middleNodeIndex_), leftNodePtr(leftNodePtr_), 
-            rightNodePtr(rightNodePtr_), nodeNum(nodeNum_){};
-
-    std::size_t size() const {
-        // return leftNodePtr->size() + rightNodePtr->size() + 1;
-        return nodeNum;
-    }
-    
-    void fill_node_indices(
-                xt::xtensor<std::size_t, 1> &nodeIndicesBuffer, std::size_t &filledNum) const {
-        leftNodePtr->fill_node_indices(nodeIndicesBuffer, filledNum);
-        filledNum += leftNodePtr->size();
-        nodeIndicesBuffer(filledNum) = middleNodeIndex;
-        filledNum += 1;
-        rightNodePtr->fill_node_indices( nodeIndicesBuffer, filledNum );
-        filledNum += rightNodePtr->size();
-    }
-
-    xt::xtensor<std::size_t, 1> get_node_indices(){
-        xt::xtensor<std::size_t, 1>::shape_type sh = {nodeNum};
-        xt::xtensor<std::size_t, 1> nodeIndicesBuffer =  xt::empty<std::size_t>(sh);
-
-        std::size_t filledNum = 0;
-        fill_node_indices( nodeIndicesBuffer, filledNum );
-        return nodeIndicesBuffer;
-    }
-
-}; // ThreeDNode class
-
-using ThreeDInsideNodePtr = std::shared_ptr<ThreeDInsideNode>;
-
-class ThreeDTree{
-private:
-    ThreeDNodePtr root;
-    const NodesType nodes;
-    const std::size_t leafSize;
-    auto next_dim(std::size_t &dim) const {
-        if(dim==3)
-            dim = 0;
-        else
-            dim += 1;
-        return dim;
-    }
-
-    ThreeDNodePtr make_ThreeDtree_node(const xt::xtensor<float, 1> &coords, std::size_t &dim){
-        // find the median value index
-        const auto medianIndex = coords.size() / 2;
-        auto sortedIndices = xt::argpartition(coords, medianIndex);
-        auto middleNodeIndex = sortedIndices(medianIndex);
-
-        ThreeDNodePtr leftNodePtr, rightNodePtr;
-
-        // recursively loop the dimension in 3D
-        dim = next_dim(dim);       
-        if (medianIndex > leafSize){
-            auto coords = xt::view(nodes, xt::all(), dim);
-            auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
-            auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
-            auto leftCoords = xt::index_view(coords, leftIndices);
-            auto rightCoords = xt::index_view(coords, rightIndices);
-            ThreeDNodePtr leftNodePtr = make_ThreeDtree_node( leftCoords, dim );
-            ThreeDNodePtr rightNodePtr = make_ThreeDtree_node( rightCoords, dim );
-        } else {
-            // include all the nodes as a leaf
-            auto leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
-            auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
-            ThreeDNodePtr leftNodePtr = std::make_shared<ThreeDLeafNode>( leftIndices );
-            ThreeDNodePtr rightNodePtr = std::make_shared<ThreeDLeafNode>( rightIndices );
-        }
-
-        return std::make_shared<AbstractThreeDNode>(
-            ThreeDInsideNode(middleNodeIndex, leftNodePtr, rightNodePtr, coords.size()));
-    }
-
-    auto is_inside_node(const ThreeDNodePtr nodePtr){
-        return std::dynamic_pointer_cast<ThreeDInsideNode>( nodePtr );
-    }
-
-    auto is_leaf_node(const ThreeDNodePtr nodePtr){
-        return std::dynamic_pointer_cast<ThreeDLeafNode>( nodePtr );
-    }
-
-    xt::xtensor<std::size_t, 1> search_nearest_nodes_in_3dtree (
-                ThreeDNodePtr nodePtr, const xt::xtensor<float, 1> &queryNode, 
-                std::size_t &dim, const std::size_t &nearestNodeNum=1) const {
-        
-        ThreeDNodePtr closeNodePtr, farNodePtr;
-        
-        // use dynamic_cast to check the class
-        if( ThreeDInsideNodePtr insideNodePtr = 
-                            std::dynamic_pointer_cast<ThreeDInsideNode>( nodePtr ) ){
-            // compare with the median value
-            if (queryNode(dim) < nodes(insideNodePtr->middleNodeIndex, dim)){
-                // continue checking left nodes
-                closeNodePtr = insideNodePtr->leftNodePtr;
-                farNodePtr = insideNodePtr->rightNodePtr;
-            } else {
-                closeNodePtr = insideNodePtr->rightNodePtr;
-                farNodePtr = insideNodePtr->leftNodePtr;
-            }
-
-            if (closeNodePtr->size() > nearestNodeNum){
-                dim = next_dim(dim);
-                return search_nearest_nodes_in_3dtree(closeNodePtr, queryNode, dim);
-            } else if (closeNodePtr->size() == nearestNodeNum){
-                //assert( std::dynamic_pointer_cast<ThreeDLeafNode>( closeNodePtr ) );
-                return closeNodePtr->get_node_indices();
-            } else {
-                // closeNodePtr->size() < nearestNodeNum
-                // we need to add some close nodes from far node
-
-            }
-        } else if (ThreeDLeafNodePtr leafNodePtr = 
-                            std::dynamic_pointer_cast<ThreeDLeafNode>( nodePtr ) ){
-
-            // this is a leaf node, we have to compute the distance one by one
-            auto nodeIndices = leafNodePtr->nodeIndices;
-            std::vector< std::size_t > ret = {};
-            ret.reserve( nearestNodeNum );
-            if (nearestNodeNum == 1){
-                // use squared distance to avoid sqrt computation
-                float minSquaredDist = std::numeric_limits<float>::max();
-                std::size_t nearestNodeIndex = 0;
-                for (auto i : nodeIndices){
-                    auto node = xt::view(nodes, i, xt::range(0, 3));
-                    float squaredDist = xt::norm_sq(node - queryNode)(0);
-                    if (squaredDist < minSquaredDist){
-                        nearestNodeIndex = i;
-                        minSquaredDist = squaredDist;
-                    }
-                }
-                ret.push_back( nearestNodeIndex  );
-                return ret;
-            } else if (((nearestNodeNum - nodeIndices.size())>= -1) && 
-                      ((nearestNodeNum - nodeIndices.size())<=  1)){
-                for (auto nodeIndex : nodeIndices){
-                    auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
-                    float dist = xt::norm_l2( node - queryNode )(0);
-                    ret.push_back( nodeIndex );
-                }
-                return ret;
-            } else {
-                std::cerr<< "only support nearest node number 1 or close to K"<<std::endl;
-            }
-        } else {
-            std::cerr<< "ThreeDNodePtr is not pointing to correct type!" <<std::endl;
-        }
-    }
-
-public:
-    auto get_leaf_size() const {
-        return leafSize;
-    }
-
-    ThreeDTree(const NodesType &nodes_, const std::size_t leafSize_=10): 
-            nodes(nodes_), leafSize(leafSize_){
-        // start from first dimension
-        std::size_t dim = 0;
-        auto coords = xt::view(nodes, xt::all(), dim);
-        root = make_ThreeDtree_node( coords, dim );
-    }
-
-    auto get_nearest_node(const xt::xtensor<float, 1> &queryNode) const {
-        std::size_t dim = 0;
-        auto queryNodeCoord = xt::view(queryNode, xt::range(0,3));
-        auto results = search_nearest_nodes_in_3dtree(root, queryNodeCoord, dim, 1);
-        assert( 1 == results.size() );
-        return results[0];
-    }
-
-    auto get_k_nearest_nodes(const xt::xtensor<float, 1> &queryNode, 
-                                        const std::size_t &nearestNodeNum=20) const {
-        std::size_t dim = 0;
-        
-        assert( nearestNodeNum >= 1 );
-        // currently, we only support nearest node number equal or less than leafSize
-        assert( nearestNodeNum <= leafSize );
-
-        auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
-        return search_nearest_nodes_in_3dtree(root, queryNodeCoord, dim, nearestNodeNum);
-    } 
-}; // ThreeDTree class
-
 class VectorCloud{
 
 private:
 
     NodesType nodes;
     xt::xtensor<float, 2> vectors;
-    ThreeDTree ThreeDtree;
+    xiuli::utils::ThreeDTree ThreeDtree;
     auto construct_vectors(const std::size_t &nearestNodeNum=20){
         auto nodeNum = nodes.shape(0);
         
@@ -342,15 +112,8 @@ private:
         vectors = xt::empty<float>( vshape );
 
         for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
-            auto node = xt::view(nodes, nodeIdx, xt::range(0, 3));
-            auto nearestNeighbors = ThreeDtree.get_k_nearest_nodes(node, nearestNodeNum);
-            for (std::size_t i = 0; i < nearestNodeNum; i++){
-                auto nearestNodeIndex = nearestNeighbors[i].first;
-                //nearestNodes(i, xt::all()) = nodes(nearestNodeIdx, xt::range(0,3));
-                nearestNodes(i, 0) = nodes(nearestNodeIndex, 0);
-                nearestNodes(i, 1) = nodes(nearestNodeIndex, 1);
-                nearestNodes(i, 2) = nodes(nearestNodeIndex, 2);
-            }
+            auto queryNode = xt::view(nodes, nodeIdx, xt::range(0, 3));
+            auto nearestNodes = ThreeDtree.find_nearest_k_nodes(queryNode, nearestNodeNum);
             // use the first principle component as the main direction
             //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
             auto direction = xiuli::utils::pca_first_component( nearestNodes );
@@ -398,8 +161,10 @@ public:
         for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
             xt::xtensor<float, 1> queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
             // find the best match node in target and get physical distance
-            auto nearestNodeDist = ThreeDtree.get_nearest_node( queryNode ).second;
-            
+            auto nearestNodeIndex = ThreeDtree.find_nearest_k_node_indices( queryNode )(0);
+            auto nearestNode = xt::view(nodes, nearestNodeIndex, xt::all());
+            distance = xt::norm_l2( nearestNode - queryNode )(0);
+
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
             auto targetVector = xt::view(vectors, nearestNodeIdx);
@@ -409,7 +174,7 @@ public:
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
 
             // lookup the score table and accumulate the score
-            rawScore += scoreTable( nearestNodeDist,  absoluteDotProduct );
+            rawScore += scoreTable( distance,  absoluteDotProduct );
         }
         return rawScore; 
     }
