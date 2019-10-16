@@ -17,7 +17,7 @@ with open(os.path.join(PACKAGE_DIR, 'requirements.txt')) as f:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-VERSIONFILE = os.path.join(PACKAGE_DIR, "reneu/__version__.py")
+VERSIONFILE = os.path.join(PACKAGE_DIR, "python/reneu/__version__.py")
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
@@ -140,7 +140,7 @@ class BuildExt(build_ext):
 
 setup(
     name='reneu',
-    description='Large Scale 3d Convolution Net Inference',
+    description='computation for real neural networks.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     license='Apache License 2.0',
@@ -165,6 +165,7 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     python_requires='>=3',
     zip_safe=False,
@@ -174,7 +175,7 @@ setup(
 # use code to move all the compiled so files to lib folder!
 for file_name in os.listdir():
     if file_name.startswith("libxiuli") and file_name.endswith(".so"):
-        dst_file_name = os.path.join('reneu/lib/', file_name)
+        dst_file_name = os.path.join('python/reneu/lib/', file_name)
         # using the full destination path will replace the so file
         # if it is already exist
         move(file_name, dst_file_name)
