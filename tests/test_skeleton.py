@@ -3,6 +3,8 @@ from os.path import dirname
 import time
 from math import isclose
 
+import faulthandler
+faulthandler.enable()
 
 from reneu.lib.libxiuli import XSkeleton
 from reneu.skeleton import Skeleton

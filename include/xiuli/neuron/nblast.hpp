@@ -42,7 +42,7 @@ private:
     auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, const float &value ) const {
         std::size_t start = 0;
         // Note that the last one index is N-1 rather than N_
-        // This is following python indexing style, the last index is uninclusive
+        // This is following python indexing style, the last index is not inclusive
         std::size_t stop = N;
         while( stop - start > 1 ){
             auto middle = std::div(stop - start, 2).quot + start;

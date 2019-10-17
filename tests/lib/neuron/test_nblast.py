@@ -1,3 +1,6 @@
+import faulthandler
+faulthandler.enable()
+
 import os
 import numpy as np
 from math import isclose
