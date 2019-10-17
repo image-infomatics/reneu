@@ -30,8 +30,8 @@ PYBIND11_MODULE(libxiuli, m) {
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
     py::class_<xn::Skeleton>(m, "XSkeleton")
-        .def(py::init<const xt::pytensor<float, 2>, const xt::pytensor<int, 2>>())
-        .def(py::init<const xt::pytensor<float, 2>>())
+        .def(py::init<const xt::pytensor<float, 2> &, const xt::pytensor<int, 2> &>())
+        .def(py::init<const xt::pytensor<float, 2> &>())
         .def(py::init<const std::string>())
         .def_property_readonly("nodes", &xn::Skeleton::get_nodes)
         .def_property_readonly("attributes", &xn::Skeleton::get_attributes)
@@ -42,17 +42,24 @@ PYBIND11_MODULE(libxiuli, m) {
         .def("to_swc_str", &xn::Skeleton::to_swc_str)
         .def("write_swc", &xn::Skeleton::write_swc);
 
+    py::class_<xiuli::utils::ThreeDTree>(m, "XThreeDTree")
+        .def(py::init<const xt::pytensor<float, 2>, const std::size_t>())
+        .def("find_nearest_k_node_indices", 
+                py::overload_cast<const xt::pytensor<float,1> &, const std::size_t &>(
+                    &xiuli::utils::ThreeDTree::find_nearest_k_node_indices));
+        
+
     py::class_<xnn::ScoreTable>(m, "XNBLASTScoreTable")
         .def(py::init())
         .def(py::init<const std::string>())
-        .def(py::init<const xt::pytensor<float, 2>>())
+        .def(py::init<const xt::pytensor<float, 2> &>())
         .def_property_readonly("table", &xnn::ScoreTable::get_pytable)
         // python do not have single precision number!
         .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(
                                     &xnn::ScoreTable::operator()), "get table item");
     
     py::class_<xnn::VectorCloud>(m, "XVectorCloud")
-        .def(py::init<const xt::pytensor<float, 2>, const std::size_t>())
+        .def(py::init<const xt::pytensor<float, 2> &, const std::size_t &>())
         .def_property_readonly("vectors", &xnn::VectorCloud::get_vectors)
         .def("__len__", &xnn::VectorCloud::size)
         .def("query_by", &xnn::VectorCloud::query_by);

@@ -30,15 +30,14 @@ def test_nblast():
     # 77641	50891.03 	101011.08
     # Note that R NBLAST use micron as unit, and our NBLAST use nanometer
     # the swc here use nanometer, so no need to divide by 1000
-    for i in range(200):
-        sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
-        sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
+    sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
+    sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
 
-        cv1 = XVectorCloud( sk1.nodes, 20 )
-        cv2 = XVectorCloud( sk2.nodes, 20 )
-        score = cv1.query_by( cv2, st )
-        print('nblast score: ', score)
-        assert isclose( score, 50891.03, rel_tol = 1e-3)
+    cv1 = XVectorCloud( sk1.nodes, 20 )
+    cv2 = XVectorCloud( sk2.nodes, 20 )
+    score = cv1.query_by( cv2, st )
+    print('nblast score: ', score)
+    assert isclose( score, 50891.03, rel_tol = 1e-3)
 
     cvs = [ cv1, cv2 ]
     score_matrix = XNBLASTScoreMatrix(cvs, st)

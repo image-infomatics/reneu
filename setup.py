@@ -53,8 +53,10 @@ ext_modules = [
         ],
         language='c++',
         extra_compile_args=[
-            '-O3',
-            '-ffast-math'
+            '-O0',
+            '-ffast-math',
+            # build with debug info
+            '-g'
             # this is not working
             #'-o reneu/lib/libxiuli.so'
         ],

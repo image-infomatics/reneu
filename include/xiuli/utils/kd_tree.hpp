@@ -1,6 +1,7 @@
 #pragma once
 #include <limits>       // std::numeric_limits
 #include "xtensor/xtensor.hpp"
+#include "xtensor-python/pytensor.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xnorm.hpp"
 #include "xtensor/xsort.hpp"
@@ -233,6 +234,9 @@ public:
         auto coords = xt::view(nodes, xt::all(), dim);
         root = make_ThreeDtree_node( coords, dim );
     }
+
+    ThreeDTree(const xt::pytensor<float, 2> &nodes_, const std::size_t leafSize_=10):
+        nodes( NodesType(nodes_) ), leafSize(leafSize_){}
     
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode, 
@@ -241,6 +245,12 @@ public:
         std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
         return root->find_nearest_k_nodes(queryNodeCoord, nodes, dim, nearestNodeNum);
+    }
+
+    xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
+            const xt::pytensor<float, 1> &queryNode, 
+            const std::size_t &nearestNodeNum=1){
+        return find_nearest_k_node_indices( xt::xtensor<float,1>(queryNode), nearestNodeNum );
     }
 
     auto find_nearest_k_nodes(const xt::xtensor<float, 1> &queryNode, 

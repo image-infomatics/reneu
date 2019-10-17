@@ -20,23 +20,24 @@
 namespace xiuli::neuron::nblast{
 
 using NodesType = xt::xtensor<float, 2>;
-using TableType = xt::xtensor_fixed<float, xt::xshape<21, 10>>; 
-using DistThresholdsType = xt::xtensor_fixed<float, xt::xshape<22>>; 
-using ADPThresholdsType = xt::xtensor_fixed<float, xt::xshape<11>>; 
 
 namespace py = pybind11;
 
 class ScoreTable{
 
 private:
-    TableType table;
+    xt::xtensor_fixed<float, xt::xshape<21, 10>> table; 
     //const DistThresholdsType distThresholds = {0., 0.75, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 
     //                                    12, 14, 16, 20, 25, 30, 40, std::numeric_limits<float>::max()};
     // this is using nanometer rather than micron
-    const DistThresholdsType distThresholds = {1000., 750, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 
-                                        12000, 14000, 16000, 20000, 25000, 30000, 40000, std::numeric_limits<float>::max()};
+    const xt::xtensor_fixed<float, xt::xshape<22>> distThresholds = {
+            1000., 750, 1500, 2000, 2500, 3000, 3500, 4000, 
+            5000, 6000, 7000, 8000, 9000, 10000, 
+            12000, 14000, 16000, 20000, 25000, 30000, 40000, 
+            std::numeric_limits<float>::max()};
 
-    const ADPThresholdsType adpThresholds = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+    const xt::xtensor_fixed<float, xt::xshape<11>> adpThresholds = {
+            0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
     template<std::size_t N>
     auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, const float &value ) const {
@@ -113,7 +114,9 @@ private:
 
         for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
             auto queryNode = xt::view(nodes, nodeIdx, xt::range(0, 3));
-            auto nearestNodes = ThreeDtree.find_nearest_k_nodes(queryNode, nearestNodeNum);
+            auto nearestNodes = xt::view(
+                        ThreeDtree.find_nearest_k_nodes(queryNode, nearestNodeNum), 
+                        xt::all(), xt::range(0,3));
             // use the first principle component as the main direction
             //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
             auto direction = xiuli::utils::pca_first_component( nearestNodes );
@@ -160,21 +163,28 @@ public:
         NodesType queryNodes = query.get_nodes();
         for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
             xt::xtensor<float, 1> queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
+            std::cout<< "\nquery node: " << queryNode <<std::endl;
             // find the best match node in target and get physical distance
             auto nearestNodeIndex = ThreeDtree.find_nearest_k_node_indices( queryNode )(0);
-            auto nearestNode = xt::view(nodes, nearestNodeIndex, xt::all());
+            std::cout<< "nearest node index: "<< nearestNodeIndex << std::endl;
+
+            auto nearestNode = xt::view(nodes, nearestNodeIndex, xt::range(0,3));
             distance = xt::norm_l2( nearestNode - queryNode )(0);
+            std::cout<< "distance: " << distance << std::endl;
 
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
-            auto targetVector = xt::view(vectors, nearestNodeIdx);
+            auto targetVector = xt::view(vectors, nearestNodeIdx, xt::all());
             //auto dot = xt::linalg::dot(queryVector, targetVector);
             //assert( dot.size() == 1 );
             //absoluteDotProduct = std::abs(dot(0));
+            std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
-
+            std::cout<< "absolute dot product: " << absoluteDotProduct << std::endl;
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
+            std::cout<< "score: "<< scoreTable(distance, absoluteDotProduct) << std::endl; 
+            std::cout<< "accumulated score: " << rawScore <<std::endl; 
         }
         return rawScore; 
     }
