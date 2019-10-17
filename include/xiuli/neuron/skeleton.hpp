@@ -130,7 +130,7 @@ private:
 public:
     virtual ~Skeleton() = default;
 
-    Skeleton( xt::pytensor<float, 2> nodes_, xt::pytensor<int, 2> attributes_):
+    Skeleton( const xt::pytensor<float, 2> &nodes_, xt::pytensor<int, 2> attributes_):
         nodes( nodes_ ), attributes( attributes_ ){
             update_first_child_and_sibling();
         }
@@ -443,7 +443,8 @@ public:
         auto parents = get_parents();
         for (std::size_t i = 0; i<get_node_num(); i++){
             auto parentIdx = parents( i );
-            pathLength += std::sqrt( squared_distance( i, parentIdx ) ); 
+            if (parentIdx >= 0)
+                pathLength += std::sqrt( squared_distance( i, parentIdx ) ); 
         }
         return pathLength;
     }
