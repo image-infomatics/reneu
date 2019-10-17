@@ -46,28 +46,28 @@ private:
     // normally the type is int
     AttributesType attributes;
 
-    inline auto get_classes(){
+    auto get_classes() const {
         return xt::view(attributes, xt::all(), 0);
     }
 
-    inline auto get_parents(){
+    auto get_parents() const {
         return xt::view(attributes, xt::all(), 1);
     }
 
-    inline auto get_childs(){
+    auto get_childs() const {
         return xt::view(attributes, xt::all(), 2);
     }
 
-    inline auto get_siblings(){
+    auto get_siblings() const {
         return xt::view(attributes, xt::all(), 3);
     }
 
     template<typename Ti>
-    inline auto get_node( Ti nodeIdx ){
+    auto get_node( Ti nodeIdx ) const {
         return xt::view(nodes, nodeIdx, xt::all());
     } 
 
-    inline auto squared_distance(int idx1, int idx2){
+    inline auto squared_distance(int idx1, int idx2) const {
         auto node1 = get_node(idx1);
         auto node2 = get_node(idx2);
         return  (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
@@ -87,8 +87,9 @@ private:
     
     auto update_first_child_and_sibling(){
         auto parents = get_parents();
-        auto childs = get_childs();
-        auto siblings = get_siblings();
+
+        auto childs = xt::view(attributes, xt::all(), 2);
+        auto siblings = xt::view(attributes, xt::all(), 3);
 
         auto nodeNum = parents.size();
         // the columns are class, parents, fist child, sibling
@@ -231,19 +232,19 @@ public:
         return attributes;
     }
 
-    inline bool is_root_node(int nodeIdx){
+    bool is_root_node(int nodeIdx) const {
         return attributes(nodeIdx, 1) < 0;
     }
 
-    inline bool is_terminal_node(int nodeIdx){
+    bool is_terminal_node(int nodeIdx) const {
         return attributes(nodeIdx, 2 ) < 0;
     }
     
-    auto get_node_num(){
+    auto get_node_num() const {
         return nodes.shape(0);
     }
     
-    bool is_branching_node(int nodeIdx){
+    bool is_branching_node(int nodeIdx) const {
         auto childs = get_childs();
         auto childNodeIdx = childs(nodeIdx);
         if (childNodeIdx < 0){
@@ -256,7 +257,7 @@ public:
         }
     }
 
-    auto get_edge_num(){
+    auto get_edge_num() const {
         auto nodeNum = get_node_num();
         auto parents = get_parents();
         std::size_t edgeNum = 0;
@@ -286,7 +287,7 @@ public:
         return edges;
     }
 
-    std::vector<int> get_children_node_indexes(int nodeIdx){
+    std::vector<int> get_children_node_indexes(int nodeIdx) const {
         auto childs = get_childs();
         auto siblings = get_siblings();
 
@@ -360,7 +361,7 @@ public:
                     // adjust the coordinate and radius by mean of nearest nodes;
                     auto parentNodeIdx = parents( walkingNodeIdx );
                     auto parentNode = get_node(parentNodeIdx);
-                    auto walkingNode = get_node(walkingNodeIdx);
+                    auto walkingNode = xt::view(nodes, walkingNodeIdx, xt::all());
                     if (!is_terminal_node(walkingNodeIdx)){
                         auto childNodeIdx = childs( walkingNodeIdx );
                         auto childNode = get_node(childNodeIdx);
@@ -437,17 +438,18 @@ public:
         return 0;
     }
     
-    auto get_path_length(){
+    auto get_path_length() const {
         float pathLength = 0;
         auto parents = get_parents();
         for (std::size_t i = 0; i<get_node_num(); i++){
             auto parentIdx = parents( i );
-            pathLength += std::sqrt( squared_distance( i, parentIdx ) ); 
+            if (parentIdx >= 0)
+                pathLength += std::sqrt( squared_distance( i, parentIdx ) ); 
         }
         return pathLength;
     }
     
-    std::string to_swc_str( const int precision = 3 ){
+    std::string to_swc_str( const int precision = 3 ) const {
         std::ostringstream swc;
         swc << std::fixed;
         swc << std::setprecision( precision );
@@ -474,7 +476,7 @@ public:
         return swc.str();
     }
 
-    int write_swc( std::string file_name, const int precision = 3){
+    int write_swc( std::string file_name, const int precision = 3) const {
         std::ofstream myfile (file_name, std::ios::out);
         myfile.precision(precision);
 
