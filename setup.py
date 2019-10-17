@@ -59,7 +59,7 @@ ext_modules = [
             #'-o reneu/lib/libxiuli.so'
         ],
         # monitor the code change and rebuild
-        depends = ['src/*'],
+        depends = ['src/*', 'include/xiuli/*'],
     ),
 ]
 
