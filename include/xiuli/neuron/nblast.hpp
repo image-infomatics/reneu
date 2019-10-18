@@ -98,11 +98,11 @@ public:
 class VectorCloud{
 
 private:
-
-    NodesType nodes;
+    const NodesType nodes;
     xt::xtensor<float, 2> vectors;
-    xiuli::utils::ThreeDTree ThreeDtree;
+    const xiuli::utils::ThreeDTree kdTree;
     auto construct_vectors(const std::size_t &nearestNodeNum=20){
+        std::cout<< "nodes: " << nodes << std::endl;
         auto nodeNum = nodes.shape(0);
         
         // find the nearest k nodes and compute the first principle component as the main direction
@@ -114,15 +114,23 @@ private:
 
         for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
             auto queryNode = xt::view(nodes, nodeIdx, xt::range(0, 3));
-            auto nearestNodes = xt::view(
-                        ThreeDtree.find_nearest_k_nodes(queryNode, nearestNodeNum), 
-                        xt::all(), xt::range(0,3));
+            auto nearestNodeIndices = kdTree.find_nearest_k_node_indices(
+                                                        queryNode, nearestNodeNum);
+            std::cout<< "nearest node indices: " << nearestNodeIndices << std::endl;
+            for (std::size_t i=0; i<nearestNodeIndices.size(); i++){
+                auto nearestNodeIndex = nearestNodeIndices(i);
+                nearestNodes(i, 0) = nodes( nearestNodeIndex, 0 );
+                nearestNodes(i, 1) = nodes( nearestNodeIndex, 1 );
+                nearestNodes(i, 2) = nodes( nearestNodeIndex, 2 );
+            }
             // use the first principle component as the main direction
             //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
+            // std::cout<< "nearest nodes: " << nearestNodes << std::endl;
             auto direction = xiuli::utils::pca_first_component( nearestNodes );
             vectors(nodeIdx, 0) = direction(0);
             vectors(nodeIdx, 1) = direction(1);
             vectors(nodeIdx, 2) = direction(2);
+            // std::cout<< "vector: " << direction << std::endl;
         }
     }
 
@@ -140,14 +148,14 @@ public:
     }
 
     // our nodes array contains radius direction, but we do not need it.
-    VectorCloud( NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), ThreeDtree(ThreeDTree(nodes_, nearestNodeNum))
+    VectorCloud( const NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
+        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes_, nearestNodeNum))
     {
         construct_vectors( nearestNodeNum );
     }
     
     VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), ThreeDtree(ThreeDTree(nodes_, nearestNodeNum))
+        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes_, nearestNodeNum))
     {
         construct_vectors( nearestNodeNum );
     }
@@ -163,14 +171,14 @@ public:
         NodesType queryNodes = query.get_nodes();
         for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
             xt::xtensor<float, 1> queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
-            std::cout<< "\nquery node: " << queryNode <<std::endl;
+            // std::cout<< "\nquery node: " << queryNode <<std::endl;
             // find the best match node in target and get physical distance
-            auto nearestNodeIndex = ThreeDtree.find_nearest_k_node_indices( queryNode )(0);
-            std::cout<< "nearest node index: "<< nearestNodeIndex << std::endl;
+            auto nearestNodeIndex = kdTree.find_nearest_k_node_indices( queryNode, 1 )(0);
+            // std::cout<< "nearest node index: "<< nearestNodeIndex << std::endl;
 
             auto nearestNode = xt::view(nodes, nearestNodeIndex, xt::range(0,3));
             distance = xt::norm_l2( nearestNode - queryNode )(0);
-            std::cout<< "distance: " << distance << std::endl;
+            // std::cout<< "distance: " << distance << std::endl;
 
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
@@ -178,13 +186,13 @@ public:
             //auto dot = xt::linalg::dot(queryVector, targetVector);
             //assert( dot.size() == 1 );
             //absoluteDotProduct = std::abs(dot(0));
-            std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
+            // std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
-            std::cout<< "absolute dot product: " << absoluteDotProduct << std::endl;
+            // std::cout<< "absolute dot product: " << absoluteDotProduct << std::endl;
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
-            std::cout<< "score: "<< scoreTable(distance, absoluteDotProduct) << std::endl; 
-            std::cout<< "accumulated score: " << rawScore <<std::endl; 
+            // std::cout<< "score: "<< scoreTable(distance, absoluteDotProduct) << std::endl; 
+            // std::cout<< "accumulated score: " << rawScore <<std::endl; 
         }
         return rawScore; 
     }

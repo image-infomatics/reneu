@@ -13,14 +13,6 @@ namespace xiuli::utils{
 
 using NodesType = xt::xtensor<float, 2>;
 
-template<class E>
-auto print_array(const E &arr){
-    for(auto i:arr){
-        std::cout<< i << ", ";
-    }
-    std::cout<< std::endl;
-}
-
 auto next_dim(std::size_t &dim) {
     if(dim==3)
         dim = 0;
@@ -43,7 +35,7 @@ public:
     virtual xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode,
                 const NodesType &nodes, 
-                std::size_t &dim, const std::size_t &nearestNodeNum=1) const = 0; 
+                std::size_t &dim, const std::size_t &nearestNodeNum) const = 0; 
 };
 using ThreeDNodePtr = std::shared_ptr<ThreeDNode>;
 
@@ -74,7 +66,7 @@ public:
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode, 
                 const NodesType &nodes,
-                std::size_t &dim, const std::size_t &nearestNodeNum=1) const {
+                std::size_t &dim, const std::size_t &nearestNodeNum) const {
         
         if (nearestNodeNum == nodeIndices.size()){
             return nodeIndices;
@@ -147,8 +139,7 @@ public:
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode,
                 const xt::xtensor<float, 2> &nodes, 
-                std::size_t &dim, const std::size_t &nearestNodeNum=1) const {
-        std::cout<< "start finding nearest k node in a node!" << std::endl;
+                std::size_t &dim, const std::size_t &nearestNodeNum) const {
         ThreeDNodePtr closeNodePtr, farNodePtr;
         
         // compare with the median value
@@ -163,7 +154,8 @@ public:
 
         if (closeNodePtr->size() >= nearestNodeNum){
             dim = next_dim(dim);
-            return closeNodePtr->find_nearest_k_node_indices(queryNode, nodes, dim);
+            return closeNodePtr->find_nearest_k_node_indices(
+                                        queryNode, nodes, dim, nearestNodeNum);
         } else {
             // closeNodePtr->size() < nearestNodeNum
             // we need to add some close nodes from far node
@@ -205,11 +197,6 @@ private:
         const auto leftNodeIndices = xt::view(partitionedNodeIndices, xt::range(0, medianIndex));
         const auto rightNodeIndices = xt::view(
                                 partitionedNodeIndices, xt::range(medianIndex, _));
-
-        // print_array( nodeIndices );
-        // print_array( partitionedNodeIndices );
-        // print_array( leftNodeIndices );
-        // print_array( rightNodeIndices );
 
         ThreeDNodePtr leftNodePtr, rightNodePtr;
         // recursively loop the dimension in 3D
@@ -253,7 +240,7 @@ public:
     
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode, 
-                const std::size_t &nearestNodeNum=1) const {
+                const std::size_t &nearestNodeNum) const {
         assert( nearestNodeNum >= 1 );
         std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
@@ -262,15 +249,16 @@ public:
 
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
             const xt::pytensor<float, 1> &queryNode, 
-            const std::size_t &nearestNodeNum=1){
+            const std::size_t &nearestNodeNum){
         return find_nearest_k_node_indices( xt::xtensor<float,1>(queryNode), nearestNodeNum );
     }
 
     auto find_nearest_k_nodes(const xt::xtensor<float, 1> &queryNode, 
-                                        const std::size_t &nearestNodeNum=20) const {
+                                        const std::size_t &nearestNodeNum) const {
         
         auto nearestNodeIndices = find_nearest_k_node_indices(queryNode, nearestNodeNum);
         xt::xtensor<float, 2>::shape_type shape = {nearestNodeNum, 4};
+
         auto nearestNodes = xt::empty<float>( shape ); 
         for(std::size_t i; i<nearestNodeNum; i++){
             auto nodeIndex = nearestNodeIndices(i);

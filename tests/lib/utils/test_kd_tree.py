@@ -24,3 +24,8 @@ def test_kd_tree():
     assert nearest_node_index == 7
     # nearest_node = kdtree.find_nearest_k_node(query_node, 1)
     # print('nearest node: ', nearest_node)
+    
+    query_node = np.asarray([21.1, 23.1, 34.1], dtype=np.float32)
+    nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, 2)
+    print('nearest node index: ', nearest_node_indices)
+    assert np.all( np.asarray([6, 7]) == nearest_node_indices )
