@@ -1,5 +1,6 @@
 #pragma once
 #include <limits>       // std::numeric_limits
+#include <iostream>
 #include "xtensor/xtensor.hpp"
 #include "xtensor-python/pytensor.hpp"
 #include "xtensor/xview.hpp"
@@ -140,6 +141,7 @@ public:
                 const xt::xtensor<float, 1> &queryNode,
                 const xt::xtensor<float, 2> &nodes, 
                 std::size_t &dim, const std::size_t &nearestNodeNum=1) const {
+        std::cout<< "start finding nearest k node in a node!" << std::endl;
         ThreeDNodePtr closeNodePtr, farNodePtr;
         
         // compare with the median value
@@ -177,11 +179,12 @@ using ThreeDInsideNodePtr = std::shared_ptr<ThreeDInsideNode>;
 
 class ThreeDTree{
 private:
-    ThreeDNodePtr root;
+    ThreeDInsideNodePtr root;
     const NodesType nodes;
     const std::size_t leafSize;
     
-    ThreeDNodePtr make_ThreeDtree_node(const xt::xtensor<float, 1> &coords, std::size_t &dim){
+    ThreeDInsideNodePtr build_node(const xt::xtensor<float, 1> &coords, std::size_t &dim){
+        std::cout<< "starting to build node" << std::endl;
         // find the median value index
         const auto medianIndex = coords.size() / 2;
         auto sortedIndices = xt::argpartition(coords, medianIndex);
@@ -197,8 +200,8 @@ private:
             auto rightIndices = xt::view(sortedIndices, xt::range(medianIndex+1, _));
             auto leftCoords = xt::index_view(coords, leftIndices);
             auto rightCoords = xt::index_view(coords, rightIndices);
-            leftNodePtr = make_ThreeDtree_node( leftCoords, dim );
-            rightNodePtr = make_ThreeDtree_node( rightCoords, dim );
+            leftNodePtr = build_node( leftCoords, dim );
+            rightNodePtr = build_node( rightCoords, dim );
         } else {
             // include all the nodes as a leaf
             xt::xtensor<std::size_t, 1> leftIndices = xt::view(sortedIndices, xt::range(0, medianIndex));
@@ -213,14 +216,12 @@ private:
                         leftNodePtr, rightNodePtr, coords.size());
     }
 
-    auto is_inside_node(const ThreeDNodePtr nodePtr){
-        return std::dynamic_pointer_cast<ThreeDInsideNode>( nodePtr );
+    auto build_root(){
+        // start from first dimension
+        std::size_t dim = 0;
+        auto coords = xt::view(nodes, xt::all(), dim);
+        root = build_node( coords, dim );
     }
-
-    auto is_leaf_node(const ThreeDNodePtr nodePtr){
-        return std::dynamic_pointer_cast<ThreeDLeafNode>( nodePtr );
-    }
-
 
 public:
     auto get_leaf_size() const {
@@ -229,14 +230,13 @@ public:
 
     ThreeDTree(const NodesType &nodes_, const std::size_t leafSize_=10): 
             nodes(nodes_), leafSize(leafSize_){
-        // start from first dimension
-        std::size_t dim = 0;
-        auto coords = xt::view(nodes, xt::all(), dim);
-        root = make_ThreeDtree_node( coords, dim );
+        build_root();
     }
 
     ThreeDTree(const xt::pytensor<float, 2> &nodes_, const std::size_t leafSize_=10):
-        nodes( NodesType(nodes_) ), leafSize(leafSize_){}
+        nodes( NodesType(nodes_) ), leafSize(leafSize_){
+        build_root();
+    }
     
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode, 
