@@ -18,30 +18,21 @@ auto pca_first_component(xt::xtensor<float, 2> sample){
     sample -= xt::mean(sample, {0});
     sample /= std::sqrt( nodeNum - 1 );
     auto [S, V, D] = xt::linalg::svd(sample);
-    
-    //std::size_t maxIdx = xt::argmax( V )(0);
-    // this is a manual implementation to replace above code
-    // manual implementation should be faster since it avoid to create a temporal vector 
-    std::size_t maxIdx = 0;
-    float maxValue = std::numeric_limits<float>::min();
-    for (std::size_t i = 0; i<nodeNum; i++){
-        if (V(i) > maxValue){
-            maxValue = V(i);
-            maxIdx = i;
-        }
-    }
-    
+
+    // std::cout<< "S, V, D: " << S << V << D << std::endl; 
+    auto maxIdx = xt::argmax( V )(0);
+    // std::cout<< "max index of " << maxIdx << "in V: " << V << std::endl;
+    // std::cout<< "D in C++: "<< D << std::endl;
+
     //return xt::view(D, maxIdx, xt::all());
     xt::xtensor<float, 1> ret = xt::view(D, maxIdx, xt::all());
+    // std::cout<< "component in c++: " << ret << std::endl;
     return ret;
 }
 
 inline auto py_pca_first_component(xt::pytensor<float, 2> pysample){
     xt::xtensor<float, 2> sample = pysample;
-    auto pca = pca_first_component( sample );
-    // we have to transform to a real xtensor to return as numpy array
-    //xt::xtensor<float, 1> ret = pca;
-    return pca;
+    return pca_first_component( sample );
 }
 
 } // namespace xiuli::utils

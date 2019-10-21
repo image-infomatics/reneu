@@ -1,4 +1,5 @@
 #pragma once
+
 #include <limits>       // std::numeric_limits
 #include <iostream>
 #include "xtensor/xtensor.hpp"
@@ -24,6 +25,7 @@ auto next_dim(std::size_t &dim) {
 // ThreeDTree
 class ThreeDNode{
 public:
+    ThreeDNode() = default;
     // we need to make base class polymorphic for dynamic cast
     virtual std::size_t size() const = 0;
     
@@ -86,8 +88,8 @@ public:
             return {nearestNodeIndex};
         } else {
             assert(nearestNodeNum < nodeIndices.size());
-            xt::xtensor<float, 1>::shape_type sh = {nearestNodeNum};
-            xt::xtensor<float, 1> dist2s = xt::empty<float>(sh); 
+            xt::xtensor<float, 1>::shape_type sh = {nodeIndices.size()};
+            auto dist2s = xt::empty<float>(sh); 
             for (std::size_t i=0; i<nodeIndices.size(); i++){
                 auto nodeIndex = nodeIndices( i );
                 auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
@@ -183,8 +185,8 @@ using ThreeDInsideNodePtr = std::shared_ptr<ThreeDInsideNode>;
 class ThreeDTree{
 private:
     ThreeDInsideNodePtr root;
-    const NodesType nodes;
-    const std::size_t leafSize;
+    NodesType nodes;
+    std::size_t leafSize;
 
     template<class E>
     ThreeDInsideNodePtr build_node(const E &nodeIndices, std::size_t &dim){
