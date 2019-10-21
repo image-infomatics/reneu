@@ -9,11 +9,13 @@ from reneu.lib.libxiuli import XNBLASTScoreTable
 from reneu.neuron import Skeleton
 from reneu.lib.libxiuli import XVectorCloud, XNBLASTScoreMatrix
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '../../../data/')
+# DATA_DIR = os.path.join(os.path.dirname(__file__), '../../../data/')
+DATA_DIR = 'data/'
 table_path = os.path.join(DATA_DIR, 'smat_fcwb.csv')
 st = XNBLASTScoreTable( table_path )
 # somehow this is not working
 # st = XNBLASTScoreTable()
+
 
 def test_nblast_score_table():
     assert isclose(st[0., 0.], 9.500096818, abs_tol=1e-4)
@@ -43,3 +45,7 @@ def test_nblast():
     score_matrix = XNBLASTScoreMatrix(cvs, st)
     print('raw scores: ', score_matrix.raw_score_matrix)
     #breakpoint()
+
+if __name__ == '__main__':
+    test_nblast_score_table()
+    test_nblast()

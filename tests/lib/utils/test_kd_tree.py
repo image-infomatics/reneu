@@ -29,3 +29,18 @@ def test_kd_tree():
     nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, 2)
     print('nearest node index: ', nearest_node_indices)
     assert np.all( np.asarray([6, 7]) == nearest_node_indices )
+    
+    print('\ntest nearest node number more than leaf node number.')
+    query_node = np.asarray([21.1, 23.1, 34.1], dtype=np.float32)
+    nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, 3)
+    print('nearest node index: ', nearest_node_indices)
+    assert np.all( np.asarray([6, 7, 5]) == nearest_node_indices )
+
+
+    print('\ntest leaf node number is more than nearest node number.') 
+    kdtree = XThreeDTree(arr, 3)
+    query_node = np.asarray([21.1, 23.1, 34.1], dtype=np.float32)
+    nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, 2)
+    print('nearest node index: ', nearest_node_indices)
+    assert np.all( np.asarray([6, 7]) == nearest_node_indices )
+    

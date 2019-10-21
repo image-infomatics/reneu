@@ -46,6 +46,7 @@ private:
     xt::xtensor<std::size_t, 1> nodeIndices;
 
 public:
+    ThreeDLeafNode() = default;
     ThreeDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : nodeIndices(nodeIndices_){}
 
     std::size_t size() const {
@@ -85,7 +86,7 @@ public:
             return {nearestNodeIndex};
         } else {
             assert(nearestNodeNum < nodeIndices.size());
-            xt::xtensor<std::size_t, 1>::shape_type sh = {nearestNodeNum};
+            xt::xtensor<float, 1>::shape_type sh = {nearestNodeNum};
             xt::xtensor<float, 1> dist2s = xt::empty<float>(sh); 
             for (std::size_t i=0; i<nodeIndices.size(); i++){
                 auto nodeIndex = nodeIndices( i );
@@ -106,6 +107,8 @@ public:
     ThreeDNodePtr leftNodePtr;
     ThreeDNodePtr rightNodePtr;
     std::size_t nodeNum;
+
+    ThreeDInsideNode() = default;
 
     ThreeDInsideNode(const std::size_t &medianNodeIndex_, 
             ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_, std::size_t nodeNum_):
@@ -224,9 +227,7 @@ private:
     }
 
 public:
-    auto get_leaf_size() const {
-        return leafSize;
-    }
+    ThreeDTree() = default;
 
     ThreeDTree(const NodesType &nodes_, const std::size_t leafSize_=10): 
             nodes(nodes_), leafSize(leafSize_){
@@ -236,6 +237,10 @@ public:
     ThreeDTree(const xt::pytensor<float, 2> &nodes_, const std::size_t leafSize_=10):
         nodes( NodesType(nodes_) ), leafSize(leafSize_){
         build_root();
+    }
+ 
+    auto get_leaf_size() const {
+        return leafSize;
     }
     
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(

@@ -100,9 +100,8 @@ class VectorCloud{
 private:
     const NodesType nodes;
     xt::xtensor<float, 2> vectors;
-    const xiuli::utils::ThreeDTree kdTree;
+    xiuli::utils::ThreeDTree kdTree;
     auto construct_vectors(const std::size_t &nearestNodeNum=20){
-        std::cout<< "nodes: " << nodes << std::endl;
         auto nodeNum = nodes.shape(0);
         
         // find the nearest k nodes and compute the first principle component as the main direction
@@ -113,7 +112,7 @@ private:
         vectors = xt::empty<float>( vshape );
 
         for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
-            auto queryNode = xt::view(nodes, nodeIdx, xt::range(0, 3));
+            xt::xtensor<float, 1> queryNode = xt::view(nodes, nodeIdx, xt::range(0, 3));
             auto nearestNodeIndices = kdTree.find_nearest_k_node_indices(
                                                         queryNode, nearestNodeNum);
             std::cout<< "nearest node indices: " << nearestNodeIndices << std::endl;
@@ -125,12 +124,12 @@ private:
             }
             // use the first principle component as the main direction
             //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
-            // std::cout<< "nearest nodes: " << nearestNodes << std::endl;
+            std::cout<< "nearest nodes: " << nearestNodes << std::endl;
             auto direction = xiuli::utils::pca_first_component( nearestNodes );
             vectors(nodeIdx, 0) = direction(0);
             vectors(nodeIdx, 1) = direction(1);
             vectors(nodeIdx, 2) = direction(2);
-            // std::cout<< "vector: " << direction << std::endl;
+            std::cout<< "vector: " << direction << std::endl;
         }
     }
 
@@ -149,14 +148,14 @@ public:
 
     // our nodes array contains radius direction, but we do not need it.
     VectorCloud( const NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes_, nearestNodeNum))
-    {
+        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes, nearestNodeNum)){
+        // kdTree = xiuli::utils::ThreeDTree(nodes, nearestNodeNum);
         construct_vectors( nearestNodeNum );
     }
     
     VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes_, nearestNodeNum))
-    {
+        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes, nearestNodeNum) ) {
+        // kdTree = xiuli::utils::ThreeDTree(nodes, nearestNodeNum);
         construct_vectors( nearestNodeNum );
     }
 

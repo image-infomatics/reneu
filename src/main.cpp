@@ -43,7 +43,7 @@ PYBIND11_MODULE(libxiuli, m) {
         .def("write_swc", &xn::Skeleton::write_swc);
 
     py::class_<xiuli::utils::ThreeDTree>(m, "XThreeDTree")
-        .def(py::init<const xt::pytensor<float, 2>, const std::size_t>())
+        .def(py::init<const xt::pytensor<float, 2> &, const std::size_t &>())
         .def("find_nearest_k_node_indices", 
                 py::overload_cast<const xt::pytensor<float,1> &, const std::size_t &>(
                     &xiuli::utils::ThreeDTree::find_nearest_k_node_indices));
@@ -51,7 +51,7 @@ PYBIND11_MODULE(libxiuli, m) {
 
     py::class_<xnn::ScoreTable>(m, "XNBLASTScoreTable")
         .def(py::init())
-        .def(py::init<const std::string>())
+        .def(py::init<const std::string &>())
         .def(py::init<const xt::pytensor<float, 2> &>())
         .def_property_readonly("table", &xnn::ScoreTable::get_pytable)
         // python do not have single precision number!
