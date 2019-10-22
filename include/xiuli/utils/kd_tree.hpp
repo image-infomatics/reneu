@@ -189,13 +189,18 @@ private:
     std::size_t leafSize;
 
     template<class E>
-    ThreeDInsideNodePtr build_node(const E &nodeIndices, std::size_t &dim){
+    ThreeDInsideNodePtr build_node(const E &nodeIndices, std::size_t &dim) const {
         // find the median value index
         xt::xtensor<std::size_t, 1> coords = xt::index_view( 
                             xt::view(nodes, xt::all(), dim), 
                             nodeIndices);
+        std::cout<< "node indices: " << nodeIndices << std::endl;
+        std::cout<< "coordinates: " << coords << std::endl;
+
         const std::size_t medianIndex = nodeIndices.size() / 2;
-        const auto partitionIndices = xt::argpartition(coords, medianIndex);
+        // although the partition can save some computation, but the order of equiverlant elements are not preserved!
+        // const auto partitionIndices = xt::argpartition(coords, medianIndex);
+        const auto partitionIndices = xt::argsort(coords, medianIndex);
         const auto middleNodeIndex = partitionIndices(medianIndex);
         const xt::xtensor<std::size_t, 1> partitionedNodeIndices = xt::index_view( 
                                                         nodeIndices, partitionIndices );
@@ -203,18 +208,29 @@ private:
         const auto rightNodeIndices = xt::view(
                                 partitionedNodeIndices, xt::range(medianIndex, _));
 
+        std::cout<< "middle node index: " << middleNodeIndex << std::endl;
+        std::cout<< "node indices: " << nodeIndices << std::endl;
+        std::cout<< "coordinates: " << coords << std::endl;
+        std::cout<< "sorted node indices: " << partitionedNodeIndices << std::endl;
+        std::cout << "left node indices: "<< leftNodeIndices << std::endl;
+        std::cout << "right node indices: "<< rightNodeIndices << std::endl;
+
         ThreeDNodePtr leftNodePtr, rightNodePtr;
         // recursively loop the dimension in 3D
         dim = next_dim(dim);       
-        if (medianIndex > leafSize){
+        if (leftNodeIndices.size() > leafSize){
             leftNodePtr = build_node( leftNodeIndices, dim );
-            rightNodePtr = build_node( rightNodeIndices, dim );
         } else {
             // include all the nodes as a leaf
             leftNodePtr = std::static_pointer_cast<ThreeDNode>(
                             std::make_shared<ThreeDLeafNode>( leftNodeIndices ));
+        }
+
+        if (rightNodeIndices.size() > leafSize){
+            rightNodePtr = build_node( rightNodeIndices, dim );
+        } else {
             rightNodePtr = std::static_pointer_cast<ThreeDNode>( 
-                            std::make_shared<ThreeDLeafNode>( rightNodeIndices ));
+                    std::make_shared<ThreeDLeafNode>( rightNodeIndices ));
         }
 
         return std::make_shared<ThreeDInsideNode>(middleNodeIndex, 
@@ -225,6 +241,7 @@ private:
         // start from first dimension
         std::size_t dim = 0;
         auto nodeIndices = xt::arange<std::size_t>(0, nodes.shape(0));
+        std::cout<< "nodes: " << nodes << std::endl;
         root = build_node( nodeIndices, dim );
     }
 

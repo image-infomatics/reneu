@@ -25,12 +25,16 @@ def test_nblast_score_table():
     assert isclose(st[11000, 0.62], 0.28008292141423, abs_tol=1e-4)
     # test the boundary condition
     assert isclose(st[2000, 0.4], 8.23731427922735, abs_tol=1e-4)
+    assert isclose(st[15976.5, 1], -0.892506, abs_tol=1e-4)
+    assert isclose(st[16011.2, 1], -1.31413, abs_tol=1e-4)
+    for _ in range(1000):
+        assert isclose(st[15000, 1], -0.892505829, abs_tol=1e-4)
 
 def test_nblast_with_fake_data():
     node_num = 100
     nodes = np.zeros((node_num, 3), dtype=np.float32)
     nodes[:, 2] = np.arange(0, node_num)
-    vc = XVectorCloud(nodes, 20)
+    vc = XVectorCloud(nodes, 2)
     true_vectors = np.repeat(np.array([[0,0,1]]), node_num, axis=0 )
     fake_vectors = deepcopy(vc.vectors)
     # there is a mixture of 1 and -1, both are correct
@@ -48,8 +52,7 @@ def test_nblast_with_fake_data():
     np.testing.assert_allclose(fake_vectors, true_vectors, atol=1e-4)
 
     score = vc.query_by(vc2, st)
-    breakpoint()
-    assert isclose(-1.20775 * node_num, score, rel_tol=1e-2)
+    assert isclose(-0.892506 * node_num, score, rel_tol=1e-2)
 
 def test_nblast_with_real_data():    
     # the result from R NBLAST is :
