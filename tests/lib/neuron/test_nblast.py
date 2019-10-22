@@ -4,6 +4,7 @@ faulthandler.enable()
 import os
 import numpy as np
 from math import isclose
+from copy import deepcopy
 
 from reneu.lib.libxiuli import XNBLASTScoreTable
 from reneu.neuron import Skeleton
@@ -25,7 +26,32 @@ def test_nblast_score_table():
     # test the boundary condition
     assert isclose(st[2000, 0.4], 8.23731427922735, abs_tol=1e-4)
 
-def test_nblast():    
+def test_nblast_with_fake_data():
+    node_num = 100
+    nodes = np.zeros((node_num, 3), dtype=np.float32)
+    nodes[:, 2] = np.arange(0, node_num)
+    vc = XVectorCloud(nodes, 20)
+    true_vectors = np.repeat(np.array([[0,0,1]]), node_num, axis=0 )
+    fake_vectors = deepcopy(vc.vectors)
+    # there is a mixture of 1 and -1, both are correct
+    fake_vectors[:, 2] = np.abs(fake_vectors[:, 2])
+    print('\nvector cloud: ', vc.vectors)
+    print('\ntrue vector cloud: ', true_vectors)
+    np.testing.assert_allclose(fake_vectors, true_vectors, atol=1e-4)
+
+    nodes2 = deepcopy(nodes)
+    nodes2[:, 0] += 15000
+    vc2 = XVectorCloud(nodes2, 10)
+    fake_vectors = deepcopy(vc.vectors)
+    # there is a mixture of 1 and -1, both are correct
+    fake_vectors[:, 2] = np.abs(fake_vectors[:, 2])
+    np.testing.assert_allclose(fake_vectors, true_vectors, atol=1e-4)
+
+    score = vc.query_by(vc2, st)
+    breakpoint()
+    assert isclose(-1.20775 * node_num, score, rel_tol=1e-2)
+
+def test_nblast_with_real_data():    
     # the result from R NBLAST is :
     # ID    77625	    77641
     # 77625	86501.20 	53696.72
@@ -35,17 +61,18 @@ def test_nblast():
     sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
     sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
 
-    cv1 = XVectorCloud( sk1.nodes, 20 )
-    cv2 = XVectorCloud( sk2.nodes, 20 )
-    score = cv1.query_by( cv2, st )
+    vc1 = XVectorCloud( sk1.nodes, 20 )
+    vc2 = XVectorCloud( sk2.nodes, 20 )
+    score = vc1.query_by( vc2, st )
     print('nblast score: ', score)
     assert isclose( score, 50891.03, rel_tol = 1e-3)
 
-    cvs = [ cv1, cv2 ]
-    score_matrix = XNBLASTScoreMatrix(cvs, st)
+    vcs = [ vc1, vc2 ]
+    score_matrix = XNBLASTScoreMatrix(vcs, st)
     print('raw scores: ', score_matrix.raw_score_matrix)
     #breakpoint()
 
 if __name__ == '__main__':
     test_nblast_score_table()
-    test_nblast()
+    test_nblast_with_fake_data()
+    test_nblast_with_real_data()

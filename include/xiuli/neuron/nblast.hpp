@@ -148,8 +148,9 @@ public:
 
     // our nodes array contains radius direction, but we do not need it.
     VectorCloud( const NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes, nearestNodeNum)){
-        // kdTree = xiuli::utils::ThreeDTree(nodes, nearestNodeNum);
+        : nodes(nodes_){
+        // : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes, nearestNodeNum)){
+        kdTree = xiuli::utils::ThreeDTree(nodes, nearestNodeNum);
         construct_vectors( nearestNodeNum );
     }
     
@@ -174,7 +175,7 @@ public:
             // std::cout<< "\nquery node: " << queryNode <<std::endl;
             // find the best match node in target and get physical distance
             auto nearestNodeIndex = kdTree.find_nearest_k_node_indices( queryNode, 1 )(0);
-            // std::cout<< "nearest node index: "<< nearestNodeIndex << std::endl;
+            std::cout<< "nearest node index: "<< nearestNodeIndex << std::endl;
 
             auto nearestNode = xt::view(nodes, nearestNodeIndex, xt::range(0,3));
             distance = xt::norm_l2( nearestNode - queryNode )(0);
@@ -188,11 +189,10 @@ public:
             //absoluteDotProduct = std::abs(dot(0));
             // std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
-            // std::cout<< "absolute dot product: " << absoluteDotProduct << std::endl;
+            std::cout<< "distance: "<< distance << ";   absolute dot product: " << absoluteDotProduct << std::endl;
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
-            // std::cout<< "score: "<< scoreTable(distance, absoluteDotProduct) << std::endl; 
-            // std::cout<< "accumulated score: " << rawScore <<std::endl; 
+            std::cout<< "accumulate score: "<< scoreTable(distance, absoluteDotProduct) << " to " << rawScore<< std::endl; 
         }
         return rawScore; 
     }
