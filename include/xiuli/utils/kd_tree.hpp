@@ -3,6 +3,7 @@
 #include <limits>       // std::numeric_limits
 #include <iostream>
 #include "xtensor/xtensor.hpp"
+#include "xtensor/xfixed.hpp"
 #include "xtensor-python/pytensor.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xnorm.hpp"
@@ -15,7 +16,7 @@ namespace xiuli::utils{
 using NodesType = xt::xtensor<float, 2>;
 
 auto next_dim(std::size_t &dim) {
-    if(dim==3)
+    if(dim==2)
         dim = 0;
     else
         dim += 1;
@@ -191,27 +192,33 @@ private:
     template<class E>
     ThreeDInsideNodePtr build_node(const E &nodeIndices, std::size_t &dim) const {
         // find the median value index
-        xt::xtensor<std::size_t, 1> coords = xt::index_view( 
-                            xt::view(nodes, xt::all(), dim), 
-                            nodeIndices);
-        std::cout<< "node indices: " << nodeIndices << std::endl;
-        std::cout<< "coordinates: " << coords << std::endl;
 
-        const std::size_t medianIndex = nodeIndices.size() / 2;
+        xt::xtensor<float, 1> coords = xt::index_view( 
+                           xt::view(nodes, xt::all(), dim), 
+                           nodeIndices);
+        //xt::xtensor<float, 1>::shape_type sh = {nodeIndices.size()};
+        //auto coords = xt::empty<float>(sh);
+        //for (std::size_t i=0; i<coords.size(); i++){
+        //    coords(i) = nodes( nodeIndices(i), dim );
+        //}
+
+        std::size_t medianIndex = nodeIndices.size() / 2;
         // although the partition can save some computation, but the order of equiverlant elements are not preserved!
         // const auto partitionIndices = xt::argpartition(coords, medianIndex);
-        const auto partitionIndices = xt::argsort(coords, medianIndex);
-        const auto middleNodeIndex = partitionIndices(medianIndex);
-        const xt::xtensor<std::size_t, 1> partitionedNodeIndices = xt::index_view( 
-                                                        nodeIndices, partitionIndices );
-        const auto leftNodeIndices = xt::view(partitionedNodeIndices, xt::range(0, medianIndex));
-        const auto rightNodeIndices = xt::view(
-                                partitionedNodeIndices, xt::range(medianIndex, _));
+        auto argSortIndices = xt::argsort( coords );
+        auto sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
+        auto middleNodeIndex = sortedNodeIndices( medianIndex );
+        auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, medianIndex) );
+        auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(medianIndex, _) );
 
-        std::cout<< "middle node index: " << middleNodeIndex << std::endl;
+        std::cout<< "\n\ndim: " << dim << std::endl; 
+        // std::cout<< "nodes: " << nodes <<std::endl;
+        // std::cout<< "coordinates in nodes: " << xt::view(nodes, xt::all(), dim) << std::endl;
         std::cout<< "node indices: " << nodeIndices << std::endl;
         std::cout<< "coordinates: " << coords << std::endl;
-        std::cout<< "sorted node indices: " << partitionedNodeIndices << std::endl;
+        std::cout<< "sorted node indices: " << sortedNodeIndices << std::endl;
+        std::cout<< "median index: " << medianIndex << std::endl;
+        std::cout<< "middle node index: " << middleNodeIndex << std::endl;
         std::cout << "left node indices: "<< leftNodeIndices << std::endl;
         std::cout << "right node indices: "<< rightNodeIndices << std::endl;
 

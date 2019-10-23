@@ -54,7 +54,8 @@ ext_modules = [
         language='c++',
         extra_compile_args=[
             # use Og for gdb debug
-            '-Og',
+            # '-Og',
+            '-O0',
             '-ffast-math',
             # build with debug info
             # '-g'
