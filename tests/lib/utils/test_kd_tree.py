@@ -62,7 +62,6 @@ def test_large_fake_array():
                                                             k=1, leaf_size=leaf_size)
     print('nearest node index: ', nearest_node_index)
     print('true nearest node index: ', true_nearest_node_index)
-    breakpoint()
     assert true_nearest_node_index == nearest_node_index
 
 if __name__ == '__main__':

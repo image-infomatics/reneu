@@ -13,9 +13,11 @@
 // use the c++17 nested namespace
 namespace xiuli::utils{
 
+using namespace xt::placeholders;
+
 using NodesType = xt::xtensor<float, 2>;
 
-auto next_dim(std::size_t &dim) {
+inline auto next_dim(std::size_t &dim) {
     if(dim==2)
         dim = 0;
     else
@@ -96,7 +98,8 @@ public:
                 auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
                 dist2s(i) = xt::norm_sq( node - queryNode )(0);
             }
-            auto indices = xt::argpartition( dist2s, nearestNodeNum-1 );
+            auto indices = xt::argsort(dist2s);
+            // auto indices = xt::argpartition( dist2s, nearestNodeNum-1 );
             auto selectedIndices = xt::view(indices, xt::range(0, nearestNodeNum));
             return xt::index_view(nodeIndices, selectedIndices );
         }
@@ -189,8 +192,7 @@ private:
     NodesType nodes;
     std::size_t leafSize;
 
-    template<class E>
-    ThreeDInsideNodePtr build_node(const E &nodeIndices, std::size_t &dim) const {
+    ThreeDInsideNodePtr build_node(const xt::xtensor<std::size_t, 1> &nodeIndices, std::size_t &dim) const {
         // find the median value index
 
         xt::xtensor<float, 1> coords = xt::index_view( 
@@ -202,14 +204,14 @@ private:
         //    coords(i) = nodes( nodeIndices(i), dim );
         //}
 
-        std::size_t medianIndex = nodeIndices.size() / 2;
+        std::size_t splitIndex = nodeIndices.size() / 2;
         // although the partition can save some computation, but the order of equiverlant elements are not preserved!
-        // const auto partitionIndices = xt::argpartition(coords, medianIndex);
+        // const auto argSortIndices = xt::argpartition(coords, splitIndex);
         auto argSortIndices = xt::argsort( coords );
-        auto sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
-        auto middleNodeIndex = sortedNodeIndices( medianIndex );
-        auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, medianIndex) );
-        auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(medianIndex, _) );
+        xt::xtensor<std::size_t, 1> sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
+        auto middleNodeIndex = sortedNodeIndices( splitIndex );
+        auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
+        auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex, _) );
 
         std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
@@ -217,15 +219,17 @@ private:
         std::cout<< "node indices: " << nodeIndices << std::endl;
         std::cout<< "coordinates: " << coords << std::endl;
         std::cout<< "sorted node indices: " << sortedNodeIndices << std::endl;
-        std::cout<< "median index: " << medianIndex << std::endl;
+        std::cout<< "median index: " << splitIndex << std::endl;
         std::cout<< "middle node index: " << middleNodeIndex << std::endl;
         std::cout << "left node indices: "<< leftNodeIndices << std::endl;
         std::cout << "right node indices: "<< rightNodeIndices << std::endl;
 
         ThreeDNodePtr leftNodePtr, rightNodePtr;
         // recursively loop the dimension in 3D
-        dim = next_dim(dim);       
-        if (leftNodeIndices.size() > leafSize){
+        dim = next_dim(dim);      
+
+        auto leftNodeNum = leftNodeIndices.size();
+        if (leftNodeNum > leafSize){
             leftNodePtr = build_node( leftNodeIndices, dim );
         } else {
             // include all the nodes as a leaf
@@ -233,7 +237,8 @@ private:
                             std::make_shared<ThreeDLeafNode>( leftNodeIndices ));
         }
 
-        if (rightNodeIndices.size() > leafSize){
+        auto rightNodeNum = rightNodeIndices.size();
+        if (rightNodeNum > leafSize){
             rightNodePtr = build_node( rightNodeIndices, dim );
         } else {
             rightNodePtr = std::static_pointer_cast<ThreeDNode>( 
