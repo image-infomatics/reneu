@@ -19,9 +19,10 @@ def get_nearest_node_indices(nodes, query_node, k=1, leaf_size=20):
     # return ind 
 
 def test_kd_tree():
-    arr = np.asarray(range(24)).reshape(8,3)
-    kdtree = XThreeDTree(arr, 2)
-    print(arr)
+    leaf_size = 2
+    nodes = np.asarray(range(24)).reshape(8,3)
+    kdtree = XThreeDTree(nodes, leaf_size)
+    print(nodes)
 
     query_node = np.asarray([6.1, 7.1, 8.1], dtype=np.float32)
     nearest_node_index = kdtree.find_nearest_k_node_indices(query_node, 1)
@@ -43,16 +44,19 @@ def test_kd_tree():
     print('\ntest nearest node number more than leaf node number.')
     query_node = np.asarray([21.1, 23.1, 34.1], dtype=np.float32)
     nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, 3)
+    true_nearest_node_indices = get_nearest_node_indices(
+                                    nodes, query_node, k=3, leaf_size=leaf_size)
     print('nearest node index: ', nearest_node_indices)
-    assert np.all( np.asarray([6, 7, 5]) == nearest_node_indices )
-
+    print('true nearest node index: ', true_nearest_node_indices)
+    assert len(set(nearest_node_indices).symmetric_difference(set(true_nearest_node_indices)))==0
 
     print('\ntest leaf node number is more than nearest node number.') 
-    kdtree = XThreeDTree(arr, 3)
+    kdtree = XThreeDTree(nodes, 3)
     query_node = np.asarray([21.1, 23.1, 34.1], dtype=np.float32)
     nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, 2)
     print('nearest node index: ', nearest_node_indices)
     assert np.all( np.asarray([6, 7]) == nearest_node_indices )
+
 
 def test_large_fake_array():
     print('\nlarger fake array test')

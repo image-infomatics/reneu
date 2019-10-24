@@ -2,6 +2,7 @@
 
 #include <limits>       // std::numeric_limits
 #include <iostream>
+#include <queue>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xfixed.hpp"
 #include "xtensor-python/pytensor.hpp"
@@ -16,6 +17,29 @@ namespace xiuli::utils{
 using namespace xt::placeholders;
 
 using NodesType = xt::xtensor<float, 2>;
+
+// the type of element in priority queue
+using PriorityQueueElement = std::pair<float, std::size_t>;
+// build priority queue to store the nearest neighbors
+auto cmp = [](PriorityQueueElement left, PriorityQueueElement right) {
+    return left.first < right.first;
+};
+using NearestNodePriorityQueue = std::priority_queue<
+        PriorityQueueElement, std::vector<PriorityQueueElement>, decltype(cmp)>; 
+
+inline void update_nearest_node_priority_queue(
+            NearestNodePriorityQueue &nearestNodePriorityQueue, 
+            const NodesType &nodes,
+            const std::size_t &nodeIndex,
+            const xt::xtensor<float, 1> &queryNode){
+    auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
+
+    float squaredDist = xt::norm_sq(node - queryNode)(0);
+    if ( squaredDist < nearestNodePriorityQueue.top().first ){
+        nearestNodePriorityQueue.pop();
+        nearestNodePriorityQueue.push( std::make_pair( squaredDist, nodeIndex ) );
+    }
+}
 
 inline auto next_dim(std::size_t &dim) {
     if(dim==2)
@@ -37,10 +61,11 @@ public:
     virtual void fill_node_indices(xt::xtensor<std::size_t, 1> &nodeIndicesBuffer, 
                                     std::size_t &startIndex) const = 0;
     
-    virtual xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
+    virtual void find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode,
                 const NodesType &nodes, 
-                std::size_t &dim, const std::size_t &nearestNodeNum) const = 0; 
+                std::size_t &dim, 
+                NearestNodePriorityQueue &nearestNodePriorityQueue) const = 0; 
 };
 using ThreeDNodePtr = std::shared_ptr<ThreeDNode>;
 
@@ -69,39 +94,14 @@ public:
         }
     }
 
-    xt::xtensor<std::size_t, 1> find_nearest_k_node_indices( 
+    void find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode, 
                 const NodesType &nodes,
-                std::size_t &dim, const std::size_t &nearestNodeNum) const {
+                std::size_t &dim, 
+                NearestNodePriorityQueue &nearestNodePriorityQueue) const {
         
-        if (nearestNodeNum == nodeIndices.size()){
-            return nodeIndices;
-        } else if (nearestNodeNum == 1){
-            // use squared distance to avoid sqrt computation
-            float minSquaredDist = std::numeric_limits<float>::max();
-            std::size_t nearestNodeIndex = 0;
-            for (auto nodeIndex : nodeIndices){
-                auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
-                float squaredDist = xt::norm_sq(node - queryNode)(0);
-                if (squaredDist < minSquaredDist){
-                    nearestNodeIndex = nodeIndex;
-                    minSquaredDist = squaredDist;
-                }
-            }
-            return {nearestNodeIndex};
-        } else {
-            assert(nearestNodeNum < nodeIndices.size());
-            xt::xtensor<float, 1>::shape_type sh = {nodeIndices.size()};
-            auto dist2s = xt::empty<float>(sh); 
-            for (std::size_t i=0; i<nodeIndices.size(); i++){
-                auto nodeIndex = nodeIndices( i );
-                auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
-                dist2s(i) = xt::norm_sq( node - queryNode )(0);
-            }
-            auto indices = xt::argsort(dist2s);
-            // auto indices = xt::argpartition( dist2s, nearestNodeNum-1 );
-            auto selectedIndices = xt::view(indices, xt::range(0, nearestNodeNum));
-            return xt::index_view(nodeIndices, selectedIndices );
+        for (auto nodeIndex : nodeIndices){
+            update_nearest_node_priority_queue(nearestNodePriorityQueue, nodes, nodeIndex, queryNode);
         }
     }
 };
@@ -145,41 +145,33 @@ public:
         startIndex += rightNodePtr->size();
     }
    
-    xt::xtensor<std::size_t, 1> find_nearest_k_node_indices( 
+    void find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode,
                 const xt::xtensor<float, 2> &nodes, 
-                std::size_t &dim, const std::size_t &nearestNodeNum) const {
-        ThreeDNodePtr closeNodePtr, farNodePtr;
-        
+                std::size_t &dim, 
+                NearestNodePriorityQueue &nearestNodePriorityQueue) const {
+
+        auto nearestNodeNum = nearestNodePriorityQueue.size();
         // compare with the median value
         if (queryNode(dim) < nodes(medianNodeIndex, dim)){
-            // continue checking left nodes
-            closeNodePtr = leftNodePtr;
-            farNodePtr = rightNodePtr;
-        } else {
-            closeNodePtr = rightNodePtr;
-            farNodePtr = leftNodePtr;
-        }
-
-        if (closeNodePtr->size() >= nearestNodeNum){
             dim = next_dim(dim);
-            return closeNodePtr->find_nearest_k_node_indices(
-                                        queryNode, nodes, dim, nearestNodeNum);
+            // continue checking left nodes
+            // closeNodePtr = leftNodePtr;
+            leftNodePtr->find_nearest_k_node_indices(
+                queryNode, nodes, dim, nearestNodePriorityQueue);
+            if (nodes(medianNodeIndex, dim) - queryNode(dim) < 
+                                            nearestNodePriorityQueue.top().first) {
+                rightNodePtr->find_nearest_k_node_indices(
+                    queryNode, nodes, dim, nearestNodePriorityQueue );
+            }
         } else {
-            // closeNodePtr->size() < nearestNodeNum
-            // we need to add some close nodes from far node
-            xt::xtensor<std::size_t, 1>::shape_type shape = {nearestNodeNum};
-            xt::xtensor<std::size_t, 1> nearestNodeIndices = xt::empty<std::size_t>(shape);
-            auto closeNodeIndices = closeNodePtr->get_node_indices();
-            xt::view(nearestNodeIndices, xt::range(0, closeNodeIndices.size())) = closeNodeIndices;
-            //for (std::size_t i = 0; i<closeNodeIndices.size(); i++){
-                //nearestNodeIndices(i) = closeNodeIndices(i);
-            //}
-            auto remainingNodeNum = nearestNodeNum - closeNodeIndices.size();
-            auto remainingNodeIndices = farNodePtr->find_nearest_k_node_indices(
-                                            queryNode, nodes, dim, remainingNodeNum);
-            xt::view(nearestNodeIndices, xt::range(closeNodeIndices.size(), _)) = remainingNodeIndices;
-            return nearestNodeIndices;
+            rightNodePtr->find_nearest_k_node_indices(
+                queryNode, nodes, dim, nearestNodePriorityQueue );
+            if (queryNode(dim)-nodes(medianNodeIndex, dim) < 
+                                    nearestNodePriorityQueue.top().first){
+                leftNodePtr->find_nearest_k_node_indices(
+                    queryNode, nodes, dim, nearestNodePriorityQueue);
+            }
         }
     }
 }; // ThreeDNode class
@@ -280,7 +272,26 @@ public:
         assert( nearestNodeNum >= 1 );
         std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
-        return root->find_nearest_k_node_indices(queryNodeCoord, nodes, dim, nearestNodeNum);
+
+        // build priority queue to store the nearest neighbors
+        NearestNodePriorityQueue nearestNodePriorityQueue(cmp);
+        for (auto nodeIndex : xt::arange<std::size_t>(0, nearestNodeNum)){
+            auto node = xt::view(nodes, nodeIndex, xt::range(0,3));
+            float squaredDist = xt::norm_sq(node - queryNodeCoord)(0);
+            nearestNodePriorityQueue.push(std::make_pair(squaredDist, nodeIndex));
+        }
+
+        root->find_nearest_k_node_indices(queryNodeCoord, 
+                                                 nodes, dim,nearestNodePriorityQueue);
+
+        xt::xtensor<float,1>::shape_type sh = {nearestNodeNum};
+        auto nearestNodeIndices = xt::empty<float>(sh);
+        for(auto i : xt::arange<std::size_t>(0, nearestNodeNum)){
+            nearestNodeIndices(i) = nearestNodePriorityQueue.top().second;
+            nearestNodePriorityQueue.pop();
+        }
+        assert( nearestNodePriorityQueue.empty() );
+        return nearestNodeIndices;
     }
 
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
