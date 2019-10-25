@@ -36,8 +36,8 @@ inline void update_nearest_node_priority_queue(
 
     float squaredDist = xt::norm_sq(node - queryNode)(0);
     if ( squaredDist < nearestNodePriorityQueue.top().first ){
-        std::cout<< "replacing (" << nearestNodePriorityQueue.top().first << ", " << 
-                                    nearestNodePriorityQueue.top().second << ") with ("<< squaredDist << ", " << nodeIndex << ")" << std::endl;
+        // std::cout<< "replacing (" << nearestNodePriorityQueue.top().first << ", " << 
+                                    // nearestNodePriorityQueue.top().second << ") with ("<< squaredDist << ", " << nodeIndex << ")" << std::endl;
         nearestNodePriorityQueue.pop();
         nearestNodePriorityQueue.push( std::make_pair( squaredDist, nodeIndex ) );
     }
@@ -169,6 +169,7 @@ public:
                     queryNode, nodes, dim, nearestNodePriorityQueue );
             }
         } else {
+            // right one is closer
             rightNodePtr->find_nearest_k_node_indices(
                 queryNode, nodes, dim, nearestNodePriorityQueue );
             if (queryNode(dim)-nodes(medianNodeIndex, dim) < 
@@ -209,7 +210,7 @@ private:
         auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
         auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex+1, _) );
 
-        std::cout<< "\n\ndim: " << dim << std::endl; 
+        // std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
         // std::cout<< "coordinates in nodes: " << xt::view(nodes, xt::all(), dim) << std::endl;
         std::cout<< "node indices: " << nodeIndices << std::endl;
@@ -279,9 +280,9 @@ public:
 
         // build priority queue to store the nearest neighbors
         NearestNodePriorityQueue nearestNodePriorityQueue(cmp);
-        for (auto nodeIndex : xt::arange<std::size_t>(0, nearestNodeNum)){
-            auto node = xt::view(nodes, nodeIndex, xt::range(0,3));
-            float squaredDist = xt::norm_sq(node - queryNodeCoord)(0);
+        for (auto i : xt::arange<std::size_t>(0, nearestNodeNum)){
+            float squaredDist = std::numeric_limits<float>::max();
+            std::size_t nodeIndex = std::numeric_limits<std::size_t>::max();
             nearestNodePriorityQueue.push(std::make_pair(squaredDist, nodeIndex));
         }
 

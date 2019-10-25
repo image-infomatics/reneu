@@ -60,9 +60,9 @@ def test_kd_tree():
 
 def test_large_fake_array():
     print('\nlarger fake array test')
-    node_num = 20
+    node_num = 100
     leaf_size = 2
-    query_index = 2
+    query_index = 10
     nodes = np.zeros((node_num, 3), dtype=np.float32)
     nodes[:, 0] = np.arange(0, node_num)
     nodes[:, 1] = np.arange(0, node_num)
@@ -74,11 +74,13 @@ def test_large_fake_array():
     true_nearest_node_index = get_nearest_node_indices(nodes, query_node, 
                                                             k=1, leaf_size=leaf_size)
 
+    print('\n\nquery nearest neighbor.')
     print('nearest node index: ', nearest_node_index)
     print('true nearest node index: ', true_nearest_node_index)
     assert true_nearest_node_index == nearest_node_index
 
     k = 20
+    print(f'\n\n query {k} nearest neighbors.')
     nearest_node_indices = kdtree.find_nearest_k_node_indices(query_node, k)
     true_nearest_node_indices = get_nearest_node_indices(nodes, query_node, 
                                                             k=k, leaf_size=leaf_size)

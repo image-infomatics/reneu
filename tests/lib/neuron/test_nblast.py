@@ -54,7 +54,8 @@ def test_nblast_with_fake_data():
     score = vc.query_by(vc2, st)
     assert isclose(-0.892506 * node_num, score, rel_tol=1e-2)
 
-def test_nblast_with_real_data():    
+def test_nblast_with_real_data():   
+    print('\n\n start testing nblast with real data.') 
     # the result from R NBLAST is :
     # ID    77625	    77641
     # 77625	86501.20 	53696.72
@@ -64,8 +65,11 @@ def test_nblast_with_real_data():
     sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
     sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
 
+    print('building vector cloud')
     vc1 = XVectorCloud( sk1.nodes, 20 )
     vc2 = XVectorCloud( sk2.nodes, 20 )
+
+    print('computing nblast score')
     score = vc1.query_by( vc2, st )
     print('nblast score: ', score)
     assert isclose( score, 50891.03, rel_tol = 1e-3)
