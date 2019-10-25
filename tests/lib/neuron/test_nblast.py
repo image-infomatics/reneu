@@ -5,6 +5,7 @@ import os
 import numpy as np
 from math import isclose
 from copy import deepcopy
+from time import time
 
 from reneu.lib.libxiuli import XNBLASTScoreTable
 from reneu.neuron import Skeleton
@@ -66,12 +67,18 @@ def test_nblast_with_real_data():
     sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
 
     print('building vector cloud')
+    start = time()
     vc1 = XVectorCloud( sk1.nodes, 20 )
+    print(f'build first vector cloud takes {time()-start} secs.')
+    start = time()
     vc2 = XVectorCloud( sk2.nodes, 20 )
+    print(f'build second vector cloud takes {time()-start} secs.')
+
 
     print('computing nblast score')
+    start = time()
     score = vc1.query_by( vc2, st )
-    print('nblast score: ', score)
+    print('nblast score: ', score, 'with time elapse: ', time()-start, ' sec')
     assert isclose( score, 50891.03, rel_tol = 1e-3)
 
     vcs = [ vc1, vc2 ]

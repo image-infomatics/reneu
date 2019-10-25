@@ -154,7 +154,6 @@ public:
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const {
 
         auto nearestNodeNum = nearestNodePriorityQueue.size();
-        update_nearest_node_priority_queue(nearestNodePriorityQueue, nodes, medianNodeIndex, queryNode);
         
         dim = next_dim(dim);
         // compare with the median value
@@ -163,6 +162,8 @@ public:
             // closeNodePtr = leftNodePtr;
             leftNodePtr->find_nearest_k_node_indices(
                 queryNode, nodes, dim, nearestNodePriorityQueue);
+            update_nearest_node_priority_queue(nearestNodePriorityQueue, 
+                                                nodes, medianNodeIndex, queryNode);
             if (nodes(medianNodeIndex, dim) - queryNode(dim) < 
                                             nearestNodePriorityQueue.top().first) {
                 rightNodePtr->find_nearest_k_node_indices(
@@ -172,6 +173,8 @@ public:
             // right one is closer
             rightNodePtr->find_nearest_k_node_indices(
                 queryNode, nodes, dim, nearestNodePriorityQueue );
+            update_nearest_node_priority_queue(nearestNodePriorityQueue, 
+                                                nodes, medianNodeIndex, queryNode);
             if (queryNode(dim)-nodes(medianNodeIndex, dim) < 
                                     nearestNodePriorityQueue.top().first){
                 leftNodePtr->find_nearest_k_node_indices(
@@ -213,13 +216,13 @@ private:
         // std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
         // std::cout<< "coordinates in nodes: " << xt::view(nodes, xt::all(), dim) << std::endl;
-        std::cout<< "node indices: " << nodeIndices << std::endl;
-        std::cout<< "coordinates: " << coords << std::endl;
-        std::cout<< "sorted node indices: " << sortedNodeIndices << std::endl;
-        std::cout<< "split index: " << splitIndex << std::endl;
-        std::cout<< "middle node index: " << middleNodeIndex << std::endl;
-        std::cout << "left node indices: "<< leftNodeIndices << std::endl;
-        std::cout << "right node indices: "<< rightNodeIndices << std::endl;
+        // std::cout<< "node indices: " << nodeIndices << std::endl;
+        // std::cout<< "coordinates: " << coords << std::endl;
+        // std::cout<< "sorted node indices: " << sortedNodeIndices << std::endl;
+        // std::cout<< "split index: " << splitIndex << std::endl;
+        // std::cout<< "middle node index: " << middleNodeIndex << std::endl;
+        // std::cout << "left node indices: "<< leftNodeIndices << std::endl;
+        // std::cout << "right node indices: "<< rightNodeIndices << std::endl;
 
         ThreeDNodePtr leftNodePtr, rightNodePtr;
         // recursively loop the dimension in 3D
@@ -250,7 +253,7 @@ private:
         // start from first dimension
         std::size_t dim = 0;
         auto nodeIndices = xt::arange<std::size_t>(0, nodes.shape(0));
-        std::cout<< "nodes: " << nodes << std::endl;
+        // std::cout<< "nodes: " << nodes << std::endl;
         root = build_node( nodeIndices, dim );
     }
 
