@@ -36,6 +36,8 @@ inline void update_nearest_node_priority_queue(
 
     float squaredDist = xt::norm_sq(node - queryNode)(0);
     if ( squaredDist < nearestNodePriorityQueue.top().first ){
+        std::cout<< "replacing (" << nearestNodePriorityQueue.top().first << ", " << 
+                                    nearestNodePriorityQueue.top().second << ") with ("<< squaredDist << ", " << nodeIndex << ")" << std::endl;
         nearestNodePriorityQueue.pop();
         nearestNodePriorityQueue.push( std::make_pair( squaredDist, nodeIndex ) );
     }
@@ -64,7 +66,7 @@ public:
     virtual void find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode,
                 const NodesType &nodes, 
-                std::size_t &dim, 
+                std::size_t dim, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const = 0; 
 };
 using ThreeDNodePtr = std::shared_ptr<ThreeDNode>;
@@ -97,7 +99,7 @@ public:
     void find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode, 
                 const NodesType &nodes,
-                std::size_t &dim, 
+                std::size_t dim, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const {
         
         for (auto nodeIndex : nodeIndices){
@@ -148,13 +150,15 @@ public:
     void find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode,
                 const xt::xtensor<float, 2> &nodes, 
-                std::size_t &dim, 
+                std::size_t dim, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const {
 
         auto nearestNodeNum = nearestNodePriorityQueue.size();
+        update_nearest_node_priority_queue(nearestNodePriorityQueue, nodes, medianNodeIndex, queryNode);
+        
+        dim = next_dim(dim);
         // compare with the median value
         if (queryNode(dim) < nodes(medianNodeIndex, dim)){
-            dim = next_dim(dim);
             // continue checking left nodes
             // closeNodePtr = leftNodePtr;
             leftNodePtr->find_nearest_k_node_indices(
@@ -184,7 +188,7 @@ private:
     NodesType nodes;
     std::size_t leafSize;
 
-    ThreeDInsideNodePtr build_node(const xt::xtensor<std::size_t, 1> &nodeIndices, std::size_t &dim) const {
+    ThreeDInsideNodePtr build_node(const xt::xtensor<std::size_t, 1> &nodeIndices, std::size_t dim) const {
         // find the median value index
 
         xt::xtensor<float, 1> coords = xt::index_view( 
@@ -203,7 +207,7 @@ private:
         xt::xtensor<std::size_t, 1> sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
         auto middleNodeIndex = sortedNodeIndices( splitIndex );
         auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
-        auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex, _) );
+        auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex+1, _) );
 
         std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
@@ -211,7 +215,7 @@ private:
         std::cout<< "node indices: " << nodeIndices << std::endl;
         std::cout<< "coordinates: " << coords << std::endl;
         std::cout<< "sorted node indices: " << sortedNodeIndices << std::endl;
-        std::cout<< "median index: " << splitIndex << std::endl;
+        std::cout<< "split index: " << splitIndex << std::endl;
         std::cout<< "middle node index: " << middleNodeIndex << std::endl;
         std::cout << "left node indices: "<< leftNodeIndices << std::endl;
         std::cout << "right node indices: "<< rightNodeIndices << std::endl;

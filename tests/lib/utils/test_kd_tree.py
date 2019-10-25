@@ -60,9 +60,9 @@ def test_kd_tree():
 
 def test_large_fake_array():
     print('\nlarger fake array test')
-    node_num = 100
-    leaf_size = 20
-    query_index = 20
+    node_num = 20
+    leaf_size = 2
+    query_index = 2
     nodes = np.zeros((node_num, 3), dtype=np.float32)
     nodes[:, 0] = np.arange(0, node_num)
     nodes[:, 1] = np.arange(0, node_num)
