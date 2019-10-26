@@ -66,7 +66,6 @@ public:
     virtual void find_nearest_k_node_indices(
                 const xt::xtensor<float, 1> &queryNode,
                 const NodesType &nodes, 
-                std::size_t dim, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const = 0; 
 };
 using ThreeDNodePtr = std::shared_ptr<ThreeDNode>;
@@ -99,11 +98,11 @@ public:
     void find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode, 
                 const NodesType &nodes,
-                std::size_t dim, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const {
         
         for (auto nodeIndex : nodeIndices){
-            update_nearest_node_priority_queue(nearestNodePriorityQueue, nodes, nodeIndex, queryNode);
+            update_nearest_node_priority_queue(
+                    nearestNodePriorityQueue, nodes, nodeIndex, queryNode);
         }
     }
 };
@@ -111,17 +110,19 @@ using ThreeDLeafNodePtr = std::shared_ptr<ThreeDLeafNode>;
 
 class ThreeDInsideNode: public ThreeDNode{
 public: 
-    std::size_t medianNodeIndex;
+    const std::size_t medianNodeIndex;
     ThreeDNodePtr leftNodePtr;
     ThreeDNodePtr rightNodePtr;
-    std::size_t nodeNum;
+    const std::size_t nodeNum;
+    const std::size_t dim;
 
     ThreeDInsideNode() = default;
 
-    ThreeDInsideNode(const std::size_t &medianNodeIndex_, 
-            ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_, std::size_t nodeNum_):
+    ThreeDInsideNode(const std::size_t medianNodeIndex_, 
+            ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_, 
+            const std::size_t nodeNum_, const std::size_t dim_):
             medianNodeIndex(medianNodeIndex_), leftNodePtr(leftNodePtr_), 
-            rightNodePtr(rightNodePtr_), nodeNum(nodeNum_){};
+            rightNodePtr(rightNodePtr_), nodeNum(nodeNum_), dim(dim_){};
 
     std::size_t size() const {
         // return leftNodePtr->size() + rightNodePtr->size() + 1;
@@ -150,35 +151,33 @@ public:
     void find_nearest_k_node_indices( 
                 const xt::xtensor<float, 1> &queryNode,
                 const xt::xtensor<float, 2> &nodes, 
-                std::size_t dim, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const {
 
         auto nearestNodeNum = nearestNodePriorityQueue.size();
         
-        dim = next_dim(dim);
         // compare with the median value
         if (queryNode(dim) < nodes(medianNodeIndex, dim)){
             // continue checking left nodes
             // closeNodePtr = leftNodePtr;
             leftNodePtr->find_nearest_k_node_indices(
-                queryNode, nodes, dim, nearestNodePriorityQueue);
+                queryNode, nodes, nearestNodePriorityQueue);
             update_nearest_node_priority_queue(nearestNodePriorityQueue, 
                                                 nodes, medianNodeIndex, queryNode);
             if (nodes(medianNodeIndex, dim) - queryNode(dim) < 
                                             nearestNodePriorityQueue.top().first) {
                 rightNodePtr->find_nearest_k_node_indices(
-                    queryNode, nodes, dim, nearestNodePriorityQueue );
+                    queryNode, nodes, nearestNodePriorityQueue );
             }
         } else {
             // right one is closer
             rightNodePtr->find_nearest_k_node_indices(
-                queryNode, nodes, dim, nearestNodePriorityQueue );
+                queryNode, nodes, nearestNodePriorityQueue );
             update_nearest_node_priority_queue(nearestNodePriorityQueue, 
                                                 nodes, medianNodeIndex, queryNode);
             if (queryNode(dim)-nodes(medianNodeIndex, dim) < 
                                     nearestNodePriorityQueue.top().first){
                 leftNodePtr->find_nearest_k_node_indices(
-                    queryNode, nodes, dim, nearestNodePriorityQueue);
+                    queryNode, nodes, nearestNodePriorityQueue);
             }
         }
     }
@@ -246,7 +245,7 @@ private:
         }
 
         return std::make_shared<ThreeDInsideNode>(middleNodeIndex, 
-                        leftNodePtr, rightNodePtr, coords.size());
+                        leftNodePtr, rightNodePtr, coords.size(), dim);
     }
 
     auto build_root(){
@@ -278,7 +277,6 @@ public:
                 const xt::xtensor<float, 1> &queryNode, 
                 const std::size_t &nearestNodeNum) const {
         assert( nearestNodeNum >= 1 );
-        std::size_t dim = 0;
         auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
 
         // build priority queue to store the nearest neighbors
@@ -290,7 +288,7 @@ public:
         }
 
         root->find_nearest_k_node_indices(queryNodeCoord, 
-                                                 nodes, dim,nearestNodePriorityQueue);
+                                            nodes, nearestNodePriorityQueue);
 
         xt::xtensor<float,1>::shape_type sh = {nearestNodeNum};
         auto nearestNodeIndices = xt::empty<float>(sh);
@@ -305,19 +303,22 @@ public:
     xt::xtensor<std::size_t, 1> find_nearest_k_node_indices(
             const xt::pytensor<float, 1> &queryNode, 
             const std::size_t &nearestNodeNum){
-        return find_nearest_k_node_indices( xt::xtensor<float,1>(queryNode), nearestNodeNum );
+        return find_nearest_k_node_indices( 
+                xt::xtensor<float,1>(queryNode), nearestNodeNum );
     }
 
     auto find_nearest_k_nodes(const xt::xtensor<float, 1> &queryNode, 
-                                        const std::size_t &nearestNodeNum) const {
+                                const std::size_t &nearestNodeNum) const {
         
-        auto nearestNodeIndices = find_nearest_k_node_indices(queryNode, nearestNodeNum);
+        auto nearestNodeIndices = find_nearest_k_node_indices(
+                                            queryNode, nearestNodeNum);
         xt::xtensor<float, 2>::shape_type shape = {nearestNodeNum, 4};
 
         auto nearestNodes = xt::empty<float>( shape ); 
         for(std::size_t i; i<nearestNodeNum; i++){
             auto nodeIndex = nearestNodeIndices(i);
-            xt::view(nearestNodes, i, xt::all()) = xt::view(nodes, nodeIndex, xt::all());
+            xt::view(nearestNodes, i, xt::all()) = xt::view(
+                                            nodes, nodeIndex, xt::all());
         }
         return nearestNodes;
     } 
