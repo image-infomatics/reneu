@@ -203,14 +203,14 @@ private:
         //    coords(i) = nodes( nodeIndices(i), dim );
         //}
 
-        std::size_t splitIndex = nodeIndices.size() / 2;
-        // although the partition can save some computation, but the order of equiverlant elements are not preserved!
-        // const auto argSortIndices = xt::argpartition(coords, splitIndex);
-        auto argSortIndices = xt::argsort( coords );
-        xt::xtensor<std::size_t, 1> sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
-        auto middleNodeIndex = sortedNodeIndices( splitIndex );
-        auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
-        auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex+1, _) );
+        const std::size_t splitIndex = nodeIndices.size() / 2;
+        // partition can save some computation than full sort
+        const auto argSortIndices = xt::argpartition(coords, splitIndex);
+        // auto argSortIndices = xt::argsort( coords );
+        const xt::xtensor<std::size_t, 1> sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
+        const auto middleNodeIndex = sortedNodeIndices( splitIndex );
+        const auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
+        const auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex+1, _) );
 
         // std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
