@@ -23,19 +23,13 @@ public:
 
     BoundingBox(const xt::xtensor<float, 2> &nodes, 
                 const xt::xtensor<std::size_t, 1> &nodeIndices){
-
-        xt::xtensor_fixed<float, xt::xshape<2>> minmax;
         for (std::size_t i=0; i<3; i++){
             auto coords = xt::index_view(
                     xt::view(nodes, xt::all(), i),
                     nodeIndices);
             auto minmax = xt::minmax(coords)();
-            // std::cout<< "minmax result: " << minmax <<std::endl;
             minCorner(i) = minmax[0];
             maxCorner(i) = minmax[1];
-            // minCorner(i), maxCorner(i) = xt::minmax(coords);
-            // minCorner(i) = std::min_element(coords.begin(), coords.end());
-            // maxCorner(i) = std::max_element(coords.begin(), coords.end());
         }
 
     }
@@ -52,7 +46,6 @@ public:
     */
     float min_squared_distance_from( const xt::xtensor<float, 1> &node) const {
         float squaredDist = 0;
-
         float tmp;
         for (std::size_t i=0; i<3; i++){
             tmp = 0;
