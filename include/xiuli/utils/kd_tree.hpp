@@ -10,6 +10,7 @@
 #include "xtensor/xnorm.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor/xindex_view.hpp"
+#include "xiuli/utils/bounding_box.hpp"
 
 // use the c++17 nested namespace
 namespace xiuli::utils{
@@ -74,11 +75,13 @@ using ThreeDNodePtr = std::shared_ptr<ThreeDNode>;
 class ThreeDLeafNode: public ThreeDNode{
 
 private:
-    xt::xtensor<std::size_t, 1> nodeIndices;
+    const xt::xtensor<std::size_t, 1> nodeIndices;
+    const BoundingBox bbox;
 
 public:
     ThreeDLeafNode() = default;
-    ThreeDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_) : nodeIndices(nodeIndices_){}
+    ThreeDLeafNode(const xt::xtensor<std::size_t, 1> &nodeIndices_,
+                    const BoundingBox &bbox_) : nodeIndices(nodeIndices_), bbox(bbox_){}
 
     std::size_t size() const {
         return nodeIndices.size();
@@ -109,24 +112,30 @@ public:
 using ThreeDLeafNodePtr = std::shared_ptr<ThreeDLeafNode>;
 
 class ThreeDInsideNode: public ThreeDNode{
-public: 
+private: 
     const std::size_t medianNodeIndex;
     ThreeDNodePtr leftNodePtr;
     ThreeDNodePtr rightNodePtr;
     const std::size_t nodeNum;
     const std::size_t dim;
+    const BoundingBox bbox; 
 
+public:
     ThreeDInsideNode() = default;
 
     ThreeDInsideNode(const std::size_t medianNodeIndex_, 
             ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_, 
-            const std::size_t nodeNum_, const std::size_t dim_):
+            const std::size_t nodeNum_, const std::size_t dim_, const BoundingBox &bbox_):
             medianNodeIndex(medianNodeIndex_), leftNodePtr(leftNodePtr_), 
-            rightNodePtr(rightNodePtr_), nodeNum(nodeNum_), dim(dim_){};
+            rightNodePtr(rightNodePtr_), nodeNum(nodeNum_), dim(dim_), bbox(bbox_){};
 
     std::size_t size() const {
         // return leftNodePtr->size() + rightNodePtr->size() + 1;
         return nodeNum;
+    }
+
+    auto get_bounding_box() const{
+        return bbox;
     }
      
     xt::xtensor<std::size_t, 1> get_node_indices() const {
@@ -152,6 +161,10 @@ public:
                 const xt::xtensor<float, 1> &queryNode,
                 const xt::xtensor<float, 2> &nodes, 
                 NearestNodePriorityQueue &nearestNodePriorityQueue) const {
+        // check the bounding box first
+        if (nearestNodePriorityQueue.top().first <= bbox.min_squared_distance_from(queryNode)){
+            return;
+        }
 
         auto nearestNodeNum = nearestNodePriorityQueue.size();
         
@@ -190,7 +203,7 @@ private:
     ThreeDInsideNodePtr root;
     NodesType nodes;
     std::size_t leafSize;
-
+    
     ThreeDInsideNodePtr build_node(const xt::xtensor<std::size_t, 1> &nodeIndices, std::size_t dim) const {
         // find the median value index
 
@@ -212,6 +225,7 @@ private:
         const auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
         const auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex+1, _) );
 
+        const BoundingBox bbox( nodes, nodeIndices );
         // std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
         // std::cout<< "coordinates in nodes: " << xt::view(nodes, xt::all(), dim) << std::endl;
@@ -231,21 +245,23 @@ private:
         if (leftNodeNum > leafSize){
             leftNodePtr = build_node( leftNodeIndices, dim );
         } else {
+            BoundingBox leftBBox( nodes, leftNodeIndices );
             // include all the nodes as a leaf
             leftNodePtr = std::static_pointer_cast<ThreeDNode>(
-                            std::make_shared<ThreeDLeafNode>( leftNodeIndices ));
+                            std::make_shared<ThreeDLeafNode>( leftNodeIndices, leftBBox ));
         }
 
         auto rightNodeNum = rightNodeIndices.size();
         if (rightNodeNum > leafSize){
             rightNodePtr = build_node( rightNodeIndices, dim );
         } else {
+            BoundingBox rightBBox( nodes, rightNodeIndices );
             rightNodePtr = std::static_pointer_cast<ThreeDNode>( 
-                    std::make_shared<ThreeDLeafNode>( rightNodeIndices ));
+                    std::make_shared<ThreeDLeafNode>( rightNodeIndices, rightBBox ));
         }
 
         return std::make_shared<ThreeDInsideNode>(middleNodeIndex, 
-                        leftNodePtr, rightNodePtr, coords.size(), dim);
+                        leftNodePtr, rightNodePtr, coords.size(), dim, bbox);
     }
 
     auto build_root(){
