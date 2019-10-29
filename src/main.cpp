@@ -1,15 +1,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "xtensor/xtensor.hpp"
 #define FORCE_IMPORT_ARRAY
-#include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xiuli/xiuli.hpp"
 #include "xiuli/utils/math.hpp"
-
+#include "xiuli/type_aliase.hpp" 
 
 namespace py = pybind11;
-namespace xn = xiuli::neuron;
-namespace xnn = xn::nblast;
+using namespace xiuli;
 
 PYBIND11_MODULE(libxiuli, m) {
     xt::import_numpy();
@@ -26,53 +23,53 @@ PYBIND11_MODULE(libxiuli, m) {
            write_swc
     )pbdoc";
 
-    m.def("pca_first_component", &xiuli::utils::py_pca_first_component); 
+    m.def("pca_first_component", &py_pca_first_component); 
 
     //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
-    py::class_<xn::Skeleton>(m, "XSkeleton")
-        .def(py::init<const xt::pytensor<float, 2> &, const xt::pytensor<int, 2> &>())
-        .def(py::init<const xt::pytensor<float, 2> &>())
+    py::class_<Skeleton>(m, "XSkeleton")
+        .def(py::init<const PyNode &, const PyNode &>())
+        .def(py::init<const PyNode &>())
         .def(py::init<const std::string>())
-        .def_property_readonly("nodes", &xn::Skeleton::get_nodes)
-        .def_property_readonly("attributes", &xn::Skeleton::get_attributes)
-        .def_property_readonly("path_length", &xn::Skeleton::get_path_length)
-        .def_property_readonly("edges", &xn::Skeleton::get_edges)
-        .def("__len__", &xn::Skeleton::get_node_num)
-        .def("downsample", &xn::Skeleton::downsample)
-        .def("to_swc_str", &xn::Skeleton::to_swc_str)
-        .def("write_swc", &xn::Skeleton::write_swc);
+        .def_property_readonly("nodes", &Skeleton::get_nodes)
+        .def_property_readonly("attributes", &Skeleton::get_attributes)
+        .def_property_readonly("path_length", &Skeleton::get_path_length)
+        .def_property_readonly("edges", &Skeleton::get_edges)
+        .def("__len__", &Skeleton::get_node_num)
+        .def("downsample", &Skeleton::downsample)
+        .def("to_swc_str", &Skeleton::to_swc_str)
+        .def("write_swc", &Skeleton::write_swc);
 
-    py::class_<xiuli::utils::ThreeDTree>(m, "XThreeDTree")
-        .def(py::init<const xt::pytensor<float, 2> &, const std::size_t &>())
+    py::class_<xiuli::ThreeDTree>(m, "XThreeDTree")
+        .def(py::init<const PyNode &, const Index &>())
         .def("find_nearest_k_node_indices", 
-                py::overload_cast<const xt::pytensor<float,1> &, const std::size_t &>(
-                    &xiuli::utils::ThreeDTree::find_nearest_k_node_indices));
+                py::overload_cast<const xt::pytensor<float,1> &, const Index &>(
+                    &ThreeDTree::find_nearest_k_node_indices));
         
 
-    py::class_<xnn::ScoreTable>(m, "XNBLASTScoreTable")
+    py::class_<ScoreTable>(m, "XNBLASTScoreTable")
         .def(py::init())
         .def(py::init<const std::string &>())
-        .def(py::init<const xt::pytensor<float, 2> &>())
-        .def_property_readonly("table", &xnn::ScoreTable::get_pytable)
+        .def(py::init<const PyNode &>())
+        .def_property_readonly("table", &ScoreTable::get_pytable)
         // python do not have single precision number!
         .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(
-                                    &xnn::ScoreTable::operator()), "get table item");
+                                    &ScoreTable::operator()), "get table item");
     
-    py::class_<xnn::VectorCloud>(m, "XVectorCloud")
-        .def(py::init<const xt::pytensor<float, 2> &, const std::size_t &>())
-        .def_property_readonly("vectors", &xnn::VectorCloud::get_vectors)
-        .def("__len__", &xnn::VectorCloud::size)
-        .def("query_by", &xnn::VectorCloud::query_by);
+    py::class_<VectorCloud>(m, "XVectorCloud")
+        .def(py::init<const PyNode &, const Index &>())
+        .def_property_readonly("vectors", &VectorCloud::get_vectors)
+        .def("__len__", &VectorCloud::size)
+        .def("query_by", &VectorCloud::query_by);
 
-    py::class_<xnn::NBLASTScoreMatrix>(m, "XNBLASTScoreMatrix")
-        //.def(py::init<const py::list &, const xnn::ScoreTable &>())
+    py::class_<NBLASTScoreMatrix>(m, "XNBLASTScoreMatrix")
+        //.def(py::init<const py::list &, const ScoreTable &>())
         // Note that the conversion from python list to std::vector has copy overhead
-        .def(py::init<const std::vector<xnn::VectorCloud> &, const xnn::ScoreTable &>())
-        .def_property_readonly("raw_score_matrix", &xnn::NBLASTScoreMatrix::get_raw_score_matrix)
+        .def(py::init<const std::vector<VectorCloud> &, const ScoreTable &>())
+        .def_property_readonly("raw_score_matrix", &NBLASTScoreMatrix::get_raw_score_matrix)
         .def_property_readonly("normalized_score_matrix", 
-                                &xnn::NBLASTScoreMatrix::get_normalized_score_matrix)
+                                &NBLASTScoreMatrix::get_normalized_score_matrix)
         .def_property_readonly("mean_score_matrix", 
-                                &xnn::NBLASTScoreMatrix::get_mean_score_matrix);
+                                &NBLASTScoreMatrix::get_mean_score_matrix);
         
 
 

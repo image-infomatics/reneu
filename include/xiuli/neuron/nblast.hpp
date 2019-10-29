@@ -13,11 +13,12 @@
 #include "xtensor/xindex_view.hpp"
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xtensor/xcsv.hpp"
+
 #include "xiuli/utils/math.hpp"
 #include "xiuli/utils/kd_tree.hpp"
 
 // use the c++17 nested namespace
-namespace xiuli::neuron::nblast{
+namespace xiuli{
 
 using NodesType = xt::xtensor<float, 2>;
 
@@ -100,7 +101,7 @@ class VectorCloud{
 private:
     const NodesType nodes;
     xt::xtensor<float, 2> vectors;
-    xiuli::utils::ThreeDTree kdTree;
+    ThreeDTree kdTree;
     auto construct_vectors(const std::size_t &nearestNodeNum=20){
         auto nodeNum = nodes.shape(0);
         
@@ -123,9 +124,9 @@ private:
                 nearestNodes(i, 2) = nodes( nearestNodeIndex, 2 );
             }
             // use the first principle component as the main direction
-            //vectors(nodeIdx, xt::all()) = xiuli::utils::pca_first_component( nearestNodes ); 
+            //vectors(nodeIdx, xt::all()) = pca_first_component( nearestNodes ); 
             // std::cout<< "nearest nodes: " << nearestNodes << std::endl;
-            auto direction = xiuli::utils::pca_first_component( nearestNodes );
+            auto direction = pca_first_component( nearestNodes );
             vectors(nodeIdx, 0) = direction(0);
             vectors(nodeIdx, 1) = direction(1);
             vectors(nodeIdx, 2) = direction(2);
@@ -149,15 +150,15 @@ public:
     // our nodes array contains radius direction, but we do not need it.
     VectorCloud( const NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
         : nodes(nodes_){
-        // : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes, nearestNodeNum)){
-        kdTree = xiuli::utils::ThreeDTree(nodes, nearestNodeNum);
+        // : nodes(nodes_), kdTree(ThreeDTree(nodes, nearestNodeNum)){
+        kdTree = ThreeDTree(nodes, nearestNodeNum);
         construct_vectors( nearestNodeNum );
     }
     
     VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
         : nodes(nodes_) {
-        // : nodes(nodes_), kdTree(xiuli::utils::ThreeDTree(nodes, nearestNodeNum) ) {
-        kdTree = xiuli::utils::ThreeDTree(nodes, nearestNodeNum);
+        // : nodes(nodes_), kdTree(ThreeDTree(nodes, nearestNodeNum) ) {
+        kdTree = ThreeDTree(nodes, nearestNodeNum);
         construct_vectors( nearestNodeNum );
     }
 

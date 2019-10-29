@@ -15,22 +15,23 @@
 #include "xtensor/xadapt.hpp"
 #include "xiuli/utils/string.hpp"
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
+#include "xiuli/type_aliase.hpp"
+
 
 using namespace xiuli::utils;
 using namespace xt::placeholders;  // required for `_` to work
 
-using NodesType = xt::xtensor<float, 2>;
 using AttributesType = xt::xtensor<int, 2>;
 
 // use the c++17 nested namespace
-namespace xiuli::neuron{
+namespace xiuli{
 
 class Skeleton{
 
 private:
     // node array (N x 4), the rows are nodes, the columns are x,y,z,r
     // normally the type is float
-    NodesType nodes;
+    Nodes nodes;
     
     // attributes of nodes (N x 4), 
     // the columns are node type, parent, first child, sibling
@@ -78,7 +79,7 @@ private:
     template<typename Tn>
     inline auto initialize_nodes_and_attributes(Tn nodeNum){
         // create nodes and attributes
-        NodesType::shape_type nodesShape = {nodeNum, 4};
+        Nodes::shape_type nodesShape = {nodeNum, 4};
         nodes = xt::zeros<float>( nodesShape );
         AttributesType::shape_type attributesShape = {nodeNum, 4};
         // root node id is -2 rather than -1.
@@ -419,8 +420,8 @@ public:
         }
 
         // create new nodes
-        NodesType::shape_type newNodesShape = {newNodeNum, 4};
-        NodesType newNodes = xt::zeros<float>( newNodesShape );
+        Nodes::shape_type newNodesShape = {newNodeNum, 4};
+        Nodes newNodes = xt::zeros<float>( newNodesShape );
         for (std::size_t i = 0; i<newNodeNum; i++){
             auto oldNodeIdx = selectedNodeIdxes[i];
             auto oldNode = xt::view(nodes, oldNodeIdx, xt::all());

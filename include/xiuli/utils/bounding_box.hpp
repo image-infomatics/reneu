@@ -8,7 +8,7 @@
 #include "xtensor/xsort.hpp"
 
 
-namespace xiuli::utils{
+namespace xiuli{
 
 class BoundingBox{
 private:
