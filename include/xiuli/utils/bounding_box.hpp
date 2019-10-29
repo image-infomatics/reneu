@@ -5,6 +5,7 @@
 #include "xtensor/xindex_view.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xmath.hpp"
+#include "xtensor/xsort.hpp"
 
 
 namespace xiuli::utils{
@@ -32,6 +33,10 @@ public:
             maxCorner(i) = minmax[1];
         }
 
+    }
+
+    auto get_largest_extent_dimension() const {
+        return xt::argmax( maxCorner - minCorner )(0);
     }
     
     /**

@@ -79,6 +79,7 @@ def test_nblast_with_real_data():
     start = time()
     score = vc1.query_by( vc2, st )
     print('nblast score: ', score, 'with time elapse: ', time()-start, ' sec')
+    print('as a reference, Julia NBLAST takes about 0.030 sec.')
     assert isclose( score, 50891.03, rel_tol = 1e-3)
 
     vcs = [ vc1, vc2 ]

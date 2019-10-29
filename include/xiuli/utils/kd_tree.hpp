@@ -46,14 +46,6 @@ inline void update_nearest_node_priority_queue(
     }
 }
 
-inline auto next_dim(std::size_t &dim) {
-    if(dim==2)
-        dim = 0;
-    else
-        dim += 1;
-    return dim;
-}
-
 // ThreeDTree
 class ThreeDNode{
 public:
@@ -99,21 +91,23 @@ using ThreeDLeafNodePtr = std::shared_ptr<ThreeDLeafNode>;
 
 class ThreeDInsideNode: public ThreeDNode{
 private: 
-    const std::size_t medianNodeIndex;
+    const std::size_t dim;
+    const float splitValue;
+    const std::size_t nodeNum;
+    const BoundingBox bbox; 
     ThreeDNodePtr leftNodePtr;
     ThreeDNodePtr rightNodePtr;
-    const std::size_t nodeNum;
-    const std::size_t dim;
-    const BoundingBox bbox; 
 
 public:
     ThreeDInsideNode() = default;
 
-    ThreeDInsideNode(const std::size_t medianNodeIndex_, 
-            ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_, 
-            const std::size_t nodeNum_, const std::size_t dim_, const BoundingBox &bbox_):
-            medianNodeIndex(medianNodeIndex_), leftNodePtr(leftNodePtr_), 
-            rightNodePtr(rightNodePtr_), nodeNum(nodeNum_), dim(dim_), bbox(bbox_){};
+    ThreeDInsideNode(const std::size_t dim_, 
+            const float splitValue_,
+            const std::size_t nodeNum_, const BoundingBox &bbox_, 
+            ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_): 
+            dim(dim_), splitValue(splitValue_),
+            nodeNum(nodeNum_), bbox(bbox_),
+            leftNodePtr(leftNodePtr_), rightNodePtr(rightNodePtr_){}
 
     std::size_t size() const {
         // return leftNodePtr->size() + rightNodePtr->size() + 1;
@@ -136,14 +130,12 @@ public:
         auto nearestNodeNum = nearestNodePriorityQueue.size();
         
         // compare with the median value
-        if (queryNode(dim) < nodes(medianNodeIndex, dim)){
+        if (queryNode(dim) < splitValue){
             // continue checking left nodes
             // closeNodePtr = leftNodePtr;
             leftNodePtr->find_nearest_k_node_indices(
                 queryNode, nodes, nearestNodePriorityQueue);
-            update_nearest_node_priority_queue(nearestNodePriorityQueue, 
-                                                nodes, medianNodeIndex, queryNode);
-            if (nodes(medianNodeIndex, dim) - queryNode(dim) < 
+            if (splitValue - queryNode(dim) < 
                                             nearestNodePriorityQueue.top().first) {
                 rightNodePtr->find_nearest_k_node_indices(
                     queryNode, nodes, nearestNodePriorityQueue );
@@ -152,9 +144,7 @@ public:
             // right one is closer
             rightNodePtr->find_nearest_k_node_indices(
                 queryNode, nodes, nearestNodePriorityQueue );
-            update_nearest_node_priority_queue(nearestNodePriorityQueue, 
-                                                nodes, medianNodeIndex, queryNode);
-            if (queryNode(dim)-nodes(medianNodeIndex, dim) < 
+            if ((queryNode(dim)-splitValue) < 
                                     nearestNodePriorityQueue.top().first){
                 leftNodePtr->find_nearest_k_node_indices(
                     queryNode, nodes, nearestNodePriorityQueue);
@@ -171,23 +161,25 @@ private:
     Nodes nodes;
     std::size_t leafSize;
     
-    ThreeDInsideNodePtr build_node(const NodeIndices &nodeIndices, std::size_t dim) const {
-        // find the median value index
+    ThreeDInsideNodePtr build_node(const NodeIndices &nodeIndices) const {
+        const BoundingBox bbox( nodes, nodeIndices );
+        const std::size_t dim = bbox.get_largest_extent_dimension();      
+        auto nodeNum = nodeIndices.size();
 
+        // find the median value index
         xt::xtensor<float, 1> coords = xt::index_view( 
                            xt::view(nodes, xt::all(), dim), 
                            nodeIndices);
-
-        const std::size_t splitIndex = nodeIndices.size() / 2;
+        const std::size_t splitIndex = nodeNum / 2;
         // partition can save some computation than full sort
         const auto argSortIndices = xt::argpartition(coords, splitIndex);
         // auto argSortIndices = xt::argsort( coords );
         const NodeIndices sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
         const auto middleNodeIndex = sortedNodeIndices( splitIndex );
+        const float splitValue = nodes( middleNodeIndex, dim );
         const auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
-        const auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex+1, _) );
+        const auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex, _) );
 
-        const BoundingBox bbox( nodes, nodeIndices );
         // std::cout<< "\n\ndim: " << dim << std::endl; 
         // std::cout<< "nodes: " << nodes <<std::endl;
         // std::cout<< "coordinates in nodes: " << xt::view(nodes, xt::all(), dim) << std::endl;
@@ -200,12 +192,10 @@ private:
         // std::cout << "right node indices: "<< rightNodeIndices << std::endl;
 
         ThreeDNodePtr leftNodePtr, rightNodePtr;
-        // recursively loop the dimension in 3D
-        dim = next_dim(dim);      
 
         auto leftNodeNum = leftNodeIndices.size();
         if (leftNodeNum > leafSize){
-            leftNodePtr = build_node( leftNodeIndices, dim );
+            leftNodePtr = build_node( leftNodeIndices );
         } else {
             BoundingBox leftBBox( nodes, leftNodeIndices );
             // include all the nodes as a leaf
@@ -215,15 +205,15 @@ private:
 
         auto rightNodeNum = rightNodeIndices.size();
         if (rightNodeNum > leafSize){
-            rightNodePtr = build_node( rightNodeIndices, dim );
+            rightNodePtr = build_node( rightNodeIndices );
         } else {
             BoundingBox rightBBox( nodes, rightNodeIndices );
             rightNodePtr = std::static_pointer_cast<ThreeDNode>( 
                     std::make_shared<ThreeDLeafNode>( rightNodeIndices, rightBBox ));
         }
 
-        return std::make_shared<ThreeDInsideNode>(middleNodeIndex, 
-                        leftNodePtr, rightNodePtr, coords.size(), dim, bbox);
+        return std::make_shared<ThreeDInsideNode>(dim, splitValue, nodeNum, bbox, 
+                                                        leftNodePtr, rightNodePtr);
     }
 
     auto build_root(){
@@ -231,7 +221,7 @@ private:
         std::size_t dim = 0;
         auto nodeIndices = xt::arange<std::size_t>(0, nodes.shape(0));
         // std::cout<< "nodes: " << nodes << std::endl;
-        root = build_node( nodeIndices, dim );
+        root = build_node( nodeIndices );
     }
 
 public:
