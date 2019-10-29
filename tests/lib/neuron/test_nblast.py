@@ -68,10 +68,10 @@ def test_nblast_with_real_data():
 
     print('building vector cloud')
     start = time()
-    vc1 = XVectorCloud( sk1.nodes, 10 )
+    vc1 = XVectorCloud( sk1.nodes, 20 )
     print(f'build first vector cloud takes {time()-start} secs.')
     start = time()
-    vc2 = XVectorCloud( sk2.nodes, 10 )
+    vc2 = XVectorCloud( sk2.nodes, 20 )
     print(f'build second vector cloud takes {time()-start} secs.')
 
 
