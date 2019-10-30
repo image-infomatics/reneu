@@ -7,6 +7,8 @@
 #include "xtensor/xmath.hpp"
 #include "xtensor/xsort.hpp"
 
+#include "xiuli/type_aliase.hpp"
+
 
 namespace xiuli{
 
@@ -15,19 +17,15 @@ private:
     xt::xtensor_fixed<float, xt::xshape<3>> minCorner;
     xt::xtensor_fixed<float, xt::xshape<3>> maxCorner;
 
-
 public:
-    BoundingBox(){
-        minCorner = xt::zeros<float>({3});
-        maxCorner = xt::zeros<float>({3});
-    }
-
-    BoundingBox(const xt::xtensor<float, 2> &nodes, 
-                const xt::xtensor<std::size_t, 1> &nodeIndices){
-        for (std::size_t i=0; i<3; i++){
+    BoundingBox(const Points &points, 
+                const PointIndices &pointIndices):
+                    minCorner(xt::zeros<float>({3})), 
+                    maxCorner(xt::zeros<float>({3})){
+        for (Index i=0; i<3; i++){
             auto coords = xt::index_view(
-                    xt::view(nodes, xt::all(), i),
-                    nodeIndices);
+                    xt::view(points, xt::all(), i),
+                    pointIndices);
             auto minmax = xt::minmax(coords)();
             minCorner(i) = minmax[0];
             maxCorner(i) = minmax[1];
@@ -52,7 +50,7 @@ public:
     float min_squared_distance_from( const xt::xtensor<float, 1> &node) const {
         float squaredDist = 0;
         float tmp;
-        for (std::size_t i=0; i<3; i++){
+        for (Index i=0; i<3; i++){
             tmp = 0;
             tmp = std::max(tmp, minCorner(i) - node(i));
             tmp = std::max(tmp, node(i) - maxCorner(i));

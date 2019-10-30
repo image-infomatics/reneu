@@ -17,7 +17,7 @@ PYBIND11_MODULE(libxiuli, m) {
         .. currentclass:: Skeleton
         .. autosummary::
            :toctree: _generate
-           nodes
+           points
            attributes
            downsample
            write_swc
@@ -25,38 +25,36 @@ PYBIND11_MODULE(libxiuli, m) {
 
     m.def("pca_first_component", &py_pca_first_component); 
 
-    //py::class_<xiuli::neuron::Skeleton, PySkeleton>(m, "Skeleton")
+    //py::class_<neuron::Skeleton, PySkeleton>(m, "Skeleton")
     py::class_<Skeleton>(m, "XSkeleton")
-        .def(py::init<const PyNode &, const PyNode &>())
-        .def(py::init<const PyNode &>())
+        .def(py::init<const PyPoints &, const PyPoints &>())
+        .def(py::init<const PyPoints &>())
         .def(py::init<const std::string>())
-        .def_property_readonly("nodes", &Skeleton::get_nodes)
+        .def_property_readonly("points", &Skeleton::get_points)
         .def_property_readonly("attributes", &Skeleton::get_attributes)
         .def_property_readonly("path_length", &Skeleton::get_path_length)
         .def_property_readonly("edges", &Skeleton::get_edges)
-        .def("__len__", &Skeleton::get_node_num)
+        .def("__len__", &Skeleton::get_point_num)
         .def("downsample", &Skeleton::downsample)
         .def("to_swc_str", &Skeleton::to_swc_str)
         .def("write_swc", &Skeleton::write_swc);
 
-    py::class_<xiuli::ThreeDTree>(m, "XThreeDTree")
-        .def(py::init<const PyNode &, const Index &>())
-        .def("find_nearest_k_node_indices", 
-                py::overload_cast<const xt::pytensor<float,1> &, const Index &>(
-                    &ThreeDTree::find_nearest_k_node_indices));
+    py::class_<KDTree>(m, "XKDTree")
+        .def(py::init<const PyPoints &, const Index &>())
+        .def("knn", &KDTree::py_knn);
         
 
     py::class_<ScoreTable>(m, "XNBLASTScoreTable")
         .def(py::init())
         .def(py::init<const std::string &>())
-        .def(py::init<const PyNode &>())
+        .def(py::init<const PyPoints &>())
         .def_property_readonly("table", &ScoreTable::get_pytable)
         // python do not have single precision number!
         .def("__getitem__", py::overload_cast<const std::tuple<float, float>&>(
                                     &ScoreTable::operator()), "get table item");
     
     py::class_<VectorCloud>(m, "XVectorCloud")
-        .def(py::init<const PyNode &, const Index &>())
+        .def(py::init<const PyPoints &, const Index &, const Index &>())
         .def_property_readonly("vectors", &VectorCloud::get_vectors)
         .def("__len__", &VectorCloud::size)
         .def("query_by", &VectorCloud::query_by);

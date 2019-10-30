@@ -3,11 +3,14 @@
 #include <limits>       // std::numeric_limits
 #include <iostream>
 #include <queue>
+#include <variant>
 #include "xiuli/type_aliase.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xnorm.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor/xindex_view.hpp"
+
+#include "xiuli/type_aliase.hpp"
 #include "xiuli/utils/bounding_box.hpp"
 
 namespace xiuli{
@@ -21,250 +24,280 @@ using namespace xt::placeholders;
  */
 class IndexHeap{
 private:
-    NodeIndices nodeIndices;
+    PointIndices pointIndices;
     xt::xtensor<float, 1> squaredDistances;
     Index maxDistIndex;
 
 public:
     IndexHeap(const Index K){
-        NodeIndices::shape_type sh = {K}; 
-        nodeIndices = xt::empty<Index>( sh );
-        nodeIndices.fill( std::numeric_limits<Index>::max() );
+        PointIndices::shape_type sh = {K}; 
+        pointIndices = xt::empty<Index>( sh );
+        pointIndices.fill( std::numeric_limits<Index>::max() );
         squaredDistances = xt::empty<float>({K});
         squaredDistances.fill( std::numeric_limits<float>::max() );
         maxDistIndex = 0;
     }
 
     inline auto get_node_indices() const {
-        return nodeIndices;
+        return pointIndices;
     }
 
     inline auto size() const {
-        return nodeIndices.size();
+        return pointIndices.size();
     }
 
     inline auto max_squared_dist() const {
         return squaredDistances( maxDistIndex );
     }
 
-    void update( const Index &nodeIndex, const Nodes &nodes, const Node &queryNode ){
-        auto node = xt::view(nodes, nodeIndex, xt::range(0, 3));
-        auto squaredDist = xt::norm_sq( node - queryNode )();
+    inline void update( const Point &point, const Index &pointIndex, const Point &queryPoint ){
+        auto squaredDist = xt::norm_sq( point - queryPoint )();
         if (squaredDist < max_squared_dist()){
             // replace the largest distance with current one
-            nodeIndices( maxDistIndex ) = nodeIndex;
+            pointIndices( maxDistIndex ) = pointIndex;
             squaredDistances( maxDistIndex ) = squaredDist;
             // update the max distance index
             maxDistIndex = xt::argmax( squaredDistances )();
         }
     }
-
-    inline void update(const NodeIndices &nodeIndices, const Nodes &nodes, const Node &queryNode){
-        for (auto nodeIndex : nodeIndices){
-            update(nodeIndex, nodes, queryNode);
-        }
-    }
 }; // end of class IndexHeap
 
-// ThreeDTree
-class ThreeDNode{
+
+
+// the maximum dim is 2, so two bits is enough to encode the dimension
+const std::uint32_t DIM_BIT_START = 30;
+
+/*
+* This implementation is inspired by libnabo:
+* https://github.com/ethz-asl/libnabo
+* we use one Point type to represent both inside node and leaf node.
+* this design will avoid class inheritance and virtual functions, smart pointers...
+* this is more efficient according to libnabo paper:
+* Elseberg, Jan, et al. "Comparison of nearest-neighbor-search strategies and implementations for efficient shape registration." Journal of Software Engineering for Robotics 3.1 (2012): 2-12.
+*/
+class KDTreeNode{
+private:
+    // make data member public to fit the criteria of POD (Plain Old Data)
+    // this variable is encoded. The first most-significant bits 
+    // encodes the dimension. if the dimension is 0-2, it is a split node.
+    // if the dimension is 3 (11 in binary code), this is a leaf node.
+    // if this is a split node inside tree, the 30 least-significant bits 
+    // encode the right child node index 
+    // if this is a leaf node, the 30 least-significant bits encode 
+    // the number of points in bucket.
+    Index dimChildBucketSize;
+    // the starting index of points in bucket
+    // the cut/split value of this node
+    std::variant<Index, float> bucketIndex_cutValue;
+    BoundingBox bbox;
+
 public:
-    ThreeDNode() = default;
-    // we need to make base class polymorphic for dynamic cast
-    virtual Index size() const = 0;
+    // construct a split node
+    KDTreeNode(const Index dim, const float cutValue_, const BoundingBox bbox_):
+                        bucketIndex_cutValue(cutValue_), bbox(bbox_){
+        // since dim is unsigned type, it is always >=0
+        assert(dim<3);
+        dimChildBucketSize = dim << DIM_BIT_START;
+        // we'll have to write right child node index later.
+    }
+
+    // construct a leaf node
+    KDTreeNode(const Index bucketSize, const Index bucketIndex_, const BoundingBox bbox_):
+                                    bucketIndex_cutValue(bucketIndex_), bbox(bbox_){
+        dimChildBucketSize = (3<<DIM_BIT_START) + bucketSize;
+    }
+
+    inline auto get_bounding_box() const {
+        return bbox;
+    }    
+
+    inline auto get_bucket_index() const {
+        return std::get<Index>(bucketIndex_cutValue);
+    }
+
+    inline auto get_cut_value() const {
+        return std::get<float>(bucketIndex_cutValue);
+    }
+
+    inline auto get_dim() const {
+        return dimChildBucketSize >> DIM_BIT_START;
+    }
+
+    inline bool is_leaf() const {
+        // whether the first two bits are 11
+        return dimChildBucketSize >= 0xC0000000;
+    }
+
+    inline auto get_right_child_node_index() const {
+        // black out the two most-significant bits
+        return dimChildBucketSize & 0x3FFFFFFF;
+    }
+
+    inline auto get_bucket_size() const {
+        // black out the two most-significant bits
+        return dimChildBucketSize & 0x3FFFFFFF;
+    }
+
+    inline auto write_right_child_node_index( const Index &rightChildNodeIndex ){
+        dimChildBucketSize += rightChildNodeIndex; 
+    }
     
-    virtual void find_nearest_k_node_indices(
-                const Node &queryNode,
-                const Nodes &nodes, 
-                IndexHeap &indexHeap) const = 0; 
-};
-using ThreeDNodePtr = std::shared_ptr<ThreeDNode>;
+    void print() const {
+        if (is_leaf()){
+            std::cout<< "\nleaf node:" << std::endl;
+            std::cout<< "bucket size: " << get_bucket_size() << std::endl;
+            std::cout<< "bucket index: "<< get_bucket_index() << std::endl;
+        } else {
+            std::cout<< "\nsplit node:" << std::endl;
+            std::cout<< "dim: " << get_dim() << std::endl;
+            std::cout<< "right child node index: " << get_right_child_node_index() << std::endl;
+            std::cout<< "cut value: " << get_cut_value() << std::endl;
+        }
+    }
+
+}; // end of class KDTreeNode
 
 
-class ThreeDLeafNode: public ThreeDNode{
+class KDTree{
 
 private:
-    const NodeIndices nodeIndices;
-    const BoundingBox bbox;
+    std::vector<KDTreeNode> kdTreeNodes;
+    std::vector<Index> pointIndicesBucket;
+    const Index leafSize;
+    const Points points;
 
-public:
-    ThreeDLeafNode() = default;
-    ThreeDLeafNode(const NodeIndices &nodeIndices_,
-                    const BoundingBox &bbox_) : nodeIndices(nodeIndices_), bbox(bbox_){}
+    Index build_kd_nodes( const PointIndices &pointIndices ){
+        BoundingBox bbox( points, pointIndices );
+        if (pointIndices.size() <= leafSize ){
+            // build a leaf node
+            Index bucketSize = pointIndices.size();
+            Index bucketIndex = pointIndicesBucket.size();
+            KDTreeNode node( bucketSize, bucketIndex, bbox );
+            for( Index pointIndex : pointIndices ){
+                pointIndicesBucket.push_back( pointIndex );
+            }
 
-    Index size() const {
-        return nodeIndices.size();
+            // std::cout<< "\ninserting leaf node to " << kdTreeNodes.size() << std::endl;
+            // node.print();
+            // std::cout<<"\nexisting nodes in kdTreeNodes: "<<std::endl;
+            // for(auto n : kdTreeNodes){
+                // n.print();
+            // }
+
+            kdTreeNodes.push_back( node );
+            return kdTreeNodes.size() - 1;
+        } else {
+            // build a split node
+            auto dim = bbox.get_largest_extent_dimension();
+            auto pointNum = pointIndices.size();
+            
+            // find the median value index
+            xt::xtensor<float, 1> coords = xt::index_view( 
+                            xt::view(points, xt::all(), dim), 
+                            pointIndices);
+            const Index splitIndex = pointNum / 2;
+            // partition can save some computation than full sort
+            const auto argSortIndices = xt::argpartition(coords, splitIndex);
+            // auto argSortIndices = xt::argsort( coords );
+            const PointIndices sortedPointIndices = xt::index_view( 
+                                                pointIndices, argSortIndices );
+            const auto middlePointIndex = sortedPointIndices( splitIndex );
+            const float cutValue = points( middlePointIndex, dim );
+             
+            // std::cout<< "dim: " << dim << std::endl;
+            // std::cout<< "point number: " << pointNum << std::endl;
+            // std::cout<< "middle point index: " << middlePointIndex << std::endl;
+
+           
+            KDTreeNode node(dim, cutValue, bbox);
+            // node.print();
+            Index nodeIndex = kdTreeNodes.size();
+            kdTreeNodes.push_back(node);
+
+            const auto leftPointIndices = xt::view( sortedPointIndices, 
+                                                        xt::range(0, splitIndex) );
+            const auto leftNodeIndex = build_kd_nodes(leftPointIndices);
+            assert( leftNodeIndex == nodeIndex + 1 );
+
+            const auto rightPointIndices = xt::view( sortedPointIndices, 
+                                                        xt::range(splitIndex, _) );
+            const auto rightNodeIndex = build_kd_nodes(rightPointIndices);
+
+            // std::cout<< "write right child node index in "<< nodeIndex << std::endl;
+            // std::cout<< "the node number is "<< kdTreeNodes.size() << std::endl;
+            // node.print(); 
+            kdTreeNodes[nodeIndex].write_right_child_node_index( rightNodeIndex );
+            node.print(); 
+            return nodeIndex;
+        }
     }
 
-    void find_nearest_k_node_indices( 
-                const Node &queryNode, 
-                const Nodes &nodes,
-                IndexHeap &indexHeap) const {
-        indexHeap.update(nodeIndices, nodes, queryNode);
-    }
-};
-using ThreeDLeafNodePtr = std::shared_ptr<ThreeDLeafNode>;
-
-class ThreeDInsideNode: public ThreeDNode{
-private: 
-    const Index dim;
-    const float splitValue;
-    const Index nodeNum;
-    const BoundingBox bbox; 
-    ThreeDNodePtr leftNodePtr;
-    ThreeDNodePtr rightNodePtr;
-
-public:
-    ThreeDInsideNode() = default;
-
-    ThreeDInsideNode(const Index dim_, 
-            const float splitValue_,
-            const Index nodeNum_, const BoundingBox &bbox_, 
-            ThreeDNodePtr leftNodePtr_, ThreeDNodePtr rightNodePtr_): 
-            dim(dim_), splitValue(splitValue_),
-            nodeNum(nodeNum_), bbox(bbox_),
-            leftNodePtr(leftNodePtr_), rightNodePtr(rightNodePtr_){}
-
-    Index size() const {
-        return nodeNum;
-    }
-
-    auto get_bounding_box() const{
-        return bbox;
-    }
-     
-    void find_nearest_k_node_indices( 
-                const Node &queryNode,
-                const Nodes &nodes, 
-                IndexHeap &indexHeap) const {
+    void knn_update_heap( const Point &queryPoint, IndexHeap &indexHeap, 
+                                        const Index &nodeIndex) const {
+        KDTreeNode node = kdTreeNodes[nodeIndex];
+        
         // check the bounding box first
-        if (indexHeap.max_squared_dist() <= bbox.min_squared_distance_from(queryNode)){
+        BoundingBox bbox = node.get_bounding_box();
+        if (indexHeap.max_squared_dist() < bbox.min_squared_distance_from( queryPoint )){
             return;
         }
 
-        // compare with the median value
-        if (queryNode(dim) < splitValue){
-            // continue checking left nodes
-            // closeNodePtr = leftNodePtr;
-            leftNodePtr->find_nearest_k_node_indices( queryNode, nodes, indexHeap );
-            if (splitValue - queryNode(dim) < indexHeap.max_squared_dist()) {
-                rightNodePtr->find_nearest_k_node_indices(queryNode, nodes, indexHeap );
+        if (node.is_leaf()){
+            for (Index i=node.get_bucket_index(); 
+                            i<node.get_bucket_index() + node.get_bucket_size(); i++){
+                auto pointIndex = pointIndicesBucket[ i ];
+                auto point = xt::view( points, pointIndex, xt::range(0, 3) );
+                indexHeap.update( point, pointIndex, queryPoint);
             }
         } else {
-            // right one is closer
-            rightNodePtr->find_nearest_k_node_indices( queryNode, nodes, indexHeap );
-            if ((queryNode(dim)-splitValue) < indexHeap.max_squared_dist()){
-                leftNodePtr->find_nearest_k_node_indices(queryNode, nodes, indexHeap);
+            // this is a split node
+            auto cutValue = node.get_cut_value();
+            auto dim = node.get_dim();
+            const Index leftChildNodeIndex = nodeIndex + 1;
+            const Index rightChildNodeIndex = node.get_right_child_node_index();
+            if (queryPoint(dim) < cutValue){
+                // left child node is closer
+                knn_update_heap(queryPoint, indexHeap, leftChildNodeIndex);
+                knn_update_heap(queryPoint, indexHeap, rightChildNodeIndex);
+            } else {
+                // right child node is closer
+                knn_update_heap(queryPoint, indexHeap, rightChildNodeIndex);
+                knn_update_heap(queryPoint, indexHeap, leftChildNodeIndex);
             }
         }
-    }
-}; // ThreeDNode class
-
-using ThreeDInsideNodePtr = std::shared_ptr<ThreeDInsideNode>;
-
-class ThreeDTree{
-private:
-    ThreeDInsideNodePtr root;
-    Nodes nodes;
-    Index leafSize;
-    
-    ThreeDInsideNodePtr build_node(const NodeIndices &nodeIndices) const {
-        const BoundingBox bbox( nodes, nodeIndices );
-        const Index dim = bbox.get_largest_extent_dimension();      
-        auto nodeNum = nodeIndices.size();
-
-        // find the median value index
-        xt::xtensor<float, 1> coords = xt::index_view( 
-                           xt::view(nodes, xt::all(), dim), 
-                           nodeIndices);
-        const Index splitIndex = nodeNum / 2;
-        // partition can save some computation than full sort
-        const auto argSortIndices = xt::argpartition(coords, splitIndex);
-        // auto argSortIndices = xt::argsort( coords );
-        const NodeIndices sortedNodeIndices = xt::index_view( nodeIndices, argSortIndices );
-        const auto middleNodeIndex = sortedNodeIndices( splitIndex );
-        const float splitValue = nodes( middleNodeIndex, dim );
-        const auto leftNodeIndices = xt::view( sortedNodeIndices, xt::range(0, splitIndex) );
-        const auto rightNodeIndices = xt::view( sortedNodeIndices, xt::range(splitIndex, _) );
-
-        ThreeDNodePtr leftNodePtr, rightNodePtr;
-
-        auto leftNodeNum = leftNodeIndices.size();
-        if (leftNodeNum > leafSize){
-            leftNodePtr = build_node( leftNodeIndices );
-        } else {
-            BoundingBox leftBBox( nodes, leftNodeIndices );
-            // include all the nodes as a leaf
-            leftNodePtr = std::static_pointer_cast<ThreeDNode>(
-                            std::make_shared<ThreeDLeafNode>( leftNodeIndices, leftBBox ));
-        }
-
-        auto rightNodeNum = rightNodeIndices.size();
-        if (rightNodeNum > leafSize){
-            rightNodePtr = build_node( rightNodeIndices );
-        } else {
-            BoundingBox rightBBox( nodes, rightNodeIndices );
-            rightNodePtr = std::static_pointer_cast<ThreeDNode>( 
-                    std::make_shared<ThreeDLeafNode>( rightNodeIndices, rightBBox ));
-        }
-
-        return std::make_shared<ThreeDInsideNode>(dim, splitValue, nodeNum, bbox, 
-                                                        leftNodePtr, rightNodePtr);
-    }
-
-    auto build_root(){
-        // start from first dimension
-        Index dim = 0;
-        auto nodeIndices = xt::arange<Index>(0, nodes.shape(0));
-        // std::cout<< "nodes: " << nodes << std::endl;
-        root = build_node( nodeIndices );
     }
 
 public:
-    ThreeDTree() = default;
-
-    ThreeDTree(const Nodes &nodes_, const Index leafSize_=10): 
-            nodes(nodes_), leafSize(leafSize_){
-        build_root();
+    KDTree( const Points &points_, std::size_t leafSize_ ): 
+                points(points_), leafSize(leafSize_), 
+                kdTreeNodes({}), pointIndicesBucket({}){
+        auto pointNum = points.shape(0);
+        pointIndicesBucket.reserve( pointNum );
+        // std::cout<< "\nreserve node number: " << pointNum/leafSize*2 <<std::endl;
+        kdTreeNodes.reserve( pointNum / leafSize * 2 );
+        
+        PointIndices pointIndices = xt::arange<Index>(0, pointNum);
+        build_kd_nodes(pointIndices);
+        assert(pointIndicesBucket.size() == pointNum);
+        kdTreeNodes.shrink_to_fit();
     }
 
-    ThreeDTree(const xt::pytensor<float, 2> &nodes_, const Index leafSize_=10):
-        nodes( Nodes(nodes_) ), leafSize(leafSize_){
-        build_root();
-    }
- 
-    auto get_leaf_size() const {
-        return leafSize;
-    }
-
-    NodeIndices find_nearest_k_node_indices( const Node &queryNode, const Index K ) const {
-        auto queryNodeCoord = xt::view(queryNode, xt::range(0, 3));
-
+    /*
+     * find the nearest k neighbors
+     */
+    inline auto knn(const Point &queryPoint, const Index &K) const {
         // build priority queue to store the nearest neighbors
         IndexHeap indexHeap(K);
-        root->find_nearest_k_node_indices(queryNodeCoord, 
-                                            nodes, indexHeap);
+        
+        // the first one is the root node
+        knn_update_heap( queryPoint, indexHeap, 0 );
+        
         return indexHeap.get_node_indices();
     }
 
-    NodeIndices find_nearest_k_node_indices( const xt::pytensor<float, 1> &queryNode, 
-                                                const Index &K){
-        return find_nearest_k_node_indices( Node(queryNode), K );
+    inline auto py_knn(const PyPoint &queryPoint, const int &K) const {
+        return knn(queryPoint, K);
     }
-
-    auto find_nearest_k_nodes( const Node &queryNode, const Index K ) const {
-        
-        auto nearestNodeIndices = find_nearest_k_node_indices(queryNode, K);
-        Nodes::shape_type shape = {K, 4};
-        auto nearestNodes = xt::empty<float>( shape );
-
-        for(Index i; i<K; i++){
-            auto nodeIndex = nearestNodeIndices(i);
-            xt::view(nearestNodes, i, xt::all()) = xt::view(
-                                            nodes, nodeIndex, xt::all());
-        }
-        return nearestNodes;
-    } 
-}; // ThreeDTree class
+}; //end of KDTree class
 
 } // end of namespace

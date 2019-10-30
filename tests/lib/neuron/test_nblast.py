@@ -32,11 +32,11 @@ def test_nblast_score_table():
         assert isclose(st[15000, 1], -0.892505829, abs_tol=1e-4)
 
 def test_nblast_with_fake_data():
-    node_num = 100
-    nodes = np.zeros((node_num, 3), dtype=np.float32)
-    nodes[:, 2] = np.arange(0, node_num)
-    vc = XVectorCloud(nodes, 2)
-    true_vectors = np.repeat(np.array([[0,0,1]]), node_num, axis=0 )
+    point_num = 100
+    points = np.zeros((point_num, 3), dtype=np.float32)
+    points[:, 2] = np.arange(0, point_num)
+    vc = XVectorCloud(points, 2)
+    true_vectors = np.repeat(np.array([[0,0,1]]), point_num, axis=0 )
     fake_vectors = deepcopy(vc.vectors)
     # there is a mixture of 1 and -1, both are correct
     fake_vectors[:, 2] = np.abs(fake_vectors[:, 2])
@@ -44,16 +44,16 @@ def test_nblast_with_fake_data():
     print('\ntrue vector cloud: ', true_vectors)
     np.testing.assert_allclose(fake_vectors, true_vectors, atol=1e-4)
 
-    nodes2 = deepcopy(nodes)
-    nodes2[:, 0] += 15000
-    vc2 = XVectorCloud(nodes2, 10)
+    points2 = deepcopy(points)
+    points2[:, 0] += 15000
+    vc2 = XVectorCloud(points2, 10)
     fake_vectors = deepcopy(vc.vectors)
     # there is a mixture of 1 and -1, both are correct
     fake_vectors[:, 2] = np.abs(fake_vectors[:, 2])
     np.testing.assert_allclose(fake_vectors, true_vectors, atol=1e-4)
 
     score = vc.query_by(vc2, st)
-    assert isclose(-0.892506 * node_num, score, rel_tol=1e-2)
+    assert isclose(-0.892506 * point_num, score, rel_tol=1e-2)
 
 def test_nblast_with_real_data():   
     print('\n\n start testing nblast with real data.') 
@@ -68,10 +68,10 @@ def test_nblast_with_real_data():
 
     print('building vector cloud')
     start = time()
-    vc1 = XVectorCloud( sk1.nodes, 20 )
+    vc1 = XVectorCloud( sk1.points, 10, 20 )
     print(f'build first vector cloud takes {time()-start} secs.')
     start = time()
-    vc2 = XVectorCloud( sk2.nodes, 20 )
+    vc2 = XVectorCloud( sk2.points, 10, 20 )
     print(f'build second vector cloud takes {time()-start} secs.')
 
 

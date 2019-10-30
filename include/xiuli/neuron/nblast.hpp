@@ -16,11 +16,11 @@
 
 #include "xiuli/utils/math.hpp"
 #include "xiuli/utils/kd_tree.hpp"
+#include "xiuli/type_aliase.hpp"
 
 // use the c++17 nested namespace
 namespace xiuli{
 
-using NodesType = xt::xtensor<float, 2>;
 
 namespace py = pybind11;
 
@@ -41,11 +41,12 @@ private:
             0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
     template<std::size_t N>
-    auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, const float &value ) const {
-        std::size_t start = 0;
+    auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
+                                                        const float &value ) const {
+        Index start = 0;
         // Note that the last one index is N-1 rather than N_
         // This is following python indexing style, the last index is not inclusive
-        std::size_t stop = N;
+        Index stop = N;
         while( stop - start > 1 ){
             auto middle = std::div(stop - start, 2).quot + start;
             if ( value > thresholds[ middle ] ){
@@ -85,8 +86,8 @@ public:
      * \param dp: absolute dot product of vectors
      */
     inline auto operator()(const float &dist, const float &adp) const {
-        std::size_t distIdx = binary_search( distThresholds, dist );
-        std::size_t adpIdx = binary_search( adpThresholds, adp );
+        Index distIdx = binary_search( distThresholds, dist );
+        Index adpIdx = binary_search( adpThresholds, adp );
         return table( distIdx, adpIdx );
     }
 
@@ -99,92 +100,89 @@ public:
 class VectorCloud{
 
 private:
-    const NodesType nodes;
+    const Points points;
     xt::xtensor<float, 2> vectors;
-    ThreeDTree kdTree;
-    auto construct_vectors(const std::size_t &nearestNodeNum=20){
-        auto nodeNum = nodes.shape(0);
+    KDTree kdTree;
+    auto construct_vectors(const Index &nearestPointNum){
+        auto pointNum = points.shape(0);
         
-        // find the nearest k nodes and compute the first principle component as the main direction
-        xt::xtensor<float, 2>::shape_type shape = {nearestNodeNum, 3};
-        NodesType nearestNodes = xt::empty<float>(shape);
+        // find the nearest k points and compute the first principle component as the main direction
+        xt::xtensor<float, 2>::shape_type shape = {nearestPointNum, 3};
+        Points nearestPoints = xt::empty<float>(shape);
 
-        xt::xtensor<float, 2>::shape_type vshape = {nodeNum, 3};
+        xt::xtensor<float, 2>::shape_type vshape = {pointNum, 3};
         vectors = xt::empty<float>( vshape );
 
-        for (std::size_t nodeIdx = 0; nodeIdx < nodeNum; nodeIdx++){
-            xt::xtensor<float, 1> queryNode = xt::view(nodes, nodeIdx, xt::range(0, 3));
-            auto nearestNodeIndices = kdTree.find_nearest_k_node_indices(
-                                                        queryNode, nearestNodeNum);
-            // std::cout<< "nearest node indices: " << nearestNodeIndices << std::endl;
-            for (std::size_t i=0; i<nearestNodeIndices.size(); i++){
-                auto nearestNodeIndex = nearestNodeIndices(i);
-                nearestNodes(i, 0) = nodes( nearestNodeIndex, 0 );
-                nearestNodes(i, 1) = nodes( nearestNodeIndex, 1 );
-                nearestNodes(i, 2) = nodes( nearestNodeIndex, 2 );
+        for (Index pointIdx = 0; pointIdx < pointNum; pointIdx++){
+            xt::xtensor<float, 1> queryPoint = xt::view(points, pointIdx, xt::range(0, 3));
+            auto nearestPointIndices = kdTree.knn( queryPoint, nearestPointNum );
+            // std::cout<< "nearest point indices: " << nearestPointIndices << std::endl;
+            for (Index i=0; i<nearestPointIndices.size(); i++){
+                auto nearestPointIndex = nearestPointIndices(i);
+                nearestPoints(i, 0) = points( nearestPointIndex, 0 );
+                nearestPoints(i, 1) = points( nearestPointIndex, 1 );
+                nearestPoints(i, 2) = points( nearestPointIndex, 2 );
             }
             // use the first principle component as the main direction
-            //vectors(nodeIdx, xt::all()) = pca_first_component( nearestNodes ); 
-            // std::cout<< "nearest nodes: " << nearestNodes << std::endl;
-            auto direction = pca_first_component( nearestNodes );
-            vectors(nodeIdx, 0) = direction(0);
-            vectors(nodeIdx, 1) = direction(1);
-            vectors(nodeIdx, 2) = direction(2);
+            //vectors(pointIdx, xt::all()) = pca_first_component( nearestPoints ); 
+            // std::cout<< "nearest points: " << nearestPoints << std::endl;
+            auto direction = pca_first_component( nearestPoints );
+            vectors(pointIdx, 0) = direction(0);
+            vectors(pointIdx, 1) = direction(1);
+            vectors(pointIdx, 2) = direction(2);
             // std::cout<< "vector: " << direction << std::endl;
         }
     }
 
 public:
     inline auto size() const {
-        return nodes.shape(0);
+        return points.shape(0);
     }
 
-    inline auto get_nodes() const {
-        return nodes;
+    inline auto get_points() const {
+        return points;
     }
 
     inline auto get_vectors() const {
         return vectors;
     }
 
-    // our nodes array contains radius direction, but we do not need it.
-    VectorCloud( const NodesType &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_){
-        // : nodes(nodes_), kdTree(ThreeDTree(nodes, nearestNodeNum)){
-        kdTree = ThreeDTree(nodes, nearestNodeNum);
-        construct_vectors( nearestNodeNum );
+    // our points array contains radius direction, but we do not need it.
+    VectorCloud( const Points &points_, const Index &leafSize, 
+                    const Index &nearestPointNum ): 
+                    points(points_), kdTree(points_, leafSize){
+        construct_vectors( nearestPointNum );
     }
     
-    VectorCloud( const xt::pytensor<float, 2> &nodes_, const std::size_t &nearestNodeNum = 20 )
-        : nodes(nodes_) {
-        // : nodes(nodes_), kdTree(ThreeDTree(nodes, nearestNodeNum) ) {
-        kdTree = ThreeDTree(nodes, nearestNodeNum);
-        construct_vectors( nearestNodeNum );
+    VectorCloud( const xt::pytensor<float, 2> &points_, const Index &leafSize, 
+                        const Index &nearestPointNum ): 
+                        points(points_), kdTree(points_, leafSize) {
+        construct_vectors( nearestPointNum );
     }
 
     auto query_by(VectorCloud &query, const ScoreTable &scoreTable) const {
-        // raw NBLAST is accumulated by query nodes
+        // raw NBLAST is accumulated by query points
         float rawScore = 0;
 
         float distance = 0;
         float absoluteDotProduct = 0;
-        std::size_t nearestNodeIdx = 0; 
+        Index nearestPointIdx = 0; 
 
-        NodesType queryNodes = query.get_nodes();
-        for (std::size_t queryNodeIdx = 0; queryNodeIdx<query.size(); queryNodeIdx++){
-            xt::xtensor<float, 1> queryNode = xt::view(queryNodes, queryNodeIdx, xt::range(0, 3));
-            // std::cout<< "\nquery node: " << queryNode <<std::endl;
-            // find the best match node in target and get physical distance
-            auto nearestNodeIndex = kdTree.find_nearest_k_node_indices( queryNode, 1 )(0);
-            // std::cout<< "nearest node index: "<< nearestNodeIndex << std::endl;
+        Points queryPoints = query.get_points();
+        for (Index queryPointIdx = 0; queryPointIdx<query.size(); queryPointIdx++){
+            xt::xtensor<float, 1> queryPoint = xt::view(queryPoints, queryPointIdx, xt::range(0, 3));
+            // std::cout<< "\nquery point: " << queryPoint <<std::endl;
+            // find the best match point in target and get physical distance
+            auto nearestPointIndex = kdTree.knn( queryPoint, 0x1 )(0);
+            // std::cout<< "nearest point index: "<< nearestPointIndex << std::endl;
 
-            auto nearestNode = xt::view(nodes, nearestNodeIndex, xt::range(0,3));
-            distance = xt::norm_l2( nearestNode - queryNode )(0);
+            auto nearestPoint = xt::view(points, nearestPointIndex, xt::range(0,3));
+            distance = xt::norm_l2( nearestPoint - queryPoint )(0);
             // std::cout<< "distance: " << distance << std::endl;
 
             // compute the absolute dot product between the principle vectors
-            auto queryVector = xt::view(query.get_vectors(), queryNodeIdx, xt::all());
-            auto targetVector = xt::view(vectors, nearestNodeIdx, xt::all());
+            auto queryVector = xt::view(query.get_vectors(), queryPointIdx, xt::all());
+            auto targetVector = xt::view(vectors, nearestPointIdx, xt::all());
             //auto dot = xt::linalg::dot(queryVector, targetVector);
             //assert( dot.size() == 1 );
             //absoluteDotProduct = std::abs(dot(0));
@@ -208,13 +206,13 @@ xt::xtensor<float, 2> rawScoreMatrix;
 public:
     NBLASTScoreMatrix(  const std::vector<VectorCloud> &vectorClouds, 
                         const ScoreTable &scoreTable){
-        std::size_t vcNum = vectorClouds.size();
+        Index vcNum = vectorClouds.size();
         xt::xtensor<float, 2>::shape_type shape = {vcNum, vcNum};
         rawScoreMatrix = xt::empty<float>( shape );
 
-        for (std::size_t targetIdx = 0; targetIdx<vcNum; targetIdx++){
+        for (Index targetIdx = 0; targetIdx<vcNum; targetIdx++){
             VectorCloud target = vectorClouds[ targetIdx ];
-            for (std::size_t queryIdx = targetIdx; queryIdx<vcNum; queryIdx++){
+            for (Index queryIdx = targetIdx; queryIdx<vcNum; queryIdx++){
                 auto query = vectorClouds[ queryIdx ];
                 rawScoreMatrix( targetIdx, queryIdx ) = target.query_by( query, scoreTable ); 
             }
@@ -243,9 +241,9 @@ public:
      */
     inline auto get_normalized_score_matrix() const {
         xt::xtensor<float, 2> normalizedScoreMatrix = xt::zeros_like(rawScoreMatrix);
-        for (std::size_t queryIdx = 0; queryIdx<get_neuron_number(); queryIdx++){
+        for (Index queryIdx = 0; queryIdx<get_neuron_number(); queryIdx++){
             auto selfQueryScore = rawScoreMatrix( queryIdx, queryIdx );
-            for (std::size_t targetIdx = 0; targetIdx<get_neuron_number(); targetIdx++){
+            for (Index targetIdx = 0; targetIdx<get_neuron_number(); targetIdx++){
                 normalizedScoreMatrix(targetIdx, queryIdx) = rawScoreMatrix(targetIdx, queryIdx) / selfQueryScore;
             }
         }
@@ -255,8 +253,8 @@ public:
     inline auto get_mean_score_matrix() const {
         auto normalizedScoreMatrix = get_normalized_score_matrix();
         auto meanScoreMatrix = xt::ones_like( normalizedScoreMatrix );
-        for (std::size_t targetIdx = 0; targetIdx<get_neuron_number(); targetIdx++){
-            for (std::size_t queryIdx = targetIdx+1; queryIdx<get_neuron_number(); queryIdx++){
+        for (Index targetIdx = 0; targetIdx<get_neuron_number(); targetIdx++){
+            for (Index queryIdx = targetIdx+1; queryIdx<get_neuron_number(); queryIdx++){
                 meanScoreMatrix(targetIdx, queryIdx) = (normalizedScoreMatrix(targetIdx, queryIdx) + 
                                                         normalizedScoreMatrix(queryIdx, targetIdx)) / 2;
                 meanScoreMatrix(queryIdx, targetIdx) = meanScoreMatrix(targetIdx, queryIdx);

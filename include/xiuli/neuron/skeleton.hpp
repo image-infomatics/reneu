@@ -15,6 +15,7 @@
 #include "xtensor/xadapt.hpp"
 #include "xiuli/utils/string.hpp"
 #include "xtensor-python/pytensor.hpp"     // Numpy bindings
+
 #include "xiuli/type_aliase.hpp"
 
 
@@ -29,13 +30,13 @@ namespace xiuli{
 class Skeleton{
 
 private:
-    // node array (N x 4), the rows are nodes, the columns are x,y,z,r
+    // point array (N x 4), the rows are points, the columns are x,y,z,r
     // normally the type is float
-    Nodes nodes;
+    Points points;
     
-    // attributes of nodes (N x 4), 
-    // the columns are node type, parent, first child, sibling
-    // the node types are defined in SWC format
+    // attributes of points (N x 4), 
+    // the columns are point type, parent, first child, sibling
+    // the point types are defined in SWC format
     // 0 - undefined
     // 1 - soma
     // 2 - axon
@@ -64,25 +65,25 @@ private:
     }
 
     template<typename Ti>
-    auto get_node( Ti nodeIdx ) const {
-        return xt::view(nodes, nodeIdx, xt::all());
+    auto get_point( Ti pointIdx ) const {
+        return xt::view(points, pointIdx, xt::all());
     } 
 
     inline auto squared_distance(int idx1, int idx2) const {
-        auto node1 = get_node(idx1);
-        auto node2 = get_node(idx2);
-        return  (node1(0) - node2(0)) * (node1(0) - node2(0)) + 
-                (node1(1) - node2(1)) * (node1(1) - node2(1)) +
-                (node1(2) - node2(2)) * (node1(2) - node2(2));
+        auto point1 = get_point(idx1);
+        auto point2 = get_point(idx2);
+        return  (point1(0) - point2(0)) * (point1(0) - point2(0)) + 
+                (point1(1) - point2(1)) * (point1(1) - point2(1)) +
+                (point1(2) - point2(2)) * (point1(2) - point2(2));
     }
 
     template<typename Tn>
-    inline auto initialize_nodes_and_attributes(Tn nodeNum){
-        // create nodes and attributes
-        Nodes::shape_type nodesShape = {nodeNum, 4};
-        nodes = xt::zeros<float>( nodesShape );
-        AttributesType::shape_type attributesShape = {nodeNum, 4};
-        // root node id is -2 rather than -1.
+    inline auto initialize_points_and_attributes(Tn pointNum){
+        // create points and attributes
+        Points::shape_type pointsShape = {pointNum, 4};
+        points = xt::zeros<float>( pointsShape );
+        AttributesType::shape_type attributesShape = {pointNum, 4};
+        // root point id is -2 rather than -1.
         attributes = xt::zeros<int>( attributesShape ) - 2;
     }
     
@@ -92,7 +93,7 @@ private:
         auto childs = xt::view(attributes, xt::all(), 2);
         auto siblings = xt::view(attributes, xt::all(), 3);
 
-        auto nodeNum = parents.size();
+        auto pointNum = parents.size();
         // the columns are class, parents, fist child, sibling
 
         // clean up the child and siblings
@@ -100,28 +101,28 @@ private:
         siblings = -2;
 
         // update childs
-        for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++){
-            auto parentNodeIdx = parents( nodeIdx );
-            if (parentNodeIdx >= 0)
-                childs( parentNodeIdx ) = nodeIdx;
+        for (std::size_t pointIdx = 0; pointIdx<pointNum; pointIdx++){
+            auto parentPointIdx = parents( pointIdx );
+            if (parentPointIdx >= 0)
+                childs( parentPointIdx ) = pointIdx;
         }
 
         // update siblings
-        for (int nodeIdx = 0; nodeIdx < int(nodeNum); nodeIdx++){
-            auto parentNodeIdx = parents( nodeIdx );
-            if (parentNodeIdx >= 0){
-                auto currentSiblingNodeIdx = childs( parentNodeIdx );
-                assert( currentSiblingNodeIdx >= 0 );
-                if (currentSiblingNodeIdx != nodeIdx){
+        for (int pointIdx = 0; pointIdx < int(pointNum); pointIdx++){
+            auto parentPointIdx = parents( pointIdx );
+            if (parentPointIdx >= 0){
+                auto currentSiblingPointIdx = childs( parentPointIdx );
+                assert( currentSiblingPointIdx >= 0 );
+                if (currentSiblingPointIdx != pointIdx){
                     // look for an empty sibling spot to fill in
-                    auto nextSiblingNodeIdx = siblings(currentSiblingNodeIdx);
-                    while (nextSiblingNodeIdx >= 0){
-                        currentSiblingNodeIdx = nextSiblingNodeIdx;
+                    auto nextSiblingPointIdx = siblings(currentSiblingPointIdx);
+                    while (nextSiblingPointIdx >= 0){
+                        currentSiblingPointIdx = nextSiblingPointIdx;
                         // move forward to look for empty sibling spot
-                        nextSiblingNodeIdx = siblings( currentSiblingNodeIdx );
+                        nextSiblingPointIdx = siblings( currentSiblingPointIdx );
                     }
                     // finally, we should find an empty spot
-                    siblings( currentSiblingNodeIdx ) = nodeIdx; 
+                    siblings( currentSiblingPointIdx ) = pointIdx; 
                 }
             }
         }
@@ -131,32 +132,32 @@ private:
 public:
     virtual ~Skeleton() = default;
 
-    Skeleton( const xt::pytensor<float, 2> &nodes_, const xt::pytensor<int, 2> &attributes_):
-        nodes( nodes_ ), attributes( attributes_ ){
+    Skeleton( const xt::pytensor<float, 2> &points_, const xt::pytensor<int, 2> &attributes_):
+        points( points_ ), attributes( attributes_ ){
             update_first_child_and_sibling();
         }
 
     Skeleton( const xt::pytensor<float, 2> &swcArray ){
         // this input array should follow the format of swc file
         assert(swcArray.shape(1) == 7);
-        auto nodeNum = swcArray.shape(0);
-        initialize_nodes_and_attributes( nodeNum );
+        auto pointNum = swcArray.shape(0);
+        initialize_points_and_attributes( pointNum );
         
         auto xids = xt::view(swcArray, xt::all(), 0);
         auto newIdx2oldIdx = xt::argsort(xids);
 
-        // construct the nodes and attributes
-        initialize_nodes_and_attributes(nodeNum);
+        // construct the points and attributes
+        initialize_points_and_attributes(pointNum);
         
-        for (std::size_t i = 0; i<nodeNum; i++){
+        for (std::size_t i = 0; i<pointNum; i++){
             // we do sort here!
             auto oldIdx = newIdx2oldIdx( i );
             attributes(i, 0) = swcArray( oldIdx, 1 );
-            nodes(i, 0) = swcArray( oldIdx, 2 );
-            nodes(i, 1) = swcArray( oldIdx, 3 );
-            nodes(i, 2) = swcArray( oldIdx, 4 );
-            nodes(i, 3) = swcArray( oldIdx, 5 );
-            // swc node id is 1-based
+            points(i, 0) = swcArray( oldIdx, 2 );
+            points(i, 1) = swcArray( oldIdx, 3 );
+            points(i, 2) = swcArray( oldIdx, 4 );
+            points(i, 3) = swcArray( oldIdx, 5 );
+            // swc point id is 1-based
             attributes(i, 1) = swcArray( oldIdx, 6 ) - 1;
         }
         update_first_child_and_sibling();
@@ -195,25 +196,25 @@ public:
             assert(ids.size() == parents.size());
             myfile.close();
             
-            // the node index could be unordered
+            // the point index could be unordered
             // we should order them and will drop the ids column
-            auto nodeNum = ids.size();
-            std::vector<std::size_t> shape = { nodeNum, };
+            auto pointNum = ids.size();
+            std::vector<std::size_t> shape = { pointNum, };
             auto xids = xt::adapt(ids, shape);
             auto newIdx2oldIdx = xt::argsort(xids);
 
-            // construct the nodes and attributes
-            initialize_nodes_and_attributes(nodeNum);
+            // construct the points and attributes
+            initialize_points_and_attributes(pointNum);
             
-            for (std::size_t i = 0; i<nodeNum; i++){
+            for (std::size_t i = 0; i<pointNum; i++){
                 // we do sort here!
                 auto oldIdx = newIdx2oldIdx( i );
-                nodes(i, 0) = xs[ oldIdx ];
-                nodes(i, 1) = ys[ oldIdx ];
-                nodes(i, 2) = zs[ oldIdx ];
-                nodes(i, 3) = rs[ oldIdx ];
+                points(i, 0) = xs[ oldIdx ];
+                points(i, 1) = ys[ oldIdx ];
+                points(i, 2) = zs[ oldIdx ];
+                points(i, 3) = rs[ oldIdx ];
                 attributes(i, 0) = classes[ oldIdx ];
-                // swc node id is 1-based
+                // swc point id is 1-based
                 attributes(i, 1) = parents[ oldIdx ];
             }
             update_first_child_and_sibling();
@@ -225,44 +226,44 @@ public:
         }
     }
     
-    inline auto get_nodes(){
-        return nodes;
+    inline auto get_points(){
+        return points;
     }
 
     inline auto get_attributes(){
         return attributes;
     }
 
-    bool is_root_node(int nodeIdx) const {
-        return attributes(nodeIdx, 1) < 0;
+    bool is_root_point(int pointIdx) const {
+        return attributes(pointIdx, 1) < 0;
     }
 
-    bool is_terminal_node(int nodeIdx) const {
-        return attributes(nodeIdx, 2 ) < 0;
+    bool is_terminal_point(int pointIdx) const {
+        return attributes(pointIdx, 2 ) < 0;
     }
     
-    auto get_node_num() const {
-        return nodes.shape(0);
+    auto get_point_num() const {
+        return points.shape(0);
     }
     
-    bool is_branching_node(int nodeIdx) const {
+    bool is_branching_point(int pointIdx) const {
         auto childs = get_childs();
-        auto childNodeIdx = childs(nodeIdx);
-        if (childNodeIdx < 0){
-            // no child, this is a terminal node
+        auto childPointIdx = childs(pointIdx);
+        if (childPointIdx < 0){
+            // no child, this is a terminal point
             return false;
         } else {
-            // if child have sibling, then this is a branching node
+            // if child have sibling, then this is a branching point
             auto siblings = get_siblings();
-            return  siblings(childNodeIdx) > 0;
+            return  siblings(childPointIdx) > 0;
         }
     }
 
     auto get_edge_num() const {
-        auto nodeNum = get_node_num();
+        auto pointNum = get_point_num();
         auto parents = get_parents();
         std::size_t edgeNum = 0;
-        for (std::size_t i = 0; i<nodeNum; i++){
+        for (std::size_t i = 0; i<pointNum; i++){
             if (parents( i ) >= 0){
                 edgeNum += 1;
             }
@@ -277,7 +278,7 @@ public:
 
         auto parents = get_parents();
         std::size_t edgeIdx = 0;
-        for (std::size_t i = 0; i<get_node_num(); i++){
+        for (std::size_t i = 0; i<get_point_num(); i++){
             auto parentIdx = parents( i );
             if (parentIdx >= 0 ){
                 edges( edgeIdx, 0 ) = i;
@@ -288,17 +289,17 @@ public:
         return edges;
     }
 
-    std::vector<int> get_children_node_indexes(int nodeIdx) const {
+    std::vector<int> get_children_point_indexes(int pointIdx) const {
         auto childs = get_childs();
         auto siblings = get_siblings();
 
-        std::vector<int> childrenNodeIdxes = {};
-        auto childNodeIdx = childs( nodeIdx );
-        while (childNodeIdx >= 0){
-            childrenNodeIdxes.push_back( childNodeIdx );
-            childNodeIdx = siblings( childNodeIdx );
+        std::vector<int> childrenPointIdxes = {};
+        auto childPointIdx = childs( pointIdx );
+        while (childPointIdx >= 0){
+            childrenPointIdxes.push_back( childPointIdx );
+            childPointIdx = siblings( childPointIdx );
         } 
-        return childrenNodeIdxes;
+        return childrenPointIdxes;
     }
 
     auto downsample(const float step){
@@ -309,130 +310,130 @@ public:
         auto childs = get_childs();
         auto siblings = get_siblings();
 
-        auto nodeNum = get_node_num();
+        auto pointNum = get_point_num();
 
         //std::cout<< "downsampling step: " << step <<std::endl;
         auto stepSquared = step * step;
 
-        // start from the root nodes
-        std::vector<int> rootNodeIdxes = {};
-        for (std::size_t nodeIdx=0; nodeIdx<nodeNum; nodeIdx++){
-            if (is_root_node(nodeIdx)){
-                rootNodeIdxes.push_back( nodeIdx );
+        // start from the root points
+        std::vector<int> rootPointIdxes = {};
+        for (std::size_t pointIdx=0; pointIdx<pointNum; pointIdx++){
+            if (is_root_point(pointIdx)){
+                rootPointIdxes.push_back( pointIdx );
             }
         }
-        assert( !rootNodeIdxes.empty() );
+        assert( !rootPointIdxes.empty() );
 
-        auto seedNodeIdxes = rootNodeIdxes;
-        // initialize the seed node parent indexes
-        std::vector<int> seedNodeParentIdxes = {};
-        seedNodeParentIdxes.assign( seedNodeIdxes.size(), -2 );
+        auto seedPointIdxes = rootPointIdxes;
+        // initialize the seed point parent indexes
+        std::vector<int> seedPointParentIdxes = {};
+        seedPointParentIdxes.assign( seedPointIdxes.size(), -2 );
         
-        // we select some nodes out as new neuron
-        // this selection should include all the seed node indexes
-        std::vector<int> selectedNodeIdxes = {};
-        // we need to update the parents when we add new selected nodes
-        std::vector<int> selectedParentNodeIdxes = {};
+        // we select some points out as new neuron
+        // this selection should include all the seed point indexes
+        std::vector<int> selectedPointIdxes = {};
+        // we need to update the parents when we add new selected points
+        std::vector<int> selectedParentPointIdxes = {};
 
-        while( !seedNodeIdxes.empty() ){
-            auto startNodeIdx = seedNodeIdxes.back();
-            auto startNodeParentIdx = seedNodeParentIdxes.back();
-            seedNodeIdxes.pop_back();
-            seedNodeParentIdxes.pop_back();
-            selectedNodeIdxes.push_back( startNodeIdx );
-            selectedParentNodeIdxes.push_back( startNodeParentIdx );
+        while( !seedPointIdxes.empty() ){
+            auto startPointIdx = seedPointIdxes.back();
+            auto startPointParentIdx = seedPointParentIdxes.back();
+            seedPointIdxes.pop_back();
+            seedPointParentIdxes.pop_back();
+            selectedPointIdxes.push_back( startPointIdx );
+            selectedParentPointIdxes.push_back( startPointParentIdx );
            
             // the start of measurement
-            auto walkingNodeIdx = startNodeIdx;
+            auto walkingPointIdx = startPointIdx;
 
             // walk through a segment
-            while (!is_branching_node(walkingNodeIdx) && 
-                    !is_terminal_node(walkingNodeIdx)){
-                // walk to next node
-                walkingNodeIdx = childs[ walkingNodeIdx ];
+            while (!is_branching_point(walkingPointIdx) && 
+                    !is_terminal_point(walkingPointIdx)){
+                // walk to next point
+                walkingPointIdx = childs[ walkingPointIdx ];
                 // use squared distance to avoid sqrt computation.
-                float d2 = squared_distance(startNodeIdx, walkingNodeIdx);
+                float d2 = squared_distance(startPointIdx, walkingPointIdx);
                 if (d2 >= stepSquared){
-                    // have enough walking distance, will include this node in new skeleton
-                    selectedNodeIdxes.push_back( walkingNodeIdx );
-                    selectedParentNodeIdxes.push_back( startNodeIdx );
+                    // have enough walking distance, will include this point in new skeleton
+                    selectedPointIdxes.push_back( walkingPointIdx );
+                    selectedParentPointIdxes.push_back( startPointIdx );
 
                     // now we restart walking again
-                    startNodeIdx = walkingNodeIdx;
-                    // adjust the coordinate and radius by mean of nearest nodes;
-                    auto parentNodeIdx = parents( walkingNodeIdx );
-                    auto parentNode = get_node(parentNodeIdx);
-                    auto walkingNode = xt::view(nodes, walkingNodeIdx, xt::all());
-                    if (!is_terminal_node(walkingNodeIdx)){
-                        auto childNodeIdx = childs( walkingNodeIdx );
-                        auto childNode = get_node(childNodeIdx);
+                    startPointIdx = walkingPointIdx;
+                    // adjust the coordinate and radius by mean of nearest points;
+                    auto parentPointIdx = parents( walkingPointIdx );
+                    auto parentPoint = get_point(parentPointIdx);
+                    auto walkingPoint = xt::view(points, walkingPointIdx, xt::all());
+                    if (!is_terminal_point(walkingPointIdx)){
+                        auto childPointIdx = childs( walkingPointIdx );
+                        auto childPoint = get_point(childPointIdx);
                         // compute the mean of x,y,z,r to smooth the skeleton
-                        walkingNode = (parentNode + walkingNode + childNode) / 3;
+                        walkingPoint = (parentPoint + walkingPoint + childPoint) / 3;
                     } else {
-                        // this node is the terminal node, do not have child
-                        walkingNode = (parentNode + walkingNode) / 2;
+                        // this point is the terminal point, do not have child
+                        walkingPoint = (parentPoint + walkingPoint) / 2;
                     }
                 }
             }
-            // add current node 
-            selectedNodeIdxes.push_back( walkingNodeIdx );
-            selectedParentNodeIdxes.push_back( startNodeIdx );
+            // add current point 
+            selectedPointIdxes.push_back( walkingPointIdx );
+            selectedParentPointIdxes.push_back( startPointIdx );
 
-            // reach a branching/terminal node 
-            // add all children nodes as seeds
+            // reach a branching/terminal point 
+            // add all children points as seeds
             // if reaching the terminal and there is no children
             // nothing will be added
-            std::vector<int> childrenNodeIdxes = get_children_node_indexes(walkingNodeIdx);
-            for (std::size_t i=0; i<childrenNodeIdxes.size(); i++){
-                seedNodeIdxes.push_back( childrenNodeIdxes[i] );
-                seedNodeParentIdxes.push_back( walkingNodeIdx );
+            std::vector<int> childrenPointIdxes = get_children_point_indexes(walkingPointIdx);
+            for (std::size_t i=0; i<childrenPointIdxes.size(); i++){
+                seedPointIdxes.push_back( childrenPointIdxes[i] );
+                seedPointParentIdxes.push_back( walkingPointIdx );
             }
         }
 
-        assert( selectedNodeIdxes.size() == selectedParentNodeIdxes.size() );
-        assert( selectedNodeIdxes.size() > 0 );
+        assert( selectedPointIdxes.size() == selectedParentPointIdxes.size() );
+        assert( selectedPointIdxes.size() > 0 );
 
-        auto newNodeNum = selectedNodeIdxes.size();
-        //std::cout<< "downsampled node number from "<< nodeNum << " to " << newNodeNum << std::endl;
+        auto newPointNum = selectedPointIdxes.size();
+        //std::cout<< "downsampled point number from "<< pointNum << " to " << newPointNum << std::endl;
 
-        AttributesType::shape_type newAttShape = {newNodeNum, 4};
+        AttributesType::shape_type newAttShape = {newPointNum, 4};
         AttributesType newAtt = xt::zeros<int>(newAttShape) - 2;
 
-        // find new node classes
-        for (std::size_t i=0; i<newNodeNum; i++){
-            auto oldNodeIdx = selectedNodeIdxes[ i ];
-            newAtt(i, 0) = att(oldNodeIdx, 0);
+        // find new point classes
+        for (std::size_t i=0; i<newPointNum; i++){
+            auto oldPointIdx = selectedPointIdxes[ i ];
+            newAtt(i, 0) = att(oldPointIdx, 0);
         }
 
-        // find new node parent index
-        // the parent node index is pointing to old nodes
-        // we need to update the node index to new nodes
-        // update_parents(selectedParentNodeIdxes, selectedNodeIdxes);
-        std::map<int, int> oldNodeIdx2newNodeIdx = {{-2, -2}};
-        for (std::size_t newNodeIdx=0; newNodeIdx<newNodeNum; newNodeIdx++){
-            auto oldNodeIdx = selectedNodeIdxes[ newNodeIdx ];
-            oldNodeIdx2newNodeIdx[ oldNodeIdx ] = newNodeIdx;
+        // find new point parent index
+        // the parent point index is pointing to old points
+        // we need to update the point index to new points
+        // update_parents(selectedParentPointIdxes, selectedPointIdxes);
+        std::map<int, int> oldPointIdx2newPointIdx = {{-2, -2}};
+        for (std::size_t newPointIdx=0; newPointIdx<newPointNum; newPointIdx++){
+            auto oldPointIdx = selectedPointIdxes[ newPointIdx ];
+            oldPointIdx2newPointIdx[ oldPointIdx ] = newPointIdx;
         }
-        for (std::size_t i = 0; i<newNodeNum; i++){
-            auto oldNodeIdx = selectedParentNodeIdxes[i];
-            auto newNodeIdx = oldNodeIdx2newNodeIdx[ oldNodeIdx ];
-            newAtt(i, 1) = newNodeIdx;
+        for (std::size_t i = 0; i<newPointNum; i++){
+            auto oldPointIdx = selectedParentPointIdxes[i];
+            auto newPointIdx = oldPointIdx2newPointIdx[ oldPointIdx ];
+            newAtt(i, 1) = newPointIdx;
         }
 
-        // create new nodes
-        Nodes::shape_type newNodesShape = {newNodeNum, 4};
-        Nodes newNodes = xt::zeros<float>( newNodesShape );
-        for (std::size_t i = 0; i<newNodeNum; i++){
-            auto oldNodeIdx = selectedNodeIdxes[i];
-            auto oldNode = xt::view(nodes, oldNodeIdx, xt::all());
-            newNodes(i, 0) = oldNode(0);
-            newNodes(i, 1) = oldNode(1);
-            newNodes(i, 2) = oldNode(2);
-            newNodes(i, 3) = oldNode(3);
+        // create new points
+        Points::shape_type newPointsShape = {newPointNum, 4};
+        Points newPoints = xt::zeros<float>( newPointsShape );
+        for (std::size_t i = 0; i<newPointNum; i++){
+            auto oldPointIdx = selectedPointIdxes[i];
+            auto oldPoint = xt::view(points, oldPointIdx, xt::all());
+            newPoints(i, 0) = oldPoint(0);
+            newPoints(i, 1) = oldPoint(1);
+            newPoints(i, 2) = oldPoint(2);
+            newPoints(i, 3) = oldPoint(3);
         }
 
         // find new first child and siblings.
-        nodes = newNodes;
+        points = newPoints;
         attributes = newAtt;
         update_first_child_and_sibling();
         assert( any(xt::view(newAtt, xt::all(), 2) >= 0 ) );
@@ -442,7 +443,7 @@ public:
     auto get_path_length() const {
         float pathLength = 0;
         auto parents = get_parents();
-        for (std::size_t i = 0; i<get_node_num(); i++){
+        for (std::size_t i = 0; i<get_point_num(); i++){
             auto parentIdx = parents( i );
             if (parentIdx >= 0)
                 pathLength += std::sqrt( squared_distance( i, parentIdx ) ); 
@@ -456,7 +457,7 @@ public:
         swc << std::setprecision( precision );
         auto classes = get_classes();
         auto parents = get_parents();
-        auto nodeNum = nodes.shape(0);
+        auto pointNum = points.shape(0);
 
         // add some commented header
         auto now = std::chrono::system_clock::now();
@@ -464,14 +465,14 @@ public:
         swc << "# Created using reneu at " << std::ctime(&now_t) << 
             "# https://github.com/jingpengw/reneu \n";
 
-        for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++ ){
+        for (std::size_t pointIdx = 0; pointIdx<pointNum; pointIdx++ ){
             // index, class, x, y, z, r, parent
-            swc << nodeIdx+1 << " " << classes(nodeIdx) << " " 
-                << std::fixed << nodes(nodeIdx, 0) << " " 
-                << std::fixed << nodes(nodeIdx, 1) << " " 
-                << std::fixed << nodes(nodeIdx, 2) << " " 
-                << std::fixed << nodes(nodeIdx, 3) << " " 
-                << parents(nodeIdx)+1 << "\n";
+            swc << pointIdx+1 << " " << classes(pointIdx) << " " 
+                << std::fixed << points(pointIdx, 0) << " " 
+                << std::fixed << points(pointIdx, 1) << " " 
+                << std::fixed << points(pointIdx, 2) << " " 
+                << std::fixed << points(pointIdx, 3) << " " 
+                << parents(pointIdx)+1 << "\n";
         }
 
         return swc.str();
@@ -484,7 +485,7 @@ public:
         if (myfile.is_open()){       
             auto classes = get_classes();
             auto parents = get_parents();
-            auto nodeNum = nodes.shape(0);
+            auto pointNum = points.shape(0);
 
             // add some commented header
             auto now = std::chrono::system_clock::now();
@@ -492,12 +493,12 @@ public:
             myfile << "# Created using reneu at " << std::ctime(&now_t) << 
                 "# https://github.com/jingpengw/reneu \n";
 
-            for (std::size_t nodeIdx = 0; nodeIdx<nodeNum; nodeIdx++ ){
+            for (std::size_t pointIdx = 0; pointIdx<pointNum; pointIdx++ ){
                 // index, class, x, y, z, r, parent
-                myfile  << nodeIdx+1 << " " << classes(nodeIdx) << " " 
-                        << std::fixed << nodes(nodeIdx, 0) << " " << std::fixed << nodes(nodeIdx, 1) << " " 
-                        << std::fixed << nodes(nodeIdx, 2) << " " << std::fixed << nodes(nodeIdx, 3) << " " 
-                        << parents(nodeIdx)+1 << "\n";
+                myfile  << pointIdx+1 << " " << classes(pointIdx) << " " 
+                        << std::fixed << points(pointIdx, 0) << " " << std::fixed << points(pointIdx, 1) << " " 
+                        << std::fixed << points(pointIdx, 2) << " " << std::fixed << points(pointIdx, 3) << " " 
+                        << parents(pointIdx)+1 << "\n";
             }
         }else{
             std::cout << "can not open file: " << file_name <<std::endl;

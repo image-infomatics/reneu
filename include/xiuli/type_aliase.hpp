@@ -4,8 +4,9 @@
 #include "xtensor/xfixed.hpp"
 #include "xtensor-python/pytensor.hpp"
 
-using Index = std::size_t;
-using PyNode = xt::pytensor<float, 2>;
-using Node = xt::xtensor_fixed<float, xt::xshape<3>>;
-using Nodes = xt::xtensor<float, 2>;
-using NodeIndices = xt::xtensor<Index, 1>;
+using Index = std::uint32_t;
+using Point = xt::xtensor_fixed<float, xt::xshape<3>>;
+using Points = xt::xtensor<float, 2>;
+using PyPoint = xt::pytensor<float, 1>;
+using PyPoints = xt::pytensor<float, 2>;
+using PointIndices = xt::xtensor<Index, 1>;
