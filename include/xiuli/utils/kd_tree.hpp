@@ -223,11 +223,7 @@ private:
                                                         xt::range(splitIndex, _) );
             const auto rightNodeIndex = build_kd_nodes(rightPointIndices);
 
-            // std::cout<< "write right child node index in "<< nodeIndex << std::endl;
-            // std::cout<< "the node number is "<< kdTreeNodes.size() << std::endl;
-            // node.print(); 
             kdTreeNodes[nodeIndex].write_right_child_node_index( rightNodeIndex );
-            node.print(); 
             return nodeIndex;
         }
     }

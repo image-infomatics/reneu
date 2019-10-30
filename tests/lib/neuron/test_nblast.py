@@ -35,7 +35,7 @@ def test_nblast_with_fake_data():
     point_num = 100
     points = np.zeros((point_num, 3), dtype=np.float32)
     points[:, 2] = np.arange(0, point_num)
-    vc = XVectorCloud(points, 2)
+    vc = XVectorCloud(points, 10, 2)
     true_vectors = np.repeat(np.array([[0,0,1]]), point_num, axis=0 )
     fake_vectors = deepcopy(vc.vectors)
     # there is a mixture of 1 and -1, both are correct
@@ -46,7 +46,7 @@ def test_nblast_with_fake_data():
 
     points2 = deepcopy(points)
     points2[:, 0] += 15000
-    vc2 = XVectorCloud(points2, 10)
+    vc2 = XVectorCloud(points2, 10, 10)
     fake_vectors = deepcopy(vc.vectors)
     # there is a mixture of 1 and -1, both are correct
     fake_vectors[:, 2] = np.abs(fake_vectors[:, 2])

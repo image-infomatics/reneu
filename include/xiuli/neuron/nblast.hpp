@@ -32,13 +32,13 @@ private:
     //                                    12, 14, 16, 20, 25, 30, 40, std::numeric_limits<float>::max()};
     // this is using nanometer rather than micron
     const xt::xtensor_fixed<float, xt::xshape<22>> distThresholds = {
-            1000., 750, 1500, 2000, 2500, 3000, 3500, 4000, 
+            std::numeric_limits<float>::min(), 750, 1500, 2000, 2500, 3000, 3500, 4000, 
             5000, 6000, 7000, 8000, 9000, 10000, 
             12000, 14000, 16000, 20000, 25000, 30000, 40000, 
             std::numeric_limits<float>::max()};
 
     const xt::xtensor_fixed<float, xt::xshape<11>> adpThresholds = {
-            0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+            -1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 2};
 
     template<std::size_t N>
     auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
@@ -171,27 +171,31 @@ public:
         Points queryPoints = query.get_points();
         for (Index queryPointIdx = 0; queryPointIdx<query.size(); queryPointIdx++){
             xt::xtensor<float, 1> queryPoint = xt::view(queryPoints, queryPointIdx, xt::range(0, 3));
-            // std::cout<< "\nquery point: " << queryPoint <<std::endl;
             // find the best match point in target and get physical distance
             auto nearestPointIndex = kdTree.knn( queryPoint, 0x1 )(0);
-            // std::cout<< "nearest point index: "<< nearestPointIndex << std::endl;
+            
 
             auto nearestPoint = xt::view(points, nearestPointIndex, xt::range(0,3));
             distance = xt::norm_l2( nearestPoint - queryPoint )(0);
-            // std::cout<< "distance: " << distance << std::endl;
-
+            
+           
             // compute the absolute dot product between the principle vectors
             auto queryVector = xt::view(query.get_vectors(), queryPointIdx, xt::all());
             auto targetVector = xt::view(vectors, nearestPointIdx, xt::all());
             //auto dot = xt::linalg::dot(queryVector, targetVector);
             //assert( dot.size() == 1 );
             //absoluteDotProduct = std::abs(dot(0));
-            // std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
-            // std::cout<< "distance: "<< distance << ";   absolute dot product: " << absoluteDotProduct << std::endl;
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
-            // std::cout<< "accumulate score: "<< scoreTable(distance, absoluteDotProduct) << " to " << rawScore<< std::endl; 
+            
+            std::cout<< "\nquery point: " << queryPoint <<std::endl;
+            std::cout<< "nearest point index: "<< nearestPointIndex << std::endl;
+            std::cout<< "distance: " << distance << std::endl;
+            std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
+            std::cout<< "distance: "<< distance << ";   absolute dot product: " 
+                                                << absoluteDotProduct << std::endl;
+            std::cout<< "accumulate score: "<< scoreTable(distance, absoluteDotProduct) << " to " << rawScore<< std::endl; 
         }
         return rawScore; 
     }
