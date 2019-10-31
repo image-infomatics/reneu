@@ -18,18 +18,16 @@ st = XNBLASTScoreTable( table_path )
 # somehow this is not working
 # st = XNBLASTScoreTable()
 
-
 def test_nblast_score_table():
     assert isclose(st[0., 0.], 9.500096818, abs_tol=1e-4)
     assert isclose(st[50000, 0.93], -10.1287588679926, abs_tol=1e-4)
     assert isclose(st[26000, 0.73], -2.70184701924541, abs_tol=1e-4)
     assert isclose(st[11000, 0.62], 0.28008292141423, abs_tol=1e-4)
     # test the boundary condition
-    assert isclose(st[2000, 0.4], 8.23731427922735, abs_tol=1e-4)
+    assert isclose(st[1800, 0.38], 8.23731427922735, abs_tol=1e-4)
     assert isclose(st[15976.5, 1], -0.892506, abs_tol=1e-4)
     assert isclose(st[16011.2, 1], -1.31413, abs_tol=1e-4)
-    for _ in range(1000):
-        assert isclose(st[15000, 1], -0.892505829, abs_tol=1e-4)
+    assert isclose(st[15000, 1], -0.892505829, abs_tol=1e-4)
 
 def test_nblast_with_fake_data():
     point_num = 100
@@ -40,8 +38,8 @@ def test_nblast_with_fake_data():
     fake_vectors = deepcopy(vc.vectors)
     # there is a mixture of 1 and -1, both are correct
     fake_vectors[:, 2] = np.abs(fake_vectors[:, 2])
-    print('\nvector cloud: ', vc.vectors)
-    print('\ntrue vector cloud: ', true_vectors)
+    # print('\nvector cloud: ', vc.vectors)
+    # print('\ntrue vector cloud: ', true_vectors)
     np.testing.assert_allclose(fake_vectors, true_vectors, atol=1e-4)
 
     points2 = deepcopy(points)
@@ -65,6 +63,7 @@ def test_nblast_with_real_data():
     # the swc here use nanometer, so no need to divide by 1000
     sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
     sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
+    print(f'node number of two neurons: {len(sk1)}, {len(sk2)}')
 
     print('building vector cloud')
     start = time()
