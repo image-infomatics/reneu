@@ -17,7 +17,7 @@ with open(os.path.join(PACKAGE_DIR, 'requirements.txt')) as f:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-VERSIONFILE = os.path.join(PACKAGE_DIR, "reneu/__version__.py")
+VERSIONFILE = os.path.join(PACKAGE_DIR, "python/reneu/__version__.py")
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
@@ -43,7 +43,7 @@ class get_pybind_include(object):
 
 ext_modules = [
     Extension(
-        'xiuli',
+        'libxiuli',
         ['src/main.cpp'],
         include_dirs=[
             # Path to pybind11 headers
@@ -53,13 +53,17 @@ ext_modules = [
         ],
         language='c++',
         extra_compile_args=[
-            '-O3',
-            '-ffast-math'
+            # use Og for gdb debug
+            '-Og',
+            # '-O3',
+            '-ffast-math',
+            # build with debug info
+            # '-g'
             # this is not working
-            #'-o chunkflow/lib/libchunkflow.so'
+            #'-o reneu/lib/libxiuli.so'
         ],
         # monitor the code change and rebuild
-        depends = ['src/*'],
+        depends = ['src/*', 'include/xiuli/*'],
     ),
 ]
 
@@ -111,6 +115,10 @@ class BuildExt(build_ext):
         l_opts['unix'] += darwin_opts
 
     def build_extensions(self):
+        # remove the compilation warning. 
+        # This flag only works with C rather than C++
+        self.compiler.compiler_so.remove('-Wstrict-prototypes')
+
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
         link_opts = self.l_opts.get(ct, [])
@@ -130,12 +138,13 @@ class BuildExt(build_ext):
             ext.extra_compile_args = opts
             ext.extra_link_args = link_opts
 
-        build_ext.build_extensions(self)
+        super().build_extensions()
+        #build_ext.build_extensions(self)
 
 
 setup(
     name='reneu',
-    description='Large Scale 3d Convolution Net Inference',
+    description='computation for real neural networks.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     license='Apache License 2.0',
@@ -160,6 +169,7 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     python_requires='>=3',
     zip_safe=False,
@@ -168,8 +178,8 @@ setup(
 # The -o option of gcc is not working
 # use code to move all the compiled so files to lib folder!
 for file_name in os.listdir():
-    if file_name.startswith("xiuli") and file_name.endswith(".so"):
-        dst_file_name = os.path.join('reneu/lib/', file_name)
+    if file_name.startswith("libxiuli") and file_name.endswith(".so"):
+        dst_file_name = os.path.join('python/reneu/lib/', file_name)
         # using the full destination path will replace the so file
         # if it is already exist
         move(file_name, dst_file_name)
