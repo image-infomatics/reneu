@@ -60,8 +60,10 @@ def test_nblast_with_real_data():
     # 77625	86501.20 	53696.72
     # 77641	50891.03 	101011.08
     # Note that R NBLAST use micron as unit, and our NBLAST use nanometer
-    sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
-    sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
+    neuronId1 = 77625
+    neuronId2 = 77641
+    sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, f'{neuronId1}.swc') )
+    sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, f'{neuronId2}.swc') )
     print(f'node number of two neurons: {len(sk1)}, {len(sk2)}')
 
     print('building vector cloud')
@@ -75,13 +77,13 @@ def test_nblast_with_real_data():
 
     print('computing nblast score')
     score12 = vc1.query_by( vc2, st )
-    print('nblast score: ', score12, 'with time elapse: ', time()-start, ' sec')
+    print(f'query {neuronId2} against target {neuronId1} nblast score: ', score12, 'with time elapse: ', time()-start, ' sec')
+    assert isclose( score12, 53696.72, rel_tol = 1e-3)
     
     start = time()
     score21 = vc2.query_by( vc1, st )
-    print('nblast score: ', score21, 'with time elapse: ', time()-start, ' sec')
+    print(f'query {neuronId1} against target {neuronId2} nblast score: ', score21, 'with time elapse: ', time()-start, ' sec')
     print('as a reference, Julia NBLAST takes about 0.030 sec.')
-    assert isclose( score12, 53696.72, rel_tol = 1e-3)
     assert isclose( score21, 50891.03, rel_tol = 1e-3)
 
     vcs = [ vc1, vc2 ]
