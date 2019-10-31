@@ -60,6 +60,16 @@ private:
         // the start is the matching index
         return start;
     }
+    
+    template<std::size_t N>
+    auto sequential_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
+                                                        const float &value ) const {
+        for (Index i=0; i<N; i++){
+            if(value <= thresholds(i+1)){
+                return i;
+            }
+        }
+    }
 
 public:
     ScoreTable(const xt::pytensor<float, 2> &table_): table(table_){}
@@ -86,8 +96,12 @@ public:
      * \param dp: absolute dot product of vectors
      */
     inline auto operator()(const float &dist, const float &adp) const {
-        Index distIdx = binary_search( distThresholds, dist );
-        Index adpIdx = binary_search( adpThresholds, adp );
+        // Index distIdx = binary_search( distThresholds, dist );
+        // Index adpIdx = binary_search( adpThresholds, adp );
+        
+        Index distIdx = sequential_search( distThresholds, dist );
+        Index adpIdx = sequential_search( adpThresholds, adp );
+
         return table( distIdx, adpIdx );
     }
 
@@ -166,36 +180,38 @@ public:
 
         float distance = 0;
         float absoluteDotProduct = 0;
-        Index nearestPointIdx = 0; 
+        Index nearestPointIndex = 0; 
+        xt::xtensor_fixed<float, xt::xshape<3>> queryPoint, nearestPoint, queryVector, targetVector;
 
-        Points queryPoints = query.get_points();
+        auto queryPoints = query.get_points();
+        auto queryVectors = query.get_vectors();
         for (Index queryPointIdx = 0; queryPointIdx<query.size(); queryPointIdx++){
-            xt::xtensor<float, 1> queryPoint = xt::view(queryPoints, queryPointIdx, xt::range(0, 3));
+            
+            queryPoint = xt::view(queryPoints, queryPointIdx, xt::range(0, 3));
+            
             // find the best match point in target and get physical distance
-            auto nearestPointIndex = kdTree.knn( queryPoint, 0x1 )(0);
-            
-
-            auto nearestPoint = xt::view(points, nearestPointIndex, xt::range(0,3));
+            nearestPointIndex = kdTree.knn( queryPoint, 1 )(0);
+            nearestPoint = xt::view(points, nearestPointIndex, xt::range(0,3));
             distance = xt::norm_l2( nearestPoint - queryPoint )(0);
-            
            
             // compute the absolute dot product between the principle vectors
-            auto queryVector = xt::view(query.get_vectors(), queryPointIdx, xt::all());
-            auto targetVector = xt::view(vectors, nearestPointIdx, xt::all());
+            queryVector = xt::view(queryVectors, queryPointIdx, xt::all());
+            targetVector = xt::view(vectors, nearestPointIndex, xt::all());
             //auto dot = xt::linalg::dot(queryVector, targetVector);
             //assert( dot.size() == 1 );
             //absoluteDotProduct = std::abs(dot(0));
             absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
+            
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
             
-            std::cout<< "\nquery point: " << queryPoint <<std::endl;
-            std::cout<< "nearest point index: "<< nearestPointIndex << std::endl;
-            std::cout<< "distance: " << distance << std::endl;
-            std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
-            std::cout<< "distance: "<< distance << ";   absolute dot product: " 
-                                                << absoluteDotProduct << std::endl;
-            std::cout<< "accumulate score: "<< scoreTable(distance, absoluteDotProduct) << " to " << rawScore<< std::endl; 
+            // std::cout<< "\nquery point: " << queryPoint <<std::endl;
+            // std::cout<< "nearest point index: "<< nearestPointIndex << std::endl;
+            // std::cout<< "distance: " << distance << std::endl;
+            // std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
+            // std::cout<< "distance: "<< distance << ";   absolute dot product: " 
+            //                                     << absoluteDotProduct << std::endl;
+            // std::cout<< "accumulate score: "<< scoreTable(distance, absoluteDotProduct) << " to " << rawScore<< std::endl; 
         }
         return rawScore; 
     }

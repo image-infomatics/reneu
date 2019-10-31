@@ -85,7 +85,7 @@ private:
     // encode the right child node index 
     // if this is a leaf node, the 30 least-significant bits encode 
     // the number of points in bucket.
-    Index dimChildBucketSize;
+    Index dim_child_bucketSize;
     // the starting index of points in bucket
     // the cut/split value of this node
     std::variant<Index, float> bucketIndex_cutValue;
@@ -97,14 +97,14 @@ public:
                         bucketIndex_cutValue(cutValue_), bbox(bbox_){
         // since dim is unsigned type, it is always >=0
         assert(dim<3);
-        dimChildBucketSize = dim << DIM_BIT_START;
+        dim_child_bucketSize = dim << DIM_BIT_START;
         // we'll have to write right child node index later.
     }
 
     // construct a leaf node
     KDTreeNode(const Index bucketSize, const Index bucketIndex_, const BoundingBox bbox_):
                                     bucketIndex_cutValue(bucketIndex_), bbox(bbox_){
-        dimChildBucketSize = (3<<DIM_BIT_START) + bucketSize;
+        dim_child_bucketSize = (3<<DIM_BIT_START) + bucketSize;
     }
 
     inline auto get_bounding_box() const {
@@ -120,26 +120,26 @@ public:
     }
 
     inline auto get_dim() const {
-        return dimChildBucketSize >> DIM_BIT_START;
+        return dim_child_bucketSize >> DIM_BIT_START;
     }
 
     inline bool is_leaf() const {
         // whether the first two bits are 11
-        return dimChildBucketSize >= 0xC0000000;
+        return dim_child_bucketSize >= 0xC0000000;
     }
 
     inline auto get_right_child_node_index() const {
         // black out the two most-significant bits
-        return dimChildBucketSize & 0x3FFFFFFF;
+        return dim_child_bucketSize & 0x3FFFFFFF;
     }
 
     inline auto get_bucket_size() const {
         // black out the two most-significant bits
-        return dimChildBucketSize & 0x3FFFFFFF;
+        return dim_child_bucketSize & 0x3FFFFFFF;
     }
 
     inline auto write_right_child_node_index( const Index &rightChildNodeIndex ){
-        dimChildBucketSize += rightChildNodeIndex; 
+        dim_child_bucketSize += rightChildNodeIndex; 
     }
     
     void print() const {
