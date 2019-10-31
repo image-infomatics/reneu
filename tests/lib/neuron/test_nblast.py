@@ -60,7 +60,6 @@ def test_nblast_with_real_data():
     # 77625	86501.20 	53696.72
     # 77641	50891.03 	101011.08
     # Note that R NBLAST use micron as unit, and our NBLAST use nanometer
-    # the swc here use nanometer, so no need to divide by 1000
     sk1 = Skeleton.from_swc( os.path.join(DATA_DIR, '77625.swc') )
     sk2 = Skeleton.from_swc( os.path.join(DATA_DIR, '77641.swc') )
     print(f'node number of two neurons: {len(sk1)}, {len(sk2)}')
@@ -88,7 +87,6 @@ def test_nblast_with_real_data():
     vcs = [ vc1, vc2 ]
     score_matrix = XNBLASTScoreMatrix(vcs, st)
     print('raw scores: ', score_matrix.raw_score_matrix)
-    #breakpoint()
 
 if __name__ == '__main__':
     test_nblast_score_table()

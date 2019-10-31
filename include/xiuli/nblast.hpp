@@ -38,8 +38,8 @@ private:
             12000, 14000, 16000, 20000, 25000, 30000, 40000, 
             std::numeric_limits<float>::max()};
 
-    const xt::xtensor_fixed<float, xt::xshape<11>> adpThresholds = {
-            -1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 2};
+    // const xt::xtensor_fixed<float, xt::xshape<11>> adpThresholds = {
+            // -1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 2};
 
     template<std::size_t N>
     inline auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
