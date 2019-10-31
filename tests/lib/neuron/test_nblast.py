@@ -75,11 +75,15 @@ def test_nblast_with_real_data():
 
 
     print('computing nblast score')
+    score12 = vc1.query_by( vc2, st )
+    print('nblast score: ', score12, 'with time elapse: ', time()-start, ' sec')
+    
     start = time()
-    score = vc1.query_by( vc2, st )
-    print('nblast score: ', score, 'with time elapse: ', time()-start, ' sec')
+    score21 = vc2.query_by( vc1, st )
+    print('nblast score: ', score21, 'with time elapse: ', time()-start, ' sec')
     print('as a reference, Julia NBLAST takes about 0.030 sec.')
-    assert isclose( score, 50891.03, rel_tol = 1e-3)
+    assert isclose( score12, 53696.72, rel_tol = 1e-3)
+    assert isclose( score21, 50891.03, rel_tol = 1e-3)
 
     vcs = [ vc1, vc2 ]
     score_matrix = XNBLASTScoreMatrix(vcs, st)
