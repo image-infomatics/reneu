@@ -1,2 +1,2 @@
-#include "neuron/skeleton.hpp"
-#include "neuron/nblast.hpp"
+#include "skeleton.hpp"
+#include "nblast.hpp"

@@ -41,7 +41,7 @@ private:
             -1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 2};
 
     template<std::size_t N>
-    auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
+    inline auto binary_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
                                                         const float &value ) const {
         Index start = 0;
         // Note that the last one index is N-1 rather than N_
@@ -62,7 +62,7 @@ private:
     }
     
     template<std::size_t N>
-    auto sequential_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
+    inline auto sequential_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
                                                         const float &value ) const {
         for (Index i=0; i<N; i++){
             if(value <= thresholds(i+1)){
@@ -96,11 +96,11 @@ public:
      * \param dp: absolute dot product of vectors
      */
     inline auto operator()(const float &dist, const float &adp) const {
-        // Index distIdx = binary_search( distThresholds, dist );
-        // Index adpIdx = binary_search( adpThresholds, adp );
+        auto distIdx = binary_search( distThresholds, dist );
+        auto adpIdx = binary_search( adpThresholds, adp );
         
-        Index distIdx = sequential_search( distThresholds, dist );
-        Index adpIdx = sequential_search( adpThresholds, adp );
+        // auto distIdx = sequential_search( distThresholds, dist );
+        // auto adpIdx = sequential_search( adpThresholds, adp );
 
         return table( distIdx, adpIdx );
     }
@@ -197,10 +197,10 @@ public:
             // compute the absolute dot product between the principle vectors
             queryVector = xt::view(queryVectors, queryPointIdx, xt::all());
             targetVector = xt::view(vectors, nearestPointIndex, xt::all());
-            //auto dot = xt::linalg::dot(queryVector, targetVector);
+            auto dot = xt::linalg::dot(queryVector, targetVector);
             //assert( dot.size() == 1 );
-            //absoluteDotProduct = std::abs(dot(0));
-            absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
+            absoluteDotProduct = std::abs(dot(0));
+            // absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
             
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
