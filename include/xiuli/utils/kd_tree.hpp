@@ -17,47 +17,54 @@ namespace xiuli{
 
 using namespace xt::placeholders;
 
+using HeapElement = std::pair<float, Index>;
+auto cmp = [](HeapElement left, HeapElement right) { return left.first < right.first; };
+
 /*
  * this is a fake heap/priority queue, designed specifically for this use case.
  * the speed is similar with std::priority_queue implementation.
  * keep customized version because it makes code more clean, and could find out some speed up method later.
  */
 class IndexHeap{
+    // build priority queue to store the nearest neighbors
 private:
-    PointIndices pointIndices;
-    xt::xtensor<float, 1> squaredDistances;
-    Index maxDistIndex;
+    std::priority_queue<HeapElement, std::vector<HeapElement>, decltype(cmp)> pqueue;
 
 public:
-    IndexHeap(const Index K){
-        PointIndices::shape_type sh = {K}; 
-        pointIndices = xt::empty<Index>( sh );
-        pointIndices.fill( std::numeric_limits<Index>::max() );
-        squaredDistances = xt::empty<float>({K});
-        squaredDistances.fill( std::numeric_limits<float>::max() );
-        maxDistIndex = 0;
+    IndexHeap(const Index K): pqueue(cmp){
+        for (Index i=0; i<K; i++){
+            float squaredDist = std::numeric_limits<float>::max();
+            std::size_t nodeIndex = std::numeric_limits<std::size_t>::max();
+            pqueue.push(std::make_pair(squaredDist, nodeIndex));
+        }
     }
-
-    inline auto get_node_indices() const {
-        return pointIndices;
-    }
-
+    
     inline auto size() const {
-        return pointIndices.size();
+        return pqueue.size();
     }
 
     inline auto max_squared_dist() const {
-        return squaredDistances( maxDistIndex );
+        return pqueue.top().first;
     }
 
-    inline void update( const Point &point, const Index &pointIndex, const Point &queryPoint ){
+    auto get_point_indices() {
+        auto K = pqueue.size();
+        PointIndices::shape_type sh = {K};
+        auto pointIndices = xt::empty<Index>(sh);
+        for(Index i=0; i<K; i++ ){
+            pointIndices(i) = pqueue.top().second;
+            pqueue.pop();
+        }
+        assert( pqueue.empty() );
+        return pointIndices;
+    }
+
+    void update( const Point &point, const Index &pointIndex, const Point &queryPoint ){
         auto squaredDist = xt::norm_sq( point - queryPoint )();
         if (squaredDist < max_squared_dist()){
             // replace the largest distance with current one
-            pointIndices( maxDistIndex ) = pointIndex;
-            squaredDistances( maxDistIndex ) = squaredDist;
-            // update the max distance index
-            maxDistIndex = xt::argmax( squaredDistances )();
+            pqueue.pop();
+            pqueue.push( std::make_pair(squaredDist, pointIndex) );
         }
     }
 }; // end of class IndexHeap
@@ -288,7 +295,7 @@ public:
         // the first one is the root node
         knn_update_heap( queryPoint, indexHeap, 0 );
         
-        return indexHeap.get_node_indices();
+        return indexHeap.get_point_indices();
     }
 
     inline auto py_knn(const PyPoint &queryPoint, const int &K) const {
