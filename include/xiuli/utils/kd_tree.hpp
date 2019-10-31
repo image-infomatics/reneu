@@ -26,8 +26,8 @@ auto cmp = [](HeapElement left, HeapElement right) { return left.first < right.f
  * keep customized version because it makes code more clean, and could find out some speed up method later.
  */
 class IndexHeap{
-    // build priority queue to store the nearest neighbors
 private:
+    // build priority queue to store the nearest neighbors
     std::priority_queue<HeapElement, std::vector<HeapElement>, decltype(cmp)> pqueue;
 
 public:

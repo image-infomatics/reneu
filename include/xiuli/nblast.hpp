@@ -5,6 +5,7 @@
 #include <limits>       // std::numeric_limits
 #include <filesystem>
 #include <memory>
+#include <cassert>
 #include <pybind11/pybind11.h>
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xfixed.hpp"
@@ -49,7 +50,7 @@ private:
         Index stop = N;
         while( stop - start > 1 ){
             auto middle = std::div(stop - start, 2).quot + start;
-            if ( value > thresholds[ middle ] ){
+            if ( value >= thresholds[ middle ] ){
                 // Move forward
                 start = middle;
             }else{
@@ -65,7 +66,7 @@ private:
     inline auto sequential_search( const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds, 
                                                         const float &value ) const {
         for (Index i=0; i<N; i++){
-            if(value <= thresholds(i+1)){
+            if(value < thresholds(i+1)){
                 return i;
             }
         }
@@ -87,7 +88,7 @@ public:
 
     inline auto get_pytable() const {
         // xtensor_fixed can not be converted to pytensor directly
-        return xt::xtensor<float, 2>(table);
+        return xt::pytensor<float, 2>(table);
     }
 
     /**
@@ -96,12 +97,17 @@ public:
      * \param dp: absolute dot product of vectors
      */
     inline auto operator()(const float &dist, const float &adp) const {
-        auto distIdx = binary_search( distThresholds, dist );
-        auto adpIdx = binary_search( adpThresholds, adp );
-        
-        // auto distIdx = sequential_search( distThresholds, dist );
-        // auto adpIdx = sequential_search( adpThresholds, adp );
+        // Index distIdx = sequential_search( distThresholds, dist );
+        Index distIdx = binary_search( distThresholds, dist );
 
+        // minus a small value to make sure that adp=1, we get index 9 rather than 10
+        Index adpIdx = trunc( adp * 10. - 1e-4 );
+        // Index adpIdx1 = binary_search( adpThresholds, adp );
+        // Index adpIdx2 = sequential_search( adpThresholds, adp );
+
+        // if (adpIdx != adpIdx2){
+            // std::cout<< adp << ": inconsistent adpidx: " << adpIdx << ", " << adpIdx1 << ", " << adpIdx2 << std::endl;
+        // }
         return table( distIdx, adpIdx );
     }
 
@@ -174,40 +180,34 @@ public:
         construct_vectors( nearestPointNum );
     }
 
-    auto query_by(VectorCloud &query, const ScoreTable &scoreTable) const {
+    auto query_by(const VectorCloud &query, const ScoreTable &scoreTable) const {
         // raw NBLAST is accumulated by query points
-        float rawScore = 0;
-
-        float distance = 0;
-        float absoluteDotProduct = 0;
-        Index nearestPointIndex = 0; 
+        float rawScore=0, distance, absoluteDotProduct;
+        Index nearestPointIndex; 
         xt::xtensor_fixed<float, xt::xshape<3>> queryPoint, nearestPoint, queryVector, targetVector;
 
-        auto queryPoints = query.get_points();
-        auto queryVectors = query.get_vectors();
-        for (Index queryPointIdx = 0; queryPointIdx<query.size(); queryPointIdx++){
+        const auto queryPoints = query.get_points();
+        const auto queryVectors = query.get_vectors();
+        for (Index queryPointIndex = 0; queryPointIndex<query.size(); queryPointIndex++){
             
-            queryPoint = xt::view(queryPoints, queryPointIdx, xt::range(0, 3));
-            
+            queryPoint = xt::view(queryPoints, queryPointIndex, xt::range(0, 3));
             // find the best match point in target and get physical distance
             nearestPointIndex = kdTree.knn( queryPoint, 1 )(0);
             nearestPoint = xt::view(points, nearestPointIndex, xt::range(0,3));
             distance = xt::norm_l2( nearestPoint - queryPoint )(0);
            
             // compute the absolute dot product between the principle vectors
-            queryVector = xt::view(queryVectors, queryPointIdx, xt::all());
+            queryVector = xt::view(queryVectors, queryPointIndex, xt::all());
             targetVector = xt::view(vectors, nearestPointIndex, xt::all());
-            auto dot = xt::linalg::dot(queryVector, targetVector);
-            //assert( dot.size() == 1 );
-            absoluteDotProduct = std::abs(dot(0));
+            auto dotProduct = xt::linalg::dot(queryVector, targetVector)(0);
+            absoluteDotProduct = std::abs(dotProduct);
             // absoluteDotProduct = std::abs(xt::linalg::dot( queryVector, targetVector )(0));
             
             // lookup the score table and accumulate the score
             rawScore += scoreTable( distance,  absoluteDotProduct );
             
-            // std::cout<< "\nquery point: " << queryPoint <<std::endl;
-            // std::cout<< "nearest point index: "<< nearestPointIndex << std::endl;
-            // std::cout<< "distance: " << distance << std::endl;
+            // std::cout<< "\n "<< queryPointIndex << " th query point: " << queryPoint <<std::endl;
+            // std::cout<< "nearest point index: "<< nearestPointIndex << " : " << nearestPoint << std::endl;
             // std::cout<< "vectors: "<<queryVector << "   "<< targetVector << std::endl;
             // std::cout<< "distance: "<< distance << ";   absolute dot product: " 
             //                                     << absoluteDotProduct << std::endl;
