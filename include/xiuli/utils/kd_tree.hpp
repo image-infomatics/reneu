@@ -59,8 +59,7 @@ public:
         return pointIndices;
     }
 
-    void update( const Point &point, const Index &pointIndex, const Point &queryPoint ){
-        auto squaredDist = xt::norm_sq( point - queryPoint )();
+    void update(const float &squaredDist, const Index &pointIndex){
         if (squaredDist < max_squared_dist()){
             // replace the largest distance with current one
             pqueue.pop();
@@ -95,13 +94,13 @@ private:
     Index dim_child_bucketSize;
     // the starting index of points in bucket
     // the cut/split value of this node
-    std::variant<Index, float> bucketIndex_cutValue;
+    std::variant<Index, float> bucketStart_cutValue;
     BoundingBox bbox;
 
 public:
     // construct a split node
     KDTreeNode(const Index dim, const float cutValue_, const BoundingBox bbox_):
-                        bucketIndex_cutValue(cutValue_), bbox(bbox_){
+                        bucketStart_cutValue(cutValue_), bbox(bbox_){
         // since dim is unsigned type, it is always >=0
         assert(dim<3);
         dim_child_bucketSize = dim << DIM_BIT_START;
@@ -109,8 +108,8 @@ public:
     }
 
     // construct a leaf node
-    KDTreeNode(const Index bucketSize, const Index bucketIndex_, const BoundingBox bbox_):
-                                    bucketIndex_cutValue(bucketIndex_), bbox(bbox_){
+    KDTreeNode(const Index bucketStart_, const Index bucketSize, const BoundingBox bbox_):
+                                    bucketStart_cutValue(bucketStart_), bbox(bbox_){
         dim_child_bucketSize = (3<<DIM_BIT_START) + bucketSize;
     }
 
@@ -118,12 +117,21 @@ public:
         return bbox;
     }    
 
-    inline auto get_bucket_index() const {
-        return std::get<Index>(bucketIndex_cutValue);
+    inline auto get_bucket_start() const {
+        return std::get<Index>(bucketStart_cutValue);
+    }
+    
+    inline auto get_bucket_size() const {
+        // black out the two most-significant bits
+        return dim_child_bucketSize & 0x3FFFFFFF;
+    }
+
+    inline auto get_bucket_stop() const {
+        return get_bucket_start() + get_bucket_size();
     }
 
     inline auto get_cut_value() const {
-        return std::get<float>(bucketIndex_cutValue);
+        return std::get<float>(bucketStart_cutValue);
     }
 
     inline auto get_dim() const {
@@ -140,11 +148,6 @@ public:
         return dim_child_bucketSize & 0x3FFFFFFF;
     }
 
-    inline auto get_bucket_size() const {
-        // black out the two most-significant bits
-        return dim_child_bucketSize & 0x3FFFFFFF;
-    }
-
     inline auto write_right_child_node_index( const Index &rightChildNodeIndex ){
         dim_child_bucketSize += rightChildNodeIndex; 
     }
@@ -153,7 +156,7 @@ public:
         if (is_leaf()){
             std::cout<< "\nleaf node:" << std::endl;
             std::cout<< "bucket size: " << get_bucket_size() << std::endl;
-            std::cout<< "bucket index: "<< get_bucket_index() << std::endl;
+            std::cout<< "bucket index: "<< get_bucket_start() << std::endl;
         } else {
             std::cout<< "\nsplit node:" << std::endl;
             std::cout<< "dim: " << get_dim() << std::endl;
@@ -170,18 +173,26 @@ class KDTree{
 private:
     std::vector<KDTreeNode> kdTreeNodes;
     std::vector<Index> pointIndicesBucket;
+    Points pointsBucket;
     const Index leafSize;
-    const Points points;
 
-    Index build_kd_nodes( const PointIndices &pointIndices ){
+    Index build_kd_nodes( const Points &points, const PointIndices &pointIndices ){
         BoundingBox bbox( points, pointIndices );
         if (pointIndices.size() <= leafSize ){
             // build a leaf node
             Index bucketSize = pointIndices.size();
-            Index bucketIndex = pointIndicesBucket.size();
-            KDTreeNode node( bucketSize, bucketIndex, bbox );
-            for( Index pointIndex : pointIndices ){
-                pointIndicesBucket.push_back( pointIndex );
+            Index bucketStart = pointIndicesBucket.size();
+            KDTreeNode node( bucketStart, bucketSize, bbox );
+
+            Index bucketIndex, pointIndex;
+            for (Index i=0; i<bucketSize; i++){
+                pointIndex = pointIndices(i);
+                pointIndicesBucket.push_back( pointIndices(i) );
+
+                bucketIndex = bucketStart + i;
+                pointsBucket( bucketIndex, 0 ) = points(pointIndex, 0);
+                pointsBucket( bucketIndex, 1 ) = points(pointIndex, 1);
+                pointsBucket( bucketIndex, 2 ) = points(pointIndex, 2);
             }
 
             // std::cout<< "\ninserting leaf node to " << kdTreeNodes.size() << std::endl;
@@ -223,12 +234,12 @@ private:
 
             const auto leftPointIndices = xt::view( sortedPointIndices, 
                                                         xt::range(0, splitIndex) );
-            const auto leftNodeIndex = build_kd_nodes(leftPointIndices);
+            const auto leftNodeIndex = build_kd_nodes(points, leftPointIndices);
             assert( leftNodeIndex == nodeIndex + 1 );
 
             const auto rightPointIndices = xt::view( sortedPointIndices, 
                                                         xt::range(splitIndex, _) );
-            const auto rightNodeIndex = build_kd_nodes(rightPointIndices);
+            const auto rightNodeIndex = build_kd_nodes(points, rightPointIndices);
 
             kdTreeNodes[nodeIndex].write_right_child_node_index( rightNodeIndex );
             return nodeIndex;
@@ -246,11 +257,25 @@ private:
         }
 
         if (node.is_leaf()){
-            for (Index i=node.get_bucket_index(); 
-                            i<node.get_bucket_index() + node.get_bucket_size(); i++){
-                auto pointIndex = pointIndicesBucket[ i ];
-                auto point = xt::view( points, pointIndex, xt::range(0, 3) );
-                indexHeap.update( point, pointIndex, queryPoint);
+            Index bucketStart = node.get_bucket_start(); 
+            Index bucketStop = node.get_bucket_stop();
+            auto leafPoints = xt::view(pointsBucket, 
+                            xt::range(bucketStart, bucketStop), xt::all());
+            // Points minusPoints = leafPoints - queryPoint; 
+            // xt::xtensor<float, 1> squaredDistances = xt::norm_sq( leafPoints - queryPoint, 1.0, xt::evaluation_strategy::immediate)();
+
+            // std::cout<< "leafPoints - queryPoint: " << (leafPoints - queryPoint) << std::endl;
+            // std::cout<< "squared distances: " << squaredDistances << std::endl;
+            // std::cout<< "bucket start: " << bucketStart << ", bucket stop: "<< bucketStop << 
+                        // ", size: "<< bucketStop - bucketStart << std::endl;
+
+            Index pointIndex;
+            float squaredDist;
+            for(Index i=0; i<node.get_bucket_size(); i++){
+                pointIndex = pointIndicesBucket[ i + bucketStart ];
+                auto point = xt::view(leafPoints, i, xt::all());
+                squaredDist = xt::norm_sq( point - queryPoint )();
+                indexHeap.update( squaredDist, pointIndex );
             }
         } else {
             // this is a split node
@@ -271,16 +296,18 @@ private:
     }
 
 public:
-    KDTree( const Points &points_, std::size_t leafSize_ ): 
-                points(points_), leafSize(leafSize_), 
+    KDTree( const Points &points, std::size_t leafSize_ ): 
+                leafSize(leafSize_), 
                 kdTreeNodes({}), pointIndicesBucket({}){
         auto pointNum = points.shape(0);
         pointIndicesBucket.reserve( pointNum );
+        Points::shape_type sh = {pointNum, 3};
+        pointsBucket = xt::empty<float>( sh );
         // std::cout<< "\nreserve node number: " << pointNum/leafSize*2 <<std::endl;
         kdTreeNodes.reserve( pointNum / leafSize * 2 );
         
         PointIndices pointIndices = xt::arange<Index>(0, pointNum);
-        build_kd_nodes(pointIndices);
+        build_kd_nodes(points, pointIndices);
         assert(pointIndicesBucket.size() == pointNum);
         kdTreeNodes.shrink_to_fit();
     }

@@ -88,7 +88,11 @@ def test_nblast_with_real_data():
 
     vcs = [ vc1, vc2 ]
     score_matrix = XNBLASTScoreMatrix(vcs, st)
+    raw_score_matrix = score_matrix.raw_score_matrix
+    r_raw_score_matrix = np.asarray([[86501.20, 53696.72], [50891.03, 101011.08]]) 
+    np.testing.assert_allclose( raw_score_matrix, r_raw_score_matrix, rtol=1e-3 )
     print('raw scores: ', score_matrix.raw_score_matrix)
+
 
 if __name__ == '__main__':
     test_nblast_score_table()

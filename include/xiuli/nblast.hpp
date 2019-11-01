@@ -232,7 +232,7 @@ public:
 
         for (Index targetIdx = 0; targetIdx<vcNum; targetIdx++){
             VectorCloud target = vectorClouds[ targetIdx ];
-            for (Index queryIdx = targetIdx; queryIdx<vcNum; queryIdx++){
+            for (Index queryIdx = 0; queryIdx<vcNum; queryIdx++){
                 auto query = vectorClouds[ queryIdx ];
                 rawScoreMatrix( targetIdx, queryIdx ) = target.query_by( query, scoreTable ); 
             }
