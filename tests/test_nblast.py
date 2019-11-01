@@ -7,13 +7,15 @@ from math import isclose
 from copy import deepcopy
 from time import time
 
-from reneu.lib.libxiuli import XNBLASTScoreTable
+from reneu.xiuli import XNBLASTScoreTable
 from reneu.neuron import Skeleton
-from reneu.lib.libxiuli import XVectorCloud, XNBLASTScoreMatrix
+from reneu.xiuli import XVectorCloud, XNBLASTScoreMatrix
 
-# DATA_DIR = os.path.join(os.path.dirname(__file__), '../../../data/')
-DATA_DIR = 'data/'
+DATA_DIR = os.path.join(os.path.dirname(__file__), '../data/')
+#DATA_DIR = 'data/'
 table_path = os.path.join(DATA_DIR, 'smat_fcwb.csv')
+print('table path: ', table_path)
+assert os.path.exists(table_path)
 st = XNBLASTScoreTable( table_path )
 # somehow this is not working
 # st = XNBLASTScoreTable()

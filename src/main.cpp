@@ -11,7 +11,7 @@
 namespace py = pybind11;
 using namespace xiuli;
 
-PYBIND11_MODULE(libxiuli, m) {
+PYBIND11_MODULE(xiuli, m) {
     xt::import_numpy();
 
     m.doc() = R"pbdoc(

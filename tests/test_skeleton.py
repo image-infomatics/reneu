@@ -6,7 +6,7 @@ from math import isclose
 import faulthandler
 faulthandler.enable()
 
-from reneu.lib.libxiuli import XSkeleton
+from reneu.xiuli import XSkeleton
 from reneu.skeleton import Skeleton
 
 NEURON_NAME = 'Nov10IR3e.CNG'
@@ -31,7 +31,7 @@ def test_xskeleton():
     print('path length: ', path_length)
     print('time elapse of computing path length: ', time.process_time()-start)
 
-    node_num1 = len(sk)
+    point_num1 = len(sk)
 
     start = time.process_time()
     if NEURON_NAME == 'Nov10IR3e.CNG':
@@ -41,8 +41,8 @@ def test_xskeleton():
         assert len(sk) == 1476
 
     print('time elapsed of downsample: ', time.process_time()-start)
-    node_num2 = len(sk)
-    print('downsampled from {} nodes to {} nodes.'.format(node_num1, node_num2))
+    point_num2 = len(sk)
+    print('downsampled from {} points to {} points.'.format(point_num1, point_num2))
 
 
 def test_skeleton():
@@ -51,15 +51,15 @@ def test_skeleton():
     sk = Skeleton.from_swc( file_name )
     print('time elapse in python read_swc: ', time.process_time()-start)
 
-    node_num1 = len(sk)
+    point_num1 = len(sk)
     if NEURON_NAME == 'Nov10IR3e.CNG':
         sk.downsample(2.0)
     elif NEURON_NAME == '77337930247110714':
         sk.downsample(1000.0)
         assert len(sk) == 1476
     
-    node_num2 = len(sk)
-    print('downsampled from {} nodes to {} nodes.'.format(node_num1, node_num2))
+    point_num2 = len(sk)
+    print('downsampled from {} points to {} points.'.format(point_num1, point_num2))
      
     start = time.process_time()
     temp_file_name = '/tmp/{}.swc'.format(NEURON_NAME)
@@ -78,5 +78,5 @@ def test_skeleton():
    
     print('path length: ', sk.path_length)
 
-    print('number of nodes: ', len(sk))
-    assert len(sk) == sk.nodes.shape[0]
+    print('number of points: ', len(sk))
+    assert len(sk) == sk.points.shape[0]

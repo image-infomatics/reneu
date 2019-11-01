@@ -1,6 +1,6 @@
 from typing import Union 
 import numpy as np
-from .lib.libxiuli import XSkeleton
+from .xiuli import XSkeleton
 import struct
 from io import BytesIO
 
@@ -10,10 +10,10 @@ class Skeleton(XSkeleton):
     
     Parameters
     ----------
-    nodes: (float ndarray, node_num x 4), each row is a node with r,z,y,x 
-    parents: (int ndarray, node_num), the parent node index of each node
-    types: (int ndarray, node_num), the type of each node.
-        The type of node is defined in `SWC format
+    points: (float ndarray, point_num x 4), each row is a point with r,z,y,x 
+    parents: (int ndarray, point_num), the parent point index of each point
+    types: (int ndarray, point_num), the type of each point.
+        The type of point is defined in `SWC format
         <http://www.neuronland.org/NLMorphologyConverter/MorphologyFormats/SWC/Spec.html>`_:
 
         0 - undefined
@@ -29,17 +29,17 @@ class Skeleton(XSkeleton):
         super().__init__(*args)
    
     @classmethod
-    def from_nodes_and_parents(cls, nodes: np.ndarray, parents: np.ndarray, 
+    def from_points_and_parents(cls, points: np.ndarray, parents: np.ndarray, 
                     classes: np.ndarray=None):
-        assert nodes.shape[1] == 4
-        assert nodes.shape[0] == len(parents) == len(classes)
+        assert points.shape[1] == 4
+        assert points.shape[0] == len(parents) == len(classes)
 
-        node_num = nodes.shape[0]
-        nodes = nodes.astype(np.float32) 
+        point_num = points.shape[0]
+        points = points.astype(np.float32) 
 
-        attributes = np.zeros((node_num, 4), dtype=np.int32) - 2
+        attributes = np.zeros((point_num, 4), dtype=np.int32) - 2
         # the parents, first child and siblings should be missing initially. 
-        # The zero will all point to the first node.
+        # The zero will all point to the first point.
         if classes is not None:
             attributes[:, 0] = classes
         else:
@@ -48,7 +48,7 @@ class Skeleton(XSkeleton):
 
         attributes[:, 1] = parents
 
-        return cls(nodes, attributes) 
+        return cls(points, attributes) 
 
     @classmethod
     def from_swc(cls, file_name: str):
@@ -56,9 +56,9 @@ class Skeleton(XSkeleton):
         Parameters:
         ------------
         file_name: the swc file path
-        sort_id: The node index could be unsorted in some swc files, 
-            we can drop the node index column after order it. Our future
-            analysis assumes that the nodes are ordered.
+        sort_id: The point index could be unsorted in some swc files, 
+            we can drop the point index column after order it. Our future
+            analysis assumes that the points are ordered.
         """
         # numpy load text is faster than my c++ implementation!
         # it might use memory map internally
@@ -123,7 +123,7 @@ class Skeleton(XSkeleton):
             radii = np.frombuffer(skelbuf[radii_start : radii_end], dtype=np.float32)
 
         if len(skelbuf) >= min_format_length + num_vertices * 5:
-            # there is node classes information
+            # there is point classes information
             classes_start = radii_end
             classes_end = classes_start + num_vertices
             classes = np.frombuffer(skelbuf[classes_start : classes_end], dtype=np.uint8)
@@ -136,32 +136,32 @@ class Skeleton(XSkeleton):
             assert len(skelbuf) <= min_format_length + num_vertices * 4
             classes = np.zeros(num_vertices, dtype=np.int32 )
 
-        nodes = np.column_stack((vertices, radii))
-        return cls.from_nodes_and_parents(nodes, parents, classes)
+        points = np.column_stack((vertices, radii))
+        return cls.from_points_and_parents(points, parents, classes)
 
     def to_precomputed(self):
-        nodes = self.nodes.astype(np.float32)
-        node_num = self.nodes.shape[0]
+        points = self.points.astype(np.float32)
+        point_num = self.points.shape[0]
         classes = self.attributes[:, 0].astype(np.uint8)
         edges = self.edges.astype( np.uint32 )
         edge_num = edges.shape[0]
 
         result = BytesIO()
-        result.write(struct.pack('<II', node_num, edge_num))
-        result.write( nodes[:, :3].tobytes('C') )
+        result.write(struct.pack('<II', point_num, edge_num))
+        result.write( points[:, :3].tobytes('C') )
         result.write( edges.tobytes('C') )
 
         # write radii
-        radii = nodes[:, 3]
+        radii = points[:, 3]
         if not np.ma.allequal(radii, 0) or not np.ma.allequal(classes, 0):
-            result.write( nodes[:, 3].tobytes('C') )
+            result.write( points[:, 3].tobytes('C') )
         
-        # write node types
+        # write point types
         if not np.ma.allequal(classes, 0):
             result.write( classes.tobytes('C') )
         return result.getvalue()
 
     def __eq__(self, other):
         assert isinstance( other, Skeleton )
-        return  np.ma.allclose(self.nodes, other.nodes, atol=0.001) and np.ma.allequal( 
+        return  np.ma.allclose(self.points, other.points, atol=0.001) and np.ma.allequal( 
                                     self.attributes, other.attributes )

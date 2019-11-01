@@ -3,7 +3,7 @@ faulthandler.enable()
 
 import numpy as np
 from numpy.testing import assert_allclose
-from reneu.lib import libxiuli
+from reneu.xiuli import pca_first_component
 from math import isclose
 from sklearn.decomposition import PCA
 
@@ -22,7 +22,7 @@ def test_pca():
     # since there is no direction
     component = -component
 
-    component2 = libxiuli.pca_first_component( X )
+    component2 = pca_first_component( X )
     assert_allclose(component, component2, rtol=1e-4)
     # the vector should already be normalized
     assert isclose(np.linalg.norm( component2 ), 1, rel_tol=1e-4)
@@ -51,11 +51,11 @@ def test_pca():
     # component = python_pca(X)
     component1 = np.asarray([ 0.02229965, -0.57740044, -0.81615652 ])
     print('python pca output: ', component1)
-    component2 = libxiuli.pca_first_component(X)
-    component3 = libxiuli.pca_first_component(X)
-    component4 = libxiuli.pca_first_component(X)
+    component2 = pca_first_component(X)
+    component3 = pca_first_component(X)
+    component4 = pca_first_component(X)
     np.testing.assert_equal(component2, component3)
     np.testing.assert_equal(component2, component4)
-    # print('out pca output: ', libxiuli.pca_first_component(X))
+    # print('out pca output: ', pca_first_component(X))
     np.testing.assert_almost_equal( -component1,  component2, decimal=5)
 
