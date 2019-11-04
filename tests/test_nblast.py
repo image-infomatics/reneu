@@ -17,8 +17,8 @@ table_path = os.path.join(DATA_DIR, 'smat_fcwb.csv')
 print('table path: ', table_path)
 assert os.path.exists(table_path)
 st = XNBLASTScoreTable( table_path )
-# somehow this is not working
-# st = XNBLASTScoreTable()
+# equivalent expression
+st = XNBLASTScoreTable()
 
 def test_nblast_score_table():
     assert isclose(st[0., 0.], 9.500096818, abs_tol=1e-4)

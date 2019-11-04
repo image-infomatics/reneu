@@ -81,9 +81,12 @@ public:
     }
 
     ScoreTable(){
-        std::string fileName = std::filesystem::current_path() / "../../../data/smat_fcwb.csv";
-        std::ifstream in(fileName); 
+        const auto fileName = std::filesystem::path(__FILE__).parent_path() / 
+                                                        "../../data/smat_fcwb.csv";
+        std::ifstream in(fileName);
+        std::cout<< "read nblast score table file: " << fileName << std::endl; 
         table = xt::load_csv<float>( in );
+        in.close();
     }
 
     inline auto get_pytable() const {
@@ -215,7 +218,6 @@ public:
         }
         return rawScore; 
     }
-
 }; // VectorCloud class
 
 class NBLASTScoreMatrix{
