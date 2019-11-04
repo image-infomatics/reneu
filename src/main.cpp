@@ -60,6 +60,7 @@ PYBIND11_MODULE(xiuli, m) {
         .def(py::init<const PyPoints &, const Index &, const Index &>())
         .def_property_readonly("vectors", &VectorCloud::get_vectors)
         .def("__len__", &VectorCloud::size)
+        .def("query_by_self", &VectorCloud::query_by_self)
         .def("query_by", &VectorCloud::query_by);
 
     py::class_<NBLASTScoreMatrix>(m, "XNBLASTScoreMatrix")

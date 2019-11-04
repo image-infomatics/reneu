@@ -118,6 +118,10 @@ public:
         return this->operator()(std::get<0>(slice), std::get<1>(slice));
     }
 
+    auto self_score() const {
+        return table(0, 9);
+    }
+
 }; // ScoreTable class 
 
 class VectorCloud{
@@ -183,6 +187,10 @@ public:
         construct_vectors( nearestPointNum );
     }
 
+    float query_by_self(const ScoreTable &scoreTable) const {
+        return size() * scoreTable.self_score();
+    }
+
     auto query_by(const VectorCloud &query, const ScoreTable &scoreTable) const {
         // raw NBLAST is accumulated by query points
         float rawScore=0, distance, absoluteDotProduct;
@@ -235,8 +243,12 @@ public:
         for (Index targetIdx = 0; targetIdx<vcNum; targetIdx++){
             VectorCloud target = vectorClouds[ targetIdx ];
             for (Index queryIdx = 0; queryIdx<vcNum; queryIdx++){
-                auto query = vectorClouds[ queryIdx ];
-                rawScoreMatrix( targetIdx, queryIdx ) = target.query_by( query, scoreTable ); 
+                if (targetIdx == queryIdx){
+                    rawScoreMatrix(targetIdx, queryIdx) = target.query_by_self(scoreTable);
+                } else {
+                    auto query = vectorClouds[ queryIdx ];
+                    rawScoreMatrix( targetIdx, queryIdx ) = target.query_by( query, scoreTable );
+                }
             }
         }
     }
