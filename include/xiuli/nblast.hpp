@@ -174,6 +174,13 @@ public:
         return vectors;
     }
 
+    inline auto get_kd_tree() const {
+        return kdTree;
+    }
+
+    VectorCloud(const Points &points_, const Points &vectors_, const KDTree &kdTree_):
+            points(points_), vectors(vectors_), kdTree(kdTree_){}
+
     // our points array contains radius direction, but we do not need it.
     VectorCloud( const Points &points_, const Index &leafSize, 
                     const Index &nearestPointNum ): 
