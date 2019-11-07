@@ -4,6 +4,8 @@
 #include "xtensor/xfixed.hpp"
 #include "xtensor-python/pytensor.hpp"
 
+using namespace xt::placeholders;  // required for `_` to work
+
 using Index = std::uint32_t;
 using Point = xt::xtensor_fixed<float, xt::xshape<3>>;
 using Points = xt::xtensor<float, 2>;

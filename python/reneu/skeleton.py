@@ -27,6 +27,10 @@ class Skeleton(XSkeleton):
     """
     def __init__(self, *args): 
         super().__init__(*args)
+
+    @classmethod
+    def from_swc_array(cls, swc_array: np.ndarray):
+        return cls( swc_array )
    
     @classmethod
     def from_points_and_parents(cls, points: np.ndarray, parents: np.ndarray, 
