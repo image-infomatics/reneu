@@ -49,6 +49,9 @@ def test_skeleton():
     print('\ntest inherited skeleton class in python...')
     start = time.process_time()
     sk = Skeleton.from_swc( file_name )
+    # use version 2 of pickle
+    data = pickle.dumps(sk, 2)
+
     print('time elapse in python read_swc: ', time.process_time()-start)
 
     point_num1 = len(sk)

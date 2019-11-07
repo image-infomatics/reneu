@@ -9,20 +9,17 @@
 #include <ctime>
 #include <chrono>
 #include <iomanip>
-#include "xtensor/xtensor.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor/xadapt.hpp"
-#include "xiuli/utils/string.hpp"
-#include "xtensor-python/pytensor.hpp"     // Numpy bindings
 
 #include "xiuli/type_aliase.hpp"
+#include "xiuli/utils/string.hpp"
 
 
 using namespace xiuli::utils;
-using namespace xt::placeholders;  // required for `_` to work
 
-using AttributesType = xt::xtensor<int, 2>;
+using Attributes = xt::xtensor<int, 2>;
 
 // use the c++17 nested namespace
 namespace xiuli{
@@ -46,7 +43,7 @@ private:
     // 6 - end point
     // 7 - custom 
     // normally the type is int
-    AttributesType attributes;
+    Attributes attributes;
 
     auto get_classes() const {
         return xt::view(attributes, xt::all(), 0);
@@ -82,7 +79,7 @@ private:
         // create points and attributes
         Points::shape_type pointsShape = {pointNum, 4};
         points = xt::zeros<float>( pointsShape );
-        AttributesType::shape_type attributesShape = {pointNum, 4};
+        Attributes::shape_type attributesShape = {pointNum, 4};
         // root point id is -2 rather than -1.
         attributes = xt::zeros<int>( attributesShape ) - 2;
     }
@@ -226,12 +223,20 @@ public:
         }
     }
     
-    inline auto get_points(){
+    inline auto get_points() const {
         return points;
     }
 
-    inline auto get_attributes(){
+    inline auto get_py_points() const {
+        return PyPoints( points );
+    }
+
+    inline auto get_attributes() const {
         return attributes;
+    }
+
+    inline auto get_py_attributes() const {
+        return PyPoints( attributes );
     }
 
     bool is_root_point(int pointIdx) const {
@@ -396,8 +401,8 @@ public:
         auto newPointNum = selectedPointIdxes.size();
         //std::cout<< "downsampled point number from "<< pointNum << " to " << newPointNum << std::endl;
 
-        AttributesType::shape_type newAttShape = {newPointNum, 4};
-        AttributesType newAtt = xt::zeros<int>(newAttShape) - 2;
+        Attributes::shape_type newAttShape = {newPointNum, 4};
+        Attributes newAtt = xt::zeros<int>(newAttShape) - 2;
 
         // find new point classes
         for (std::size_t i=0; i<newPointNum; i++){

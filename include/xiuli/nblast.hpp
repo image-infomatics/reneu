@@ -7,17 +7,14 @@
 #include <memory>
 #include <cassert>
 #include <pybind11/pybind11.h>
-#include "xtensor/xtensor.hpp"
-#include "xtensor/xfixed.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xnorm.hpp"
 #include "xtensor/xindex_view.hpp"
-#include "xtensor-python/pytensor.hpp"     // Numpy bindings
 #include "xtensor/xcsv.hpp"
 
+#include "xiuli/type_aliase.hpp"
 #include "xiuli/utils/math.hpp"
 #include "xiuli/utils/kd_tree.hpp"
-#include "xiuli/type_aliase.hpp"
 
 // use the c++17 nested namespace
 namespace xiuli{
@@ -178,9 +175,19 @@ public:
         return vectors;
     }
 
-    inline auto get_py_vector() const {
+    inline auto get_py_vectors() const {
         return PyPoints( vectors );
     }
+
+    inline auto get_kd_tree() const {
+        return kdTree;
+    }
+
+    VectorCloud( const Points &points_, const Points &vectors_, const KDTree &kdTree_ ):
+                points(points), vectors(vectors_), kdTree(kdTree_){}
+    
+    VectorCloud( const PyPoints &points_, const PyPoints &vectors_, const KDTree &kdTree_ ):
+                points(points), vectors(vectors_), kdTree(kdTree_){}
 
     // our points array contains radius direction, but we do not need it.
     VectorCloud( const Points &points_, const Index &leafSize, 

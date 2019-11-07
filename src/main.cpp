@@ -40,7 +40,18 @@ PYBIND11_MODULE(xiuli, m) {
         .def("__len__", &Skeleton::get_point_num)
         .def("downsample", &Skeleton::downsample)
         .def("to_swc_str", &Skeleton::to_swc_str)
-        .def("write_swc", &Skeleton::write_swc);
+        .def("write_swc", &Skeleton::write_swc)
+        .def(py::pickle(
+            [](const Skeleton &sk){ // __getstate__
+                return py::make_tuple( sk.get_py_points(), sk.get_py_attributes() );
+            },
+            [](py::tuple tp) { // __setstate__
+                if (tp.size() != 2)
+                    throw std::runtime_error("Invalid state!");
+                Skeleton sk(tp[0].cast<PyPoints>(), tp[1].cast<PyPoints>());
+                return sk;
+            }
+        ));
 
     py::class_<KDTree>(m, "XKDTree")
         .def(py::init<const PyPoints &, const Index &>())
@@ -66,13 +77,14 @@ PYBIND11_MODULE(xiuli, m) {
         .def(py::pickle(
             [](const VectorCloud &vc) { // __getstate__
                 // Return a tuple that fully encodes the state of the object
-                return py::make_tuple( vc.get_points(), vc.get_vectors(), vc.get_kd_tree() );
+                return py::make_tuple(  vc.get_py_points(), 
+                                        vc.get_py_vectors(), vc.get_kd_tree() );
             },
             [](py::tuple tp) { // __setstate__
                 if (tp.size() != 3)
                     throw std::runtime_error("Invalid state!");
                 // create a new C++ instance
-                VectorCloud vc( tp[0].cast<Points>(), tp[1].cast<Points>(), 
+                VectorCloud vc( tp[0].cast<PyPoints>(), tp[1].cast<PyPoints>(), 
                                 tp[2].cast<KDTree>());
                 return vc;
             }
