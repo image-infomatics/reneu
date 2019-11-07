@@ -9,12 +9,13 @@
 #include <ctime>
 #include <chrono>
 #include <iomanip>
+
 #include "xtensor/xview.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor/xadapt.hpp"
 
-#include "xiuli/type_aliase.hpp"
 #include "xiuli/utils/string.hpp"
+#include "xiuli/type_aliase.hpp"
 
 
 using namespace xiuli::utils;
@@ -45,24 +46,24 @@ private:
     // normally the type is int
     Attributes attributes;
 
-    auto get_classes() const {
+    inline auto get_classes() const {
         return xt::view(attributes, xt::all(), 0);
     }
 
-    auto get_parents() const {
+    inline auto get_parents() const {
         return xt::view(attributes, xt::all(), 1);
     }
 
-    auto get_childs() const {
+    inline auto get_childs() const {
         return xt::view(attributes, xt::all(), 2);
     }
 
-    auto get_siblings() const {
+    inline auto get_siblings() const {
         return xt::view(attributes, xt::all(), 3);
     }
 
     template<typename Ti>
-    auto get_point( Ti pointIdx ) const {
+    inline auto get_point( Ti pointIdx ) const {
         return xt::view(points, pointIdx, xt::all());
     } 
 
@@ -223,7 +224,7 @@ public:
         }
     }
     
-    inline auto get_points() const {
+    inline auto get_points() {
         return points;
     }
 
@@ -231,7 +232,7 @@ public:
         return PyPoints( points );
     }
 
-    inline auto get_attributes() const {
+    inline auto get_attributes() {
         return attributes;
     }
 
@@ -239,15 +240,15 @@ public:
         return PyPoints( attributes );
     }
 
-    bool is_root_point(int pointIdx) const {
+    inline bool is_root_point(int pointIdx) const {
         return attributes(pointIdx, 1) < 0;
     }
 
-    bool is_terminal_point(int pointIdx) const {
+    inline bool is_terminal_point(int pointIdx) const {
         return attributes(pointIdx, 2 ) < 0;
     }
     
-    auto get_point_num() const {
+    inline auto get_point_num() const {
         return points.shape(0);
     }
     

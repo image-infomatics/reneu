@@ -54,8 +54,8 @@ ext_modules = [
         language='c++',
         extra_compile_args=[
             # use Og for gdb debug
-            #'-Og',
-            '-O3',
+            '-Og',
+            #'-O3',
             '-ffast-math',
             # build with debug info
             # '-g'
@@ -106,7 +106,8 @@ class BuildExt(build_ext):
     }
     l_opts = {
         'msvc': [],
-        'unix': [],
+        # link to cblas library to solve undefined symbol issue
+        'unix': ['-lcblas',],
     }
 
     if sys.platform == 'darwin':
@@ -124,7 +125,7 @@ class BuildExt(build_ext):
         link_opts = self.l_opts.get(ct, [])
         for arg in ext_modules[0].extra_compile_args:
             opts.append(arg)
-
+        
         if ct == 'unix':
             opts.append('-DVERSION_INFO="%s"' %
                         self.distribution.get_version())
@@ -139,7 +140,6 @@ class BuildExt(build_ext):
             ext.extra_link_args = link_opts
 
         super().build_extensions()
-        #build_ext.build_extensions(self)
 
 
 setup(
