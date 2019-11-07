@@ -170,8 +170,16 @@ public:
         return points;
     }
 
+    inline auto get_py_points() const {
+        return PyPoints(points);
+    }
+
     inline auto get_vectors() const {
         return vectors;
+    }
+
+    inline auto get_py_vector() const {
+        return PyPoints( vectors );
     }
 
     // our points array contains radius direction, but we do not need it.
