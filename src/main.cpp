@@ -61,7 +61,22 @@ PYBIND11_MODULE(xiuli, m) {
         .def_property_readonly("vectors", &VectorCloud::get_vectors)
         .def("__len__", &VectorCloud::size)
         .def("query_by_self", &VectorCloud::query_by_self)
-        .def("query_by", &VectorCloud::query_by);
+        .def("query_by", &VectorCloud::query_by)
+        // make it pickleable for distributed processing
+        .def(py::pickle(
+            [](const VectorCloud &vc) { // __getstate__
+                // Return a tuple that fully encodes the state of the object
+                return py::make_tuple( vc.get_points(), vc.get_vectors(), vc.get_kd_tree() );
+            },
+            [](py::tuple tp) { // __setstate__
+                if (tp.size() != 3)
+                    throw std::runtime_error("Invalid state!");
+                // create a new C++ instance
+                VectorCloud vc( tp[0].cast<Points>(), tp[1].cast<Points>(), 
+                                tp[2].cast<KDTree>());
+                return vc;
+            }
+        ));
 
     py::class_<NBLASTScoreMatrix>(m, "XNBLASTScoreMatrix")
         //.def(py::init<const py::list &, const ScoreTable &>())
