@@ -9,7 +9,7 @@ from copy import deepcopy
 from time import time
 
 from reneu.xiuli import XNBLASTScoreTable
-from reneu.neuron import Skeleton
+from reneu.skeleton import Skeleton
 from reneu.xiuli import XVectorCloud, XNBLASTScoreMatrix
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '../data/')
