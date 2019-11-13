@@ -15,6 +15,7 @@
 
 namespace xiuli{
 
+// namespace py=pybind11;
 using namespace xt::placeholders;
 
 using HeapElement = std::pair<float, Index>;
@@ -171,8 +172,11 @@ public:
 class KDTree{
 
 private:
-    std::vector<KDTreeNode> kdTreeNodes;
-    std::vector<Index> pointIndicesBucket;
+    using KDTreeNodes = std::vector<KDTreeNode>;
+    using PointIndicesBucket = std::vector<Index>;
+
+    KDTreeNodes kdTreeNodes;
+    PointIndicesBucket pointIndicesBucket;
     Points pointsBucket;
     const Index leafSize;
 
@@ -295,10 +299,7 @@ private:
         }
     }
 
-public:
-    KDTree( const Points &points, std::size_t leafSize_ ): 
-                leafSize(leafSize_), 
-                kdTreeNodes({}), pointIndicesBucket({}){
+    auto build_kd_tree(const Points &points){
         auto pointNum = points.shape(0);
         pointIndicesBucket.reserve( pointNum );
         Points::shape_type sh = {pointNum, 3};
@@ -310,6 +311,49 @@ public:
         build_kd_nodes(points, pointIndices);
         assert(pointIndicesBucket.size() == pointNum);
         kdTreeNodes.shrink_to_fit();
+    }
+
+public:
+    KDTree(const KDTreeNodes &kdTreeNodes_, 
+            const PointIndicesBucket &pointIndicesBucket_, const PyPoints &pointsBucket_, 
+            const Index &leafSize_): 
+                kdTreeNodes(kdTreeNodes_), pointIndicesBucket(pointIndicesBucket_),
+                pointsBucket(Points(pointsBucket_)), leafSize(leafSize_){}
+
+    KDTree( const std::tuple<KDTreeNodes, PointIndicesBucket, PyPoint, Index> &tp ):
+        kdTreeNodes(std::get<0>(tp)), pointIndicesBucket(std::get<1>(tp)), 
+        pointsBucket( Points( std::get<2>(tp) ) ), leafSize(std::get<3>(tp)){}
+
+    KDTree( const Points &points, const std::size_t &leafSize_ ): 
+                leafSize(leafSize_), 
+                kdTreeNodes({}), pointIndicesBucket({}){
+        build_kd_tree( points );
+    }
+
+    KDTree( const PyPoints &points, const std::size_t &leafSize_ ):
+                leafSize(leafSize_), kdTreeNodes({}), pointIndicesBucket({}){
+        build_kd_tree( Points( points) );
+    }
+
+    auto get_kd_tree_nodes() const {
+        return kdTreeNodes;
+    }
+
+    auto get_point_indices_bucket() const {
+        return pointIndicesBucket;
+    }
+
+    auto get_py_points_bucket() const {
+        return PyPoints(pointsBucket);
+    }
+
+    auto get_leaf_size() const {
+        return leafSize;
+    }
+
+    auto get_serializable_tuple() const {
+        return std::make_tuple( kdTreeNodes, pointIndicesBucket, 
+                                get_py_points_bucket(), leafSize);
     }
 
     /*

@@ -159,6 +159,26 @@ private:
     }
 
 public:
+    VectorCloud( const Points &points_, const Points &vectors_, const KDTree &kdTree_ ):
+                points(points), vectors(vectors_), kdTree(kdTree_){}
+    
+    VectorCloud( const PyPoints &points_, const PyPoints &vectors_, const KDTree &kdTree_ ):
+                points(points), vectors(vectors_), kdTree(kdTree_){}
+    
+    // our points array contains radius direction, but we do not need it.
+    VectorCloud( const Points &points_, const Index &leafSize, 
+                    const Index &nearestPointNum ): 
+                    points(points_), kdTree(points_, leafSize){
+        construct_vectors( nearestPointNum );
+    }
+    
+    VectorCloud( const xt::pytensor<float, 2> &points_, const Index &leafSize, 
+                        const Index &nearestPointNum ): 
+                        points(points_), kdTree(points_, leafSize) {
+        construct_vectors( nearestPointNum );
+    }
+
+    
     inline auto size() const {
         return points.shape(0);
     }
@@ -183,24 +203,9 @@ public:
         return kdTree;
     }
 
-    VectorCloud( const Points &points_, const Points &vectors_, const KDTree &kdTree_ ):
-                points(points), vectors(vectors_), kdTree(kdTree_){}
-    
-    VectorCloud( const PyPoints &points_, const PyPoints &vectors_, const KDTree &kdTree_ ):
-                points(points), vectors(vectors_), kdTree(kdTree_){}
-
-    // our points array contains radius direction, but we do not need it.
-    VectorCloud( const Points &points_, const Index &leafSize, 
-                    const Index &nearestPointNum ): 
-                    points(points_), kdTree(points_, leafSize){
-        construct_vectors( nearestPointNum );
-    }
-    
-    VectorCloud( const xt::pytensor<float, 2> &points_, const Index &leafSize, 
-                        const Index &nearestPointNum ): 
-                        points(points_), kdTree(points_, leafSize) {
-        construct_vectors( nearestPointNum );
-    }
+    inline auto get_kd_tree_serializable_tuple() const {
+        return kdTree.get_serializable_tuple();
+    } 
 
     float query_by_self(const ScoreTable &scoreTable) const {
         return size() * scoreTable.self_score();

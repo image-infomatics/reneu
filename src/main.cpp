@@ -78,7 +78,8 @@ PYBIND11_MODULE(xiuli, m) {
             [](const VectorCloud &vc) { // __getstate__
                 // Return a tuple that fully encodes the state of the object
                 return py::make_tuple(  vc.get_py_points(), 
-                                        vc.get_py_vectors(), vc.get_kd_tree() );
+                                        vc.get_py_vectors(), 
+                                        vc.get_kd_tree_serializable_tuple() );
             },
             [](py::tuple tp) { // __setstate__
                 if (tp.size() != 3)
