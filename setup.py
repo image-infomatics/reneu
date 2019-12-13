@@ -44,7 +44,7 @@ class get_pybind_include(object):
 ext_modules = [
     Extension(
         'xiuli',
-        ['src/main.cpp'],
+        ['cpp/main.cpp'],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
@@ -63,7 +63,7 @@ ext_modules = [
             #'-o reneu/xiuli.so'
         ],
         # monitor the code change and rebuild
-        depends = ['src/*', 'include/xiuli/*'],
+        depends = ['cpp/*', 'cpp/include/xiuli/*'],
     ),
 ]
 
