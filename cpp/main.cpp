@@ -6,7 +6,7 @@
 #include "xiuli/xiuli.hpp"
 #include "xiuli/utils/math.hpp"
 #include "xiuli/type_aliase.hpp" 
-
+#include "xiuli/segmentation.hpp"
 
 namespace py = pybind11;
 using namespace xiuli;
@@ -25,6 +25,10 @@ PYBIND11_MODULE(xiuli, m) {
            downsample
            write_swc
     )pbdoc";
+
+    py::class_<MinimumSpanningTree>(m, "XMinimumSpanningTree")
+        .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
+        .def("segment", &MinimumSpanningTree::segment);
 
     m.def("pca_first_component", &py_pca_first_component); 
 
