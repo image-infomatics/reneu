@@ -26,9 +26,9 @@ PYBIND11_MODULE(xiuli, m) {
            write_swc
     )pbdoc";
 
-    py::class_<MinimumSpanningTree>(m, "XMinimumSpanningTree")
+    py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
         .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
-        .def("segment", &MinimumSpanningTree::segment);
+        .def("segment", &SupervoxelDendrogram::segment);
 
     m.def("pca_first_component", &py_pca_first_component); 
 
