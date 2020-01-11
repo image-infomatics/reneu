@@ -138,7 +138,8 @@ auto segment( const aff_edge_t &threshold ){
     xt::xtensor<segid_t, 1> rank = xt::ones<segid_t>({segNum});
     xt::xtensor<segid_t, 1> parent = xt::arange<segid_t>(0, segNum);
     boost::disjoint_sets dsets(rank.data(), parent.data());
-
+    
+    size_t mergeNum = 0;
     for(const auto &[segid0, segid1, aff] : dendrogram){
         if(aff>=threshold){
             // union these two sets
@@ -147,14 +148,16 @@ auto segment( const aff_edge_t &threshold ){
             // Union the two sets that contain elements x and y. 
             // This is equivalent to link(find_set(x),find_set(y)).
             dsets.union_set(index0, index1);
+            mergeNum += 1;
         }
     }
 
     // Flatten the parents tree so that the parent of every element is its representative.
     dsets.compress_sets(parent.begin(), parent.end());
 
-    std::cout<< "get "<< dsets.count_sets(parent.begin(), parent.end()) << 
-                " segments after merging."<< std::endl;
+    std::cout<< "merged "<< mergeNum << " times to get "<< 
+                dsets.count_sets(parent.begin(), parent.end()) << 
+                " final objects."<< std::endl;
 
     std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
     // copy fragments  
