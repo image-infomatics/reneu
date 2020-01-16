@@ -3,8 +3,10 @@ Computation for REal NEUral networks
 
 # Development
 
-compile C++ backend
+install boost library (example for ubuntu):
+    sudo apt install libboost-dev
 
+compile C++ backend
     python setup.py develop
 
 export conda environment
