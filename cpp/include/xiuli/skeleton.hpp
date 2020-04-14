@@ -232,6 +232,11 @@ public:
         return PyPoints( points );
     }
 
+    void set_py_points( const PyPoints &points_ ){
+        points = Points(points_);
+        return;
+    }
+
     inline auto get_attributes() {
         return attributes;
     }
@@ -306,6 +311,10 @@ public:
             childPointIdx = siblings( childPointIdx );
         } 
         return childrenPointIdxes;
+    }
+    
+    void translate_centroid_to_origin(){
+        points -= xt::mean(points, {0});
     }
 
     auto downsample(const float step){

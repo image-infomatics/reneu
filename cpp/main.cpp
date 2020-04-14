@@ -6,7 +6,7 @@
 #include "xiuli/xiuli.hpp"
 #include "xiuli/utils/math.hpp"
 #include "xiuli/type_aliase.hpp" 
-
+#include "xiuli/segmentation.hpp"
 
 namespace py = pybind11;
 using namespace xiuli;
@@ -26,6 +26,10 @@ PYBIND11_MODULE(xiuli, m) {
            write_swc
     )pbdoc";
 
+    py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
+        .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
+        .def("segment", &SupervoxelDendrogram::segment);
+
     m.def("pca_first_component", &py_pca_first_component); 
 
     //py::class_<neuron::Skeleton, PySkeleton>(m, "Skeleton")
@@ -33,11 +37,14 @@ PYBIND11_MODULE(xiuli, m) {
         .def(py::init<const PyPoints &, const PyPoints &>())
         .def(py::init<const PyPoints &>())
         .def(py::init<const std::string>())
-        .def_property_readonly("points", &Skeleton::get_points)
+        // it seems that the setter function is not working!
+        .def_property("points", &Skeleton::get_py_points, &Skeleton::set_py_points)
+        //.def_property_readonly("points", &Skeleton::get_py_points)
         .def_property_readonly("attributes", &Skeleton::get_attributes)
         .def_property_readonly("path_length", &Skeleton::get_path_length)
         .def_property_readonly("edges", &Skeleton::get_edges)
         .def("__len__", &Skeleton::get_point_num)
+        .def("translate_centroid_to_origin", &Skeleton::translate_centroid_to_origin)
         .def("downsample", &Skeleton::downsample)
         .def("to_swc_str", &Skeleton::to_swc_str)
         .def("write_swc", &Skeleton::write_swc)
