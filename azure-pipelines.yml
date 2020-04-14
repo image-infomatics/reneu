@@ -1,37 +1,59 @@
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-
-# References
+# Create and test Manylinux Python packages
+# # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
-# https://github.com/MicrosoftDocs/pipelines-anaconda/blob/master/azure-pipelines.yml
-# https://github.com/matplotlib/mplcairo/blob/master/azure-pipelines.yml
+# https://github.com/microsoft/onnxruntime/blob/master/tools/ci_build/github/azure-pipelines/azure-pipelines-py-packaging.yml
 
-strategy:
-  matrix:
-    Linux_py37:
-      vmImage: 'ubuntu-16.04'
-      pythonVersion: '3.7'
-    Linux_py38:
-      vmImage: 'ubuntu-16.04'
-      pythonVersion: '3.8'
-  pool:
-    vmImage: '$(vmImage)'
-
+jobs:
+- job: Manylinux2010_py_Wheels
+  workspace:
+    clean: all
+  pool: Linux-CPU
+  strategy:
+    matrix:
+      Python37:
+        python.version: '3.7'
+        python.dir: '/opt/python/cp37-cp37m'
+        python.include.dir: '/opt/python/cp37-cp37m/include/python3.7m'
+      Python38:
+        python.version: '3.8'
+        python.dir: '/opt/python/cp38-cp38'
+        python.include.dir: '/opt/python/cp38-cp38/include/python3.8'
   steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(pythonVersion)'
-      architecture: 'x64'
+    - checkout: self
+      clean: true
+      submodules: recursive
 
-  - script: conda env create --quiet --file environment.yml
-    displayName: Create Anaconda environment
+    - task: CmdLine@2
+      displayName: 'Download azcopy'
+      inputs:
+        script: |
+          curl -so azcopy.tar.gz -L 'https://aka.ms/downloadazcopy-v10-linux'
+          tar -zxvf azcopy.tar.gz --strip 1
+        workingDirectory: $(Build.BinariesDirectory)
 
-  - bash: |
-      sudo apt update &&
-      sudo apt install libboost-dev
-      source activate reneu
-      python setup.py develop
-      pip install pytest pytest-azurepipelines
-      pytest tests
-      sudo PY_VERS="$PYTHONVERSION" tools/build-manylinux-wheel.sh
-    displayName: pytest
+    - task: CmdLine@2
+      inputs:
+        script: |
+          docker build --pull -t onnxruntime-manylinux-$(python.version)  --build-arg BUILD_USER=onnxruntimedev --build-arg BUILD_UID=$(id -u) --build-arg PYTHON_VERSION=$(python.version) -f Dockerfile.manylinux1 .
+        workingDirectory: $(Build.SourcesDirectory)/tools/ci_build/github/linux/docker
+    - task: CmdLine@2
+      inputs:
+        script: |
+          docker run --rm --volume $(Build.SourcesDirectory):/onnxruntime_src --volume $(Build.BinariesDirectory):/build -e NIGHTLY_BUILD -e BUILD_BUILDNUMBER onnxruntime-manylinux-$(python.version) $(python.dir)/bin/python3 /onnxruntime_src/tools/ci_build/build.py --build_dir /build --config Release --skip_submodule_sync --parallel  --build_wheel --use_openmp --enable_onnx_tests $(FeaturizerBuildFlag) --cmake_extra_defines PYTHON_INCLUDE_DIR=$(python.include.dir) PYTHON_LIBRARY=/usr/lib64/librt.so
+        workingDirectory: $(Build.SourcesDirectory)
+
+    - task: CopyFiles@2
+      displayName: 'Copy Python Wheel to:  $(Build.ArtifactStagingDirectory)'
+      inputs:
+        SourceFolder: '$(Build.BinariesDirectory)'
+        Contents: 'Release/dist/*-manylinux1_x86_64.whl'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: ONNXRuntime python wheel'
+      inputs:
+        ArtifactName: onnxruntime
+
+    - template: templates/component-governance-component-detection-steps.yml
+
+    - template: templates/clean-agent-build-directory-step.yml

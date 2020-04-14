@@ -1,8 +1,11 @@
-from typing import Union 
 import numpy as np
 from .xiuli import XSkeleton
 import struct
 from io import BytesIO
+
+import matplotlib.pylab as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 
 
 class Skeleton(XSkeleton):
@@ -169,3 +172,13 @@ class Skeleton(XSkeleton):
         assert isinstance( other, Skeleton )
         return  np.ma.allclose(self.points, other.points, atol=0.001) and np.ma.allequal( 
                                     self.attributes, other.attributes )
+
+
+
+def compare_points(points1, points2, K = 600):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    
+    ax.scatter(points1[:K,0], points1[:K,1], zs=points1[:K, 2], marker='.', s=2)
+    ax.scatter(points2[:K,0], points2[:K,1], zs=points2[:K, 2], marker='.', s=2)
+    plt.show()
