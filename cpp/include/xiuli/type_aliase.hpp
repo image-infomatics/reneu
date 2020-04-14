@@ -4,7 +4,6 @@
 #include "xtensor/xfixed.hpp"
 #include "xtensor-python/pytensor.hpp"
 
-
 namespace xiuli{
 
 using namespace std;
