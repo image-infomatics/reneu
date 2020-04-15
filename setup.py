@@ -118,7 +118,9 @@ class BuildExt(build_ext):
     def build_extensions(self):
         # remove the compilation warning. 
         # This flag only works with C rather than C++
-        self.compiler.compiler_so.remove('-Wstrict-prototypes')
+        # do not remove it because it do not exist in some compiler versions, 
+        # such as in manylinux docker image
+        # self.compiler.compiler_so.remove('-Wstrict-prototypes')
 
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
