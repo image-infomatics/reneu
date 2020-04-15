@@ -3,18 +3,27 @@
 
 name: Python package build and push
 
-on:
-  push 
+on: [push, pull_request] 
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7]
-
     steps:
+    
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    
+    - name: Install dependencies
+      run: |
+        bash install_common_deps.sh
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r tests/requirements.txt
+
     - name: Python wheels manylinux build
       uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
       with:
@@ -23,13 +32,6 @@ jobs:
         system-packages: 'lrzip-devel zlib-devel libboost-dev'
         package-path: ''
         pip-wheel-args: '--no-deps'
-    
-    - name: Install dependencies
-      run: |
-        bash install_common_deps.sh
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
     
     - name: Test with pytest
       run: |
