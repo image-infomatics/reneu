@@ -15,7 +15,6 @@ def test_supervoxel_dendrogram():
     dend = SupervoxelDendrogram(affs, fragments, 0.3)
     
     seg = dend.segment(0.3)
-    breakpoint()
 
     tifffile.imwrite(os.path.join(DIR, "seg.tif"), data=seg)
     
