@@ -1,1 +1,4 @@
 neovim
+pynvim
+twine
+flake8
