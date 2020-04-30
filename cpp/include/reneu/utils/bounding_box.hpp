@@ -7,10 +7,10 @@
 #include "xtensor/xmath.hpp"
 #include "xtensor/xsort.hpp"
 
-#include "xiuli/type_aliase.hpp"
+#include "reneu/type_aliase.hpp"
 
 
-namespace xiuli{
+namespace reneu{
 
 class BoundingBox{
 private:

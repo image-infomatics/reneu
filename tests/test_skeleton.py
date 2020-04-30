@@ -7,7 +7,7 @@ import pickle
 import faulthandler
 faulthandler.enable()
 
-from reneu.xiuli import XSkeleton
+from reneu.libreneu import XSkeleton
 from reneu.skeleton import Skeleton
 
 NEURON_NAME = 'Nov10IR3e.CNG'

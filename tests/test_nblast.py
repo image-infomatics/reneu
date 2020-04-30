@@ -8,9 +8,9 @@ from math import isclose
 from copy import deepcopy
 from time import time
 
-from reneu.xiuli import XNBLASTScoreTable
+from reneu.libreneu import XNBLASTScoreTable
 from reneu.skeleton import Skeleton
-from reneu.xiuli import XVectorCloud, XNBLASTScoreMatrix
+from reneu.libreneu import XVectorCloud, XNBLASTScoreMatrix
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '../data/')
 #DATA_DIR = 'data/'

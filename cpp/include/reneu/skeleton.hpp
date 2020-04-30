@@ -14,16 +14,16 @@
 #include "xtensor/xsort.hpp"
 #include "xtensor/xadapt.hpp"
 
-#include "xiuli/utils/string.hpp"
-#include "xiuli/type_aliase.hpp"
+#include "reneu/utils/string.hpp"
+#include "reneu/type_aliase.hpp"
 
 
-using namespace xiuli::utils;
+using namespace reneu::utils;
 
 using Attributes = xt::xtensor<int, 2>;
 
 // use the c++17 nested namespace
-namespace xiuli{
+namespace reneu{
 
 class Skeleton{
 
@@ -179,7 +179,7 @@ public:
             std::vector<int> parents = {};
 
             while ( std::getline(myfile, line) ){
-                std::vector<std::string> parts = xiuli::utils::split(line, "\\s+"_re);
+                std::vector<std::string> parts = reneu::utils::split(line, "\\s+"_re);
                 if (parts.size()==7 && parts[0][0] != '#'){
                     ids.push_back( std::stoi( parts[0] ) );
                     classes.push_back( std::stoi( parts[1] ) );

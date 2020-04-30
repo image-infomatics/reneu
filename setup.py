@@ -43,7 +43,7 @@ class get_pybind_include(object):
 
 ext_modules = [
     Extension(
-        'xiuli',
+        'libreneu',
         ['cpp/main.cpp'],
         include_dirs=[
             # Path to pybind11 headers
@@ -60,10 +60,10 @@ ext_modules = [
             # build with debug info
             # '-g'
             # this is not working
-            #'-o reneu/xiuli.so'
+            #'-o reneu/reneu.so'
         ],
         # monitor the code change and rebuild
-        depends = ['cpp/*', 'cpp/include/xiuli/*'],
+        depends = ['cpp/*', 'cpp/include/reneu/*'],
     ),
 ]
 
@@ -180,7 +180,7 @@ setup(
 # The -o option of gcc is not working
 # use code to move all the compiled so files to lib folder!
 for file_name in os.listdir():
-    if file_name.startswith("xiuli") and file_name.endswith(".so"):
+    if file_name.startswith("libreneu") and file_name.endswith(".so"):
         dst_file_name = os.path.join('python/reneu/', file_name)
         # using the full destination path will replace the so file
         # if it is already exist

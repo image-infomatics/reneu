@@ -1,5 +1,5 @@
 import numpy as np
-from .xiuli import XSkeleton
+from .libreneu import XSkeleton
 import struct
 from io import BytesIO
 
