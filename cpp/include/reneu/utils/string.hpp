@@ -4,7 +4,7 @@
 #include <iterator>
 #include <algorithm>
 
-namespace xiuli::utils{
+namespace reneu::utils{
 
 std::regex operator ""_re (char const* const str, std::size_t) {
     return std::regex{str};

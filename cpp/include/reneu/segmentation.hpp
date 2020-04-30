@@ -13,7 +13,7 @@
 
 #include "type_aliase.hpp"
 
-namespace xiuli{
+namespace reneu{
 
 class SupervoxelDendrogram{
 private:

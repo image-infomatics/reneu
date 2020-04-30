@@ -3,19 +3,19 @@
 #define FORCE_IMPORT_ARRAY
 
 
-#include "xiuli/xiuli.hpp"
-#include "xiuli/utils/math.hpp"
-#include "xiuli/type_aliase.hpp" 
-#include "xiuli/segmentation.hpp"
+#include "reneu/reneu.hpp"
+#include "reneu/utils/math.hpp"
+#include "reneu/type_aliase.hpp" 
+#include "reneu/segmentation.hpp"
 
 namespace py = pybind11;
-using namespace xiuli;
+using namespace reneu;
 
-PYBIND11_MODULE(xiuli, m) {
+PYBIND11_MODULE(libreneu, m) {
     xt::import_numpy();
 
     m.doc() = R"pbdoc(
-        xiuli package
+        libreneu package
         -----------------------
         .. currentclass:: Skeleton
         .. autosummary::

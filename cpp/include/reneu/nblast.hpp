@@ -12,12 +12,12 @@
 #include "xtensor/xindex_view.hpp"
 #include "xtensor/xcsv.hpp"
 
-#include "xiuli/type_aliase.hpp"
-#include "xiuli/utils/math.hpp"
-#include "xiuli/utils/kd_tree.hpp"
+#include "reneu/type_aliase.hpp"
+#include "reneu/utils/math.hpp"
+#include "reneu/utils/kd_tree.hpp"
 
 // use the c++17 nested namespace
-namespace xiuli{
+namespace reneu{
 
 
 namespace py = pybind11;
@@ -277,7 +277,7 @@ public:
     //    
     //}
 
-    //NBLASTScoreMatrix(  const std::vector<xiuli::neuron::Skeleton> &skeletonList, 
+    //NBLASTScoreMatrix(  const std::vector<reneu::neuron::Skeleton> &skeletonList, 
     //                    const ScoreTable &scoreTable){
     //    
     //}
@@ -318,4 +318,4 @@ public:
     }
 };
 
-} // end of namespace xiuli::neuron::nblast
+} // end of namespace reneu::neuron::nblast
