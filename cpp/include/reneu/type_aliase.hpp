@@ -6,7 +6,6 @@
 
 namespace reneu{
 
-using namespace std;
 using namespace xt::placeholders;  // required for `_` in range view to work
 
 using aff_edge_t = float;
