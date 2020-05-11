@@ -1,10 +1,10 @@
-# pragma once
+#pragma once
 
-#include "xtensor/xtensor.hpp"
-#include "xtensor/xfixed.hpp"
 #include "xtensor-python/pytensor.hpp"
+#include "xtensor/xfixed.hpp"
+#include "xtensor/xtensor.hpp"
 
-namespace reneu{
+namespace reneu {
 
 using namespace xt::placeholders;  // required for `_` in range view to work
 
@@ -23,4 +23,4 @@ using Points = xt::xtensor<float, 2>;
 using PyPoints = xt::pytensor<float, 2>;
 using PointIndices = xt::xtensor<Index, 1>;
 
-} // namespace
+}  // namespace reneu
