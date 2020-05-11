@@ -13,6 +13,15 @@ export conda environment
 
     conda env export > environment.yml
 
+## Code Style
+
+We follow the [Google Style](https://google.github.io/styleguide) for both [C++](https://google.github.io/styleguide/cppguide.html) and [Python](https://google.github.io/styleguide/pyguide.html).
+We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to format code automatically.
+
+```
+clang-format --style Google -i *.cc
+```
+
 ## Release
 
 ```

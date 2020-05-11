@@ -14,9 +14,6 @@ namespace reneu{
 
 class BoundingBox;
 
-namespace internal_bounding_box {
-
-}
-
+// TODO: Put implementation detail in a internal namespace
 
 } // end of namespace

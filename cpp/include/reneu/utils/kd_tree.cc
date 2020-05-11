@@ -1,33 +1,14 @@
 #pragma once
 
-#include <iostream>
-#include <limits>  // std::numeric_limits
-#include <queue>
-#include <variant>
-
-#include "reneu/type_aliase.hpp"
-#include "reneu/utils/bounding_box.hpp"
-#include "xtensor/xindex_view.hpp"
-#include "xtensor/xnorm.hpp"
-#include "xtensor/xsort.hpp"
-#include "xtensor/xview.hpp"
+#include "kd_tree.h"
 
 namespace reneu {
 
-// namespace py=pybind11;
-using namespace xt::placeholders;
 
-using HeapElement = std::pair<float, Index>;
-auto cmp = [](HeapElement left, HeapElement right) {
-  return left.first < right.first;
-};
-
-/*
- * this is a fake heap/priority queue, designed specifically for this use case.
- * the speed is similar with std::priority_queue implementation.
- * keep customized version because it makes code more clean, and could find out
- * some speed up method later.
- */
+// this is a fake heap/priority queue, designed specifically for this use case.
+// the speed is similar with std::priority_queue implementation.
+// keep customized version because it makes code more clean, and could find out
+// some speed up method later.
 class IndexHeap {
  private:
   // build priority queue to store the nearest neighbors
