@@ -1,21 +1,4 @@
-#pragma once
-
-#include <pybind11/pybind11.h>
-
-#include <cassert>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <limits>  // std::numeric_limits
-#include <memory>
-
-#include "reneu/type_aliase.hpp"
-#include "reneu/utils/kd_tree.hpp"
-#include "reneu/utils/math.hpp"
-#include "xtensor/xcsv.hpp"
-#include "xtensor/xindex_view.hpp"
-#include "xtensor/xnorm.hpp"
-#include "xtensor/xview.hpp"
+#include "nblast.h"
 
 // use the c++17 nested namespace
 namespace reneu {
@@ -60,43 +43,17 @@ class ScoreTable {
   template <std::size_t N>
   inline auto binary_search(
       const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds,
-      const float &value) const {
-    Index start = 0;
-    // Note that the last one index is N-1 rather than N_
-    // This is following python indexing style, the last index is not inclusive
-    Index stop = N;
-    while (stop - start > 1) {
-      auto middle = std::div(stop - start, 2).quot + start;
-      if (value >= thresholds[middle]) {
-        // Move forward
-        start = middle;
-      } else {
-        // Move backward
-        stop = middle;
-      }
-    }
-    // the start is the matching index
-    return start;
-  }
+      const float &value);
 
   template <std::size_t N>
   inline auto sequential_search(
       const xt::xtensor_fixed<float, xt::xshape<N>> &thresholds,
-      const float &value) const {
-    for (Index i = 0; i < N; i++) {
-      if (value < thresholds(i + 1)) {
-        return i;
-      }
-    }
-  }
+      const float &value);
 
  public:
   ScoreTable(const xt::pytensor<float, 2> &table_) : table(table_) {}
 
-  ScoreTable(const std::string fileName) {
-    std::ifstream in(fileName);
-    table = xt::load_csv<float>(in);
-  }
+  ScoreTable(const std::string fileName);
 
   ScoreTable() {
     const auto fileName = std::filesystem::path(__FILE__).parent_path() /
@@ -144,9 +101,6 @@ class ScoreTable {
 
 class VectorCloud {
  private:
-  const Points points;
-  xt::xtensor<float, 2> vectors;
-  KDTree kdTree;
   auto construct_vectors(const Index &nearestPointNum) {
     auto pointNum = points.shape(0);
 
@@ -181,48 +135,7 @@ class VectorCloud {
     }
   }
 
- public:
-  VectorCloud(const Points &points_, const Points &vectors_,
-              const KDTree &kdTree_)
-      : points(points), vectors(vectors_), kdTree(kdTree_) {}
-
-  VectorCloud(const PyPoints &points_, const PyPoints &vectors_,
-              const KDTree &kdTree_)
-      : points(points), vectors(vectors_), kdTree(kdTree_) {}
-
-  // our points array contains radius direction, but we do not need it.
-  VectorCloud(const Points &points_, const Index &leafSize,
-              const Index &nearestPointNum)
-      : points(points_), kdTree(points_, leafSize) {
-    construct_vectors(nearestPointNum);
-  }
-
-  VectorCloud(const xt::pytensor<float, 2> &points_, const Index &leafSize,
-              const Index &nearestPointNum)
-      : points(points_), kdTree(points_, leafSize) {
-    construct_vectors(nearestPointNum);
-  }
-
-  inline auto size() const { return points.shape(0); }
-
-  inline auto get_points() const { return points; }
-
-  inline auto get_py_points() const { return PyPoints(points); }
-
-  inline auto get_vectors() const { return vectors; }
-
-  inline auto get_py_vectors() const { return PyPoints(vectors); }
-
-  inline auto get_kd_tree() const { return kdTree; }
-
-  inline auto get_kd_tree_serializable_tuple() const {
-    return kdTree.get_serializable_tuple();
-  }
-
-  float query_by_self(const ScoreTable &scoreTable) const {
-    return size() * scoreTable.self_score();
-  }
-
+public:
   auto query_by(const VectorCloud &query, const ScoreTable &scoreTable) const {
     // raw NBLAST is accumulated by query points
     float rawScore = 0, distance, absoluteDotProduct;

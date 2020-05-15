@@ -1,12 +1,4 @@
-#pragma once
-
-#include <iostream>
-
-#include "xtensor-blas/xlinalg.hpp"
-#include "xtensor-python/pytensor.hpp"
-#include "xtensor/xfixed.hpp"
-#include "xtensor/xsort.hpp"
-#include "xtensor/xview.hpp"
+#include "math.h"
 
 namespace reneu::utils {
 

@@ -22,6 +22,8 @@ We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to format co
 clang-format --style Google -i *.cc
 ```
 
+[Code Review Guideline](https://google.github.io/eng-practices)
+
 ## Release
 
 ```
