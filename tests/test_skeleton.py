@@ -4,6 +4,8 @@ import time
 from math import isclose
 import pickle
 
+import numpy as np
+
 import faulthandler
 faulthandler.enable()
 
@@ -64,7 +66,9 @@ def test_skeleton():
     
     point_num2 = len(sk)
     print('downsampled from {} points to {} points.'.format(point_num1, point_num2))
-     
+
+    print('number of root nodes: ', np.count_nonzero(sk.parents<0))
+
     start = time.process_time()
     temp_file_name = '/tmp/{}.swc'.format(NEURON_NAME)
     sk.to_swc(temp_file_name, 3)

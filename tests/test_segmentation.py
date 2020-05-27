@@ -1,4 +1,4 @@
-from reneu.xiuli import XSupervoxelDendrogram as SupervoxelDendrogram
+from reneu.libreneu import XSupervoxelDendrogram as SupervoxelDendrogram
 import h5py
 import os
 import tifffile

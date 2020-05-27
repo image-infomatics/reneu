@@ -168,11 +168,15 @@ class Skeleton(XSkeleton):
             result.write( classes.tobytes('C') )
         return result.getvalue()
 
+    @property
+    def parents(self):
+        '''Note that the root node index is -2 rather than -1 for programing convinience.'''
+        return self.attributes[:, 1]
+
     def __eq__(self, other):
         assert isinstance( other, Skeleton )
         return  np.ma.allclose(self.points, other.points, atol=0.001) and np.ma.allequal( 
                                     self.attributes, other.attributes )
-
 
 
 def compare_points(points1, points2, K = 600):

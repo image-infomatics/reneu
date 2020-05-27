@@ -4,7 +4,7 @@ faulthandler.enable()
 import numpy as np
 from scipy.spatial import KDTree
 
-from reneu.xiuli import XKDTree
+from reneu.libreneu import XKDTree
 
 def get_nearest_point_indices(points, query_point, k=1, leaf_size=20):
     tree = KDTree(points, leaf_size)

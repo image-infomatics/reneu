@@ -3,7 +3,7 @@ faulthandler.enable()
 
 import numpy as np
 from numpy.testing import assert_allclose
-from reneu.xiuli import pca_first_component
+from reneu.libreneu import pca_first_component
 from math import isclose
 from sklearn.decomposition import PCA
 
