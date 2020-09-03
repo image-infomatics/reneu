@@ -100,4 +100,3 @@ dependencies:
     - urllib3==1.24.2
     - wcwidth==0.1.7
     - zipp==0.6.0
-prefix: /opt/anaconda3/envs/reneu
