@@ -6,7 +6,7 @@
 #include "reneu/reneu.hpp"
 #include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
-#include "reneu/segmentation.hpp"
+#include "reneu/agglomeration.hpp"
 
 namespace py = pybind11;
 using namespace reneu;
@@ -26,6 +26,7 @@ PYBIND11_MODULE(libreneu, m) {
            write_swc
     )pbdoc";
 
+    // agglomeration
     py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
         .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
         .def("segment", &SupervoxelDendrogram::segment);

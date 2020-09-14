@@ -82,6 +82,7 @@ auto greedy_mean_affinity_agglomeration( const AffinityMap &affs,
     // fibonacci heap might be more efficient
     // use std data structure to avoid denpendency for now
     auto cmp = [](Edge left, Edge right){return left.second.second < right.second.second;};
+    // TO-DO: replace with fibonacci heap
     priority_queue<Edge, vector<Edge>, decltype(cmp)> heap(cmp);
     for(auto &edge : rg){
         heap.emplace(edge);

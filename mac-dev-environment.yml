@@ -1,3 +1,4 @@
+name: reneu
 channels:
   - conda-forge
   - defaults
@@ -28,8 +29,10 @@ dependencies:
   - readline=8.0=h1de35cc_0
   - setuptools=49.6.0=py38_0
   - sqlite=3.33.0=hffcf06c_0
+  - tbb=2019.9=ha1b3eb9_1
   - tk=8.6.10=hb0a8c7a_0
   - wheel=0.34.2=py38_0
+  - xsimd=7.4.8=ha1b3eb9_0
   - xtensor=0.21.5=ha1b3eb9_0
   - xtensor-blas=0.17.2=h5a8e21a_0
   - xtensor-python=0.24.1=py38hbf1eeb5_0
@@ -51,6 +54,7 @@ dependencies:
     - neovim==0.3.1
     - packaging==20.4
     - pkginfo==1.5.0.1
+    - ptvsd==4.3.2
     - pybind11==2.5.0
     - pycodestyle==2.6.0
     - pyflakes==2.2.0
@@ -66,3 +70,4 @@ dependencies:
     - twine==3.2.0
     - urllib3==1.25.10
     - webencodings==0.5.1
+prefix: /Users/jwu/opt/anaconda3/envs/reneu
