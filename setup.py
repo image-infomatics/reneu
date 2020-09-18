@@ -4,6 +4,7 @@ import sys
 import platform
 import subprocess
 from shutil import move 
+from pathlib import Path
 
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
@@ -74,6 +75,10 @@ class CMakeBuild(build_ext):
             build_args += ['--', '-j2']
 
         env = os.environ.copy()
+        env['LIBRARY_OUTPUT_DIRECTORY'] = self.build_temp
+        env['CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG'] = self.build_temp
+        env['CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE'] = self.build_temp
+
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
                                                               self.distribution.get_version())
         if not os.path.exists(self.build_temp):
@@ -113,12 +118,3 @@ setup(
     python_requires='>=3',
     zip_safe=False,
 )
-
-# The -o option of gcc is not working
-# use code to move all the compiled so files to lib folder!
-for file_name in os.listdir('cpp/build'):
-    if file_name.startswith("libreneu") and file_name.endswith(".so"):
-        dst_file_name = os.path.join('python/reneu/', file_name)
-        # using the full destination path will replace the so file
-        # if it is already exist
-        move(file_name, dst_file_name)
