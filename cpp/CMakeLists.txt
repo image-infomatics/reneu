@@ -7,8 +7,8 @@ set(RENEU_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(PYBIND11_CPP_STANDARD  "-std=c++17")
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu)
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu/lib)
 
@@ -21,10 +21,12 @@ find_package(Boost REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
 
-pybind11_add_module(libreneu ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+pybind11_add_module(skeleton ${CMAKE_CURRENT_SOURCE_DIR}/skeleton.cpp)
+pybind11_add_module(segmentation ${CMAKE_CURRENT_SOURCE_DIR}/segmentation.cpp)
 # pybind11 do not recognize our NUMPY_INCLUDE_DIR variable
 # we need to add it explicitly
-target_include_directories(libreneu PUBLIC ${NUMPY_INCLUDE_DIR})
+target_include_directories(skeleton PUBLIC ${NUMPY_INCLUDE_DIR})
+target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR})
 
 # options
 option(BUILD_TESTS "build test suite" OFF)

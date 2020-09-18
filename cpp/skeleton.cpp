@@ -11,11 +11,11 @@
 namespace py = pybind11;
 using namespace reneu;
 
-PYBIND11_MODULE(libreneu, m) {
+PYBIND11_MODULE(skeleton, m) {
     xt::import_numpy();
 
     m.doc() = R"pbdoc(
-        libreneu package
+        skeleton package
         -----------------------
         .. currentclass:: Skeleton
         .. autosummary::
@@ -25,11 +25,6 @@ PYBIND11_MODULE(libreneu, m) {
            downsample
            write_swc
     )pbdoc";
-
-    // agglomeration
-    py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
-        .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
-        .def("segment", &SupervoxelDendrogram::segment);
 
     m.def("pca_first_component", &py_pca_first_component); 
 
