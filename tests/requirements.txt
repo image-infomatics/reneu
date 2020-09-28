@@ -2,3 +2,6 @@ pytest
 coveralls
 pytest-cov
 matplotlib
+scikit-learn
+h5py
+tifffile

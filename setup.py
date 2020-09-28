@@ -1,11 +1,14 @@
+import os
+import re
+import sys
+import platform
+import subprocess
+from shutil import move 
+from pathlib import Path
+
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
-import os
-import sys
-import re
-import setuptools
-from shutil import move
-import numpy 
+from distutils.version import LooseVersion
 
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,121 +31,60 @@ else:
                        (VERSIONFILE, ))
 
 
-class get_pybind_include(object):
-    """Helper class to determine the pybind11 include path
-    The purpose of this class is to postpone importing pybind11
-    until it is actually installed, so that the ``get_include()``
-    method can be invoked. """
-    def __init__(self, user=False):
-        self.user = user
-
-    def __str__(self):
-        import pybind11
-        return pybind11.get_include(self.user)
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=''):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
 
 
-ext_modules = [
-    Extension(
-        'libreneu',
-        ['cpp/main.cpp'],
-        include_dirs=[
-            # Path to pybind11 headers
-            get_pybind_include(),
-            get_pybind_include(user=True),
-            numpy.get_include(),
-        ],
-        language='c++',
-        extra_compile_args=[
-            # use Og for gdb debug
-            # '-Og',
-            '-O3',
-            '-ffast-math',
-            # build with debug info
-            # '-g'
-            # this is not working
-            #'-o reneu/reneu.so'
-        ],
-        # monitor the code change and rebuild
-        depends = ['cpp/*', 'cpp/include/reneu/*'],
-    ),
-]
-
-
-# As of Python 3.6, CCompiler has a `has_flag` method.
-# cf http://bugs.python.org/issue26689
-def has_flag(compiler, flagname):
-    """Return a boolean indicating whether a flag name is supported on
-    the specified compiler.
-    """
-    import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+class CMakeBuild(build_ext):
+    def run(self):
         try:
-            compiler.compile([f.name], extra_postargs=[flagname])
-        except setuptools.distutils.errors.CompileError:
-            return False
-    return True
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError("CMake must be installed to build the following extensions: " +
+                               ", ".join(e.name for e in self.extensions))
 
+        if platform.system() == "Windows":
+            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)', out.decode()).group(1))
+            if cmake_version < '3.12.0':
+                raise RuntimeError("CMake >= 3.12.0 is required on Windows")
 
-def cpp_flag(compiler):
-    """Return the -std=c++[11/14/17] compiler flag.
-    The newer version is prefered over c++11 (when it is available).
-    """
-    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
-
-    for flag in flags:
-        if has_flag(compiler, flag): return flag
-
-    raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                       'is needed!')
-
-
-
-class BuildExt(build_ext):
-    """A custom build extension for adding compiler-specific options."""
-    c_opts = {
-        'msvc': ['/EHsc'],
-        'unix': [],
-    }
-    l_opts = {
-        'msvc': [],
-        # link to cblas library to solve undefined symbol issue
-        'unix': ['-lcblas',],
-    }
-    
-    if sys.platform == 'darwin':
-        darwin_opts = ['-stdlib=libc++', '-mmacosx-version-min=10.15.6']
-        c_opts['unix'] += darwin_opts
-        l_opts['unix'] += darwin_opts
-
-    def build_extensions(self):
-        # remove the compilation warning. 
-        # This flag only works with C rather than C++
-        # do not remove it because it do not exist in some compiler versions, 
-        # such as in manylinux docker image
-        # self.compiler.compiler_so.remove('-Wstrict-prototypes')
-
-        ct = self.compiler.compiler_type
-        opts = self.c_opts.get(ct, [])
-        link_opts = self.l_opts.get(ct, [])
-        for arg in ext_modules[0].extra_compile_args:
-            opts.append(arg)
-        
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' %
-                        self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
-        elif ct == 'msvc':
-            opts.append('/DVERSION_INFO=\\"%s\\"' %
-                        self.distribution.get_version())
         for ext in self.extensions:
-            ext.extra_compile_args = opts
-            ext.extra_link_args = link_opts
+            self.build_extension(ext)
 
-        super().build_extensions()
+    def build_extension(self, ext):
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        # required for auto-detection of auxiliary "native" libs
+        if not extdir.endswith(os.path.sep):
+            extdir += os.path.sep
 
+        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+                      '-DPYTHON_EXECUTABLE=' + sys.executable]
+
+        cfg = 'Debug' if self.debug else 'Release'
+        build_args = ['--config', cfg]
+
+        if platform.system() == "Windows":
+            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
+            if sys.maxsize > 2**32:
+                cmake_args += ['-A', 'x64']
+            build_args += ['--', '/m']
+        else:
+            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
+            build_args += ['--', '-j4']
+
+        env = os.environ.copy()
+        env['LIBRARY_OUTPUT_DIRECTORY'] = self.build_temp
+        env['CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG'] = self.build_temp
+        env['CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE'] = self.build_temp
+
+        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
+                                                              self.distribution.get_version())
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
     name='reneu',
@@ -159,8 +101,8 @@ setup(
     tests_require=[
         'pytest',
     ],
-    ext_modules=ext_modules,
-    cmdclass={'build_ext': BuildExt},
+    ext_modules=[CMakeExtension('libreneu', sourcedir='./cpp')],
+    cmdclass=dict(build_ext=CMakeBuild),
     classifiers=[
         'Environment :: Console',
         'Intended Audience :: End Users/Desktop',
@@ -176,12 +118,3 @@ setup(
     python_requires='>=3',
     zip_safe=False,
 )
-
-# The -o option of gcc is not working
-# use code to move all the compiled so files to lib folder!
-for file_name in os.listdir():
-    if file_name.startswith("libreneu") and file_name.endswith(".so"):
-        dst_file_name = os.path.join('python/reneu/', file_name)
-        # using the full destination path will replace the so file
-        # if it is already exist
-        move(file_name, dst_file_name)

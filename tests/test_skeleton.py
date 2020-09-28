@@ -9,7 +9,7 @@ import numpy as np
 import faulthandler
 faulthandler.enable()
 
-from reneu.libreneu import XSkeleton
+from reneu.lib.skeleton import XSkeleton
 from reneu.skeleton import Skeleton
 
 NEURON_NAME = 'Nov10IR3e.CNG'

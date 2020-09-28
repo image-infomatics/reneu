@@ -5,6 +5,12 @@ Computation for REal NEUral networks
 
 # Development
 
+install dependencies
+
+    conda env create -f environment.yml
+
+if you use OSX, please use the mac_environment.yml.
+
 compile C++ backend
 
     python setup.py develop
