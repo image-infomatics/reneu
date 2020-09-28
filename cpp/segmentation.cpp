@@ -20,10 +20,6 @@ PYBIND11_MODULE(segmentation, m) {
         .. currentclass:: Skeleton
         .. autosummary::
            :toctree: _generate
-           points
-           attributes
-           downsample
-           write_swc
     )pbdoc";
 
     // agglomeration
