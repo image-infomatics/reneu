@@ -18,22 +18,22 @@ template < typename T > struct watershed_traits;
 
 template <> struct watershed_traits<uint32_t>
 {
-    static const uint32_t high_bit = 0x80000000;
-    static const uint32_t mask     = 0x7FFFFFFF;
-    static const uint32_t sag_visited  = 0x00000040;
+    static const uint32_t high_bit      = 0x80000000;
+    static const uint32_t mask          = 0x7FFFFFFF;
+    static const uint32_t sag_visited   = 0x00000040;
 };
 
 template <> struct watershed_traits<uint64_t>
 {
-    static const uint64_t high_bit = 0x8000000000000000LL;
-    static const uint64_t mask     = 0x7FFFFFFFFFFFFFFFLL;
-    static const uint64_t sag_visited  = 0x00000000000000040LL;
+    static const uint64_t high_bit      = 0x8000000000000000LL;
+    static const uint64_t mask          = 0x7FFFFFFFFFFFFFFFLL;
+    static const uint64_t sag_visited   = 0x00000000000000040LL;
 };
 
 using traits = watershed_traits<segid_t>;
 
 // direction mask
-const std::array<std::uint32_t, 6> dirmask = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20};
+const std::array<std::uint32_t, 6> dirmask  = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20};
 // inverse direction mask
 const std::array<std::uint32_t, 6> idirmask = {0x08, 0x10, 0x20, 0x01, 0x02, 0x04};
 
@@ -52,23 +52,23 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
             for(auto x=0; x<sx; x++){
                 // weights of all six edges incident to (z,y,x)
                 // the affinity map channels are ordered in (x,y,z)
-                auto negz = (z==0) ? low : affs(2, z,y,x);
-                auto negy = (y==0) ? low : affs(1, z,y,x);
                 auto negx = (x==0) ? low : affs(0, z,y,x);
-                auto posz = (z==sz-1) ? low : affs(2, z+1, y, x);
-                auto posy = (y==sy-1) ? low : affs(1, z, y+1, x);
-                auto posx = (x==sx-1) ? low : affs(0, z, y, x+1);
+                auto negy = (y==0) ? low : affs(1, z,y,x);
+                auto negz = (z==0) ? low : affs(2, z,y,x);
+                auto posx = (x>=sx-1) ? low : affs(0, z, y, x+1);
+                auto posy = (y>=sy-1) ? low : affs(1, z, y+1, x);
+                auto posz = (z>=sz-1) ? low : affs(2, z+1, y, x);
 
                 auto m = std::max({negz, negy, negx, posz, posy, posx});
 
                 // keep edges with maximum affinity
                 if(m > low){ // no edges at all if m<=low
-                    if(m==negz || negz >= high) sag(z,y,x) |= 0x01;
+                    if(m==negx || negx >= high) sag(z,y,x) |= 0x01;
                     if(m==negy || negy >= high) sag(z,y,x) |= 0x02;
-                    if(m==negx || negx >= high) sag(z,y,x) |= 0x04;
-                    if(m==posz || posz >= high) sag(z,y,x) |= 0x08;
+                    if(m==negz || negz >= high) sag(z,y,x) |= 0x04;
+                    if(m==posx || posx >= high) sag(z,y,x) |= 0x08;
                     if(m==posy || posy >= high) sag(z,y,x) |= 0x10;
-                    if(m==posx || posx >= high) sag(z,y,x) |= 0x20;
+                    if(m==posz || posz >= high) sag(z,y,x) |= 0x20;
                 }
             }
         }
@@ -171,7 +171,7 @@ auto find_basins(Segmentation& seg){
                         auto him = me + dir[d];
                         if( (seg[him] & traits::high_bit) != 0){
                             // already assigned
-                            for(size_t it = 0; it<bfs.size(); it++){
+                            for(auto it : bfs){
                                 // assign entire queue to same ID including high bit
                                 seg[it] = seg[him];
                             }
@@ -193,7 +193,7 @@ auto find_basins(Segmentation& seg){
             if(!bfs.empty()){
                 // new basin has been created
                 counts.push_back(bfs.size());
-                for(size_t it = 0; it<bfs.size(); it++){
+                for(auto it : bfs){
                     seg[it] = traits::high_bit | next_id;
                 }
                 next_id++;
