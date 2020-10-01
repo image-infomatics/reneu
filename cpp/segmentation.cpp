@@ -6,6 +6,7 @@
 #include "reneu/reneu.hpp"
 #include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
+#include "reneu/watershed.hpp"
 #include "reneu/agglomeration.hpp"
 
 namespace py = pybind11;
@@ -17,15 +18,18 @@ PYBIND11_MODULE(segmentation, m) {
     m.doc() = R"pbdoc(
         segmentation package
         -----------------------
-        .. currentclass:: Skeleton
         .. autosummary::
            :toctree: _generate
     )pbdoc";
+
+    m.def("watershed", &py_watershed);
 
     // agglomeration
     py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
         .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
         .def("segment", &SupervoxelDendrogram::segment);
+
+
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

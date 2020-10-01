@@ -11,7 +11,7 @@
 #include "xtensor/xsort.hpp"
 #include "xtensor/xbuilder.hpp"
 
-#include "type_aliasehpp"
+#include "type_aliase.hpp"
 
 namespace reneu{
 
