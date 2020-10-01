@@ -85,29 +85,34 @@ auto divide_plateaus(SAG& sag){
     const std::array<std::int64_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
     
     // queue all vertices for which a purely outgoing edge exists
-    std::vector<int64_t> bfs = {};
-    bfs.reserve(sag.size());
+    std::cout<<"queue all vertices for which a purely outgoing edge exists"<<std::endl;
+    std::vector<int64_t> bfs;
+    //bfs.reserve(sag.size());
+    
     for(int64_t idx = 0; idx < sag.size(); idx++){
         for(size_t d=0; d<6; d++){
-            if(sag[idx] & dirmask[d] != 0){
-                // outgoing edge exists
-                if((sag[idx+dir[d]] & idirmask[d]) == 0){
-                    // no incoming edge
+            if((sag[idx] & dirmask[d] != 0) && 
+                        idx+dir[d]>=0 && 
+                        idx+dir[d]<sag.size() && 
+                        ((sag[idx+dir[d]] & idirmask[d]) == 0)){
+                    // outgoing edge exists, no incoming edge
                     sag[idx] |= traits::sag_visited;
                     bfs.push_back(idx);
                     break;
-                }
             }
         }
     }
 
     // divide plateaus
+    std::cout<<"divide plateaus for the sag"<< std::endl;
     int64_t bfs_index = 0;
     while(bfs_index < bfs.size()){
         auto idx = bfs[bfs_index];
         segid_t to_set = 0;
         for(size_t d=0; d<6; d++){
-            if((sag[idx] & dirmask[d]) != 0){
+            if(((sag[idx] & dirmask[d]) != 0) && 
+                        idx+dir[d]>=0 && 
+                        idx+dir[d]<sag.size()){
                 // outgoing edge exists
                 if((sag[idx+dir[d]] & idirmask[d]) != 0 ){
                     // incoming edge
@@ -123,7 +128,7 @@ auto divide_plateaus(SAG& sag){
         }
         // picks unique outgoing edge, unsets visited bit
         sag[idx] = to_set;
-        bfs_index += 1;
+        bfs_index++;
     }
     return sag;
 }
@@ -143,7 +148,7 @@ auto find_basins(Segmentation& seg){
     // number of background voxels
     size_t count0 = 0;
     // voxel counts for each basin
-    std::vector<size_t> counts = {};
+    std::vector<size_t> counts = {0};
     // breadth first search
     std::vector<size_t> bfs = {};
 
@@ -169,21 +174,24 @@ auto find_basins(Segmentation& seg){
                         // this is an outgoing edge
                         // target of edge
                         auto him = me + dir[d];
-                        if( (seg[him] & traits::high_bit) != 0){
-                            // already assigned
-                            for(auto it : bfs){
-                                // assign entire queue to same ID including high bit
-                                seg[it] = seg[him];
-                            }
-                            counts[seg[him] & traits::mask] += bfs.size();
-                            bfs.clear();
-                            break;
-                        } else if( (seg[him] & traits::sag_visited) == 0){
-                            // not visited
-                            // make as visited
-                            seg[him] |= traits::sag_visited;
-                            bfs.push_back(him);
-                        } // else ignore since visited (try next direction)
+                        if(him >= 0 && him<seg.size()){
+                            // target is inside this volume
+                            if( (seg[him] & traits::high_bit) != 0){
+                                // already assigned
+                                for(auto it : bfs){
+                                    // assign entire queue to same ID including high bit
+                                    seg[it] = seg[him];
+                                }
+                                counts[seg[him] & traits::mask] += bfs.size();
+                                bfs.clear();
+                                break;
+                            } else if( (seg[him] & traits::sag_visited) == 0){
+                                // not visited
+                                // make as visited
+                                seg[him] |= traits::sag_visited;
+                                bfs.push_back(him);
+                            } // else ignore since visited (try next direction)
+                        }
                     }
                 }
                 // go to next vertex in queue

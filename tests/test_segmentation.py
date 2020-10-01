@@ -12,7 +12,7 @@ with h5py.File(os.path.join(DIR, "aff_160k.h5"), "r") as f:
     affs = np.asarray(f["main"])
 
 print('watershed ...')
-seg = watershed(affs, 0.5, 0.99)
+seg = watershed(affs, 0.2, 0.9)
 tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
 
 print('read fragments from watershed...')
