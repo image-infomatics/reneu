@@ -33,31 +33,31 @@ template <> struct watershed_traits<uint64_t>
 using traits = watershed_traits<segid_t>;
 
 // direction mask
-const std::array<std::uint32_t, 6> dirmask  = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20};
+const std::array<segid_t, 6> dirmask  = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20};
 // inverse direction mask
-const std::array<std::uint32_t, 6> idirmask = {0x08, 0x10, 0x20, 0x01, 0x02, 0x04};
+const std::array<segid_t, 6> idirmask = {0x08, 0x10, 0x20, 0x01, 0x02, 0x04};
 
 auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     // initialize the steepest ascent graph
     assert(affs.shape(0) == 3);
-    auto sz = affs.shape(1);
-    auto sy = affs.shape(2);
-    auto sx = affs.shape(3);
+    std::ptrdiff_t sz = affs.shape(1);
+    std::ptrdiff_t sy = affs.shape(2);
+    std::ptrdiff_t sx = affs.shape(3);
     
     SAG::shape_type sag_shape = {sz, sy, sx};
     SAG sag = xt::zeros<segid_t>(sag_shape);
 
-    for(auto z=0; z<sz; z++){
-        for(auto y=0; y<sy; y++){
-            for(auto x=0; x<sx; x++){
+    for(std::ptrdiff_t z=0; z<sz; z++){
+        for(std::ptrdiff_t y=0; y<sy; y++){
+            for(std::ptrdiff_t x=0; x<sx; x++){
                 // weights of all six edges incident to (z,y,x)
                 // the affinity map channels are ordered in (x,y,z)
-                auto negx = (x==0) ? low : affs(0, z,y,x);
-                auto negy = (y==0) ? low : affs(1, z,y,x);
-                auto negz = (z==0) ? low : affs(2, z,y,x);
-                auto posx = (x>=sx-1) ? low : affs(0, z, y, x+1);
-                auto posy = (y>=sy-1) ? low : affs(1, z, y+1, x);
-                auto posz = (z>=sz-1) ? low : affs(2, z+1, y, x);
+                auto negx = (x==0)      ? low : affs(0, z,y,x);
+                auto negy = (y==0)      ? low : affs(1, z,y,x);
+                auto negz = (z==0)      ? low : affs(2, z,y,x);
+                auto posx = (x>=sx-1)   ? low : affs(0, z, y, x+1);
+                auto posy = (y>=sy-1)   ? low : affs(1, z, y+1, x);
+                auto posz = (z>=sz-1)   ? low : affs(2, z+1, y, x);
 
                 auto m = std::max({negz, negy, negx, posz, posy, posx});
 
@@ -77,24 +77,25 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
 }
 
 auto divide_plateaus(SAG& sag){
-    auto sz = sag.shape(0);
-    auto sy = sag.shape(1);
-    auto sx = sag.shape(2);
+    std::ptrdiff_t sz = sag.shape(0);
+    std::ptrdiff_t sy = sag.shape(1);
+    std::ptrdiff_t sx = sag.shape(2);
     
     // direction
     const std::array<std::ptrdiff_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
-    
+
+    // get plato corners 
     // queue all vertices for which a purely outgoing edge exists
     std::cout<<"queue all vertices for which a purely outgoing edge exists"<<std::endl;
     std::vector<std::ptrdiff_t> bfs;
     //bfs.reserve(sag.size());
     
     for(std::ptrdiff_t idx = 0; idx < sag.size(); idx++){
-        for(size_t d=0; d<6; d++){
-            if((sag[idx] & dirmask[d] != 0) && 
+        for(std::ptrdiff_t d=0; d<6; d++){
+            if((sag[idx] & dirmask[d] ) && 
                         idx+dir[d]>=0 && 
                         idx+dir[d]<sag.size() && 
-                        ((sag[idx+dir[d]] & idirmask[d]) == 0)){
+                        (!(sag[idx+dir[d]] & idirmask[d]))){
                     // outgoing edge exists, no incoming edge
                     sag[idx] |= traits::sag_visited;
                     bfs.push_back(idx);
@@ -109,8 +110,8 @@ auto divide_plateaus(SAG& sag){
     while(bfs_index < bfs.size()){
         std::ptrdiff_t idx = bfs[bfs_index];
         segid_t to_set = 0;
-        for(size_t d=0; d<6; d++){
-            if(((sag[idx] & dirmask[d]) != 0) && 
+        for(std::ptrdiff_t d=0; d<6; d++){
+            if( ( sag[idx] & dirmask[d] ) && 
                         idx+dir[d]>=0 && 
                         idx+dir[d]<sag.size()){
                 // outgoing edge exists
@@ -138,9 +139,9 @@ auto find_basins(Segmentation& seg){
     // seg is initially the steepest ascent graph
     // and will be transformed in-place to yield the segmentation into basins
     
-    auto sz = seg.shape(0);
-    auto sy = seg.shape(1);
-    auto sx = seg.shape(2);
+    std::ptrdiff_t sz = seg.shape(0);
+    std::ptrdiff_t sy = seg.shape(1);
+    std::ptrdiff_t sx = seg.shape(2);
     
     // direction
     const std::array<std::ptrdiff_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
@@ -157,7 +158,7 @@ auto find_basins(Segmentation& seg){
             // mark as assigned
             seg[idx] |= traits::high_bit;
             counts[0]++; 
-        } else if((seg[idx] & traits::high_bit) == 0){
+        } else if( !(seg[idx] & traits::high_bit) ){
             // not yet assigned, enqueue
             bfs.push_back(idx);
             // mark as visited
@@ -171,7 +172,7 @@ auto find_basins(Segmentation& seg){
                     if( seg[me] & dirmask[d] ){
                         // this is an outgoing edge
                         // target of edge
-                        auto him = me + dir[d];
+                        std::ptrdiff_t him = me + dir[d];
                         if( him>=0 && him<seg.size() ){
                             // target is inside this volume
                             if( seg[him] & traits::high_bit ){
@@ -207,12 +208,14 @@ auto find_basins(Segmentation& seg){
             }
         }
     }
-    std::cout<< "found: "<< next_id - 1 << " components" << std::endl;
+    std::cout<< "found: "<< next_id - 1 << " components and "<< 
+                    counts[0] << " background voxels" << std::endl;
 
+    // clear high bit visited label
     for(size_t idx = 0; idx < seg.size(); idx++){
-        // clear high bit visited label
         seg[idx] &= traits::mask;
     }
+    
     return std::make_tuple(seg, counts);
 }
 
