@@ -3,6 +3,12 @@
 
 Computation for REal NEUral networks
 
+# Features
+- [x] Watershed
+- [ ] Greedy mean-affinity agglomeration
+- [ ] Mutex watershed
+- [x] NBLAST algorithm to compare neuron skeletons. 
+
 # Development
 
 install dependencies
