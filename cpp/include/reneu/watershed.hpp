@@ -82,14 +82,14 @@ auto divide_plateaus(SAG& sag){
     auto sx = sag.shape(2);
     
     // direction
-    const std::array<std::int64_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
+    const std::array<std::ptrdiff_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
     
     // queue all vertices for which a purely outgoing edge exists
     std::cout<<"queue all vertices for which a purely outgoing edge exists"<<std::endl;
-    std::vector<int64_t> bfs;
+    std::vector<std::ptrdiff_t> bfs;
     //bfs.reserve(sag.size());
     
-    for(int64_t idx = 0; idx < sag.size(); idx++){
+    for(std::ptrdiff_t idx = 0; idx < sag.size(); idx++){
         for(size_t d=0; d<6; d++){
             if((sag[idx] & dirmask[d] != 0) && 
                         idx+dir[d]>=0 && 
@@ -105,18 +105,18 @@ auto divide_plateaus(SAG& sag){
 
     // divide plateaus
     std::cout<<"divide plateaus for the sag"<< std::endl;
-    int64_t bfs_index = 0;
+    size_t bfs_index = 0;
     while(bfs_index < bfs.size()){
-        auto idx = bfs[bfs_index];
+        std::ptrdiff_t idx = bfs[bfs_index];
         segid_t to_set = 0;
         for(size_t d=0; d<6; d++){
             if(((sag[idx] & dirmask[d]) != 0) && 
                         idx+dir[d]>=0 && 
                         idx+dir[d]<sag.size()){
                 // outgoing edge exists
-                if((sag[idx+dir[d]] & idirmask[d]) != 0 ){
+                if(sag[idx+dir[d]] & idirmask[d]){
                     // incoming edge
-                    if((sag[idx+dir[d]] & traits::sag_visited) == 0){
+                    if(!(sag[idx+dir[d]] & traits::sag_visited)){
                         bfs.push_back(idx+dir[d]);
                         sag[idx+dir[d]] |= traits::sag_visited;
                     }
@@ -143,22 +143,20 @@ auto find_basins(Segmentation& seg){
     auto sx = seg.shape(2);
     
     // direction
-    const std::array<std::int64_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
+    const std::array<std::ptrdiff_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
 
-    // number of background voxels
-    size_t count0 = 0;
     // voxel counts for each basin
     std::vector<size_t> counts = {0};
     // breadth first search
-    std::vector<size_t> bfs = {};
+    std::vector<std::ptrdiff_t> bfs = {};
 
     segid_t next_id = 1;
-    for(size_t idx=0; idx<seg.size(); idx++){
+    for(std::ptrdiff_t idx=0; idx<seg.size(); idx++){
         if(seg[idx]==0){
             // background voxel (no edges at all)
             // mark as assigned
             seg[idx] |= traits::high_bit;
-            count0++; 
+            counts[0]++; 
         } else if((seg[idx] & traits::high_bit) == 0){
             // not yet assigned, enqueue
             bfs.push_back(idx);
@@ -168,24 +166,24 @@ auto find_basins(Segmentation& seg){
             // follow trajectory starting from idx
             size_t bfs_index = 0;
             while( bfs_index < bfs.size()){
-                auto me = bfs[bfs_index];
+                std::ptrdiff_t me = bfs[bfs_index];
                 for(size_t d=0; d<6; d++){
-                    if((seg[me] & dirmask[d]) != 0){
+                    if( seg[me] & dirmask[d] ){
                         // this is an outgoing edge
                         // target of edge
                         auto him = me + dir[d];
-                        if(him >= 0 && him<seg.size()){
+                        if( him>=0 && him<seg.size() ){
                             // target is inside this volume
-                            if( (seg[him] & traits::high_bit) != 0){
+                            if( seg[him] & traits::high_bit ){
                                 // already assigned
-                                for(auto it : bfs){
+                                for(auto& it : bfs){
                                     // assign entire queue to same ID including high bit
                                     seg[it] = seg[him];
                                 }
                                 counts[seg[him] & traits::mask] += bfs.size();
                                 bfs.clear();
                                 break;
-                            } else if( (seg[him] & traits::sag_visited) == 0){
+                            } else if( !(seg[him] & traits::sag_visited) ){
                                 // not visited
                                 // make as visited
                                 seg[him] |= traits::sag_visited;
@@ -199,11 +197,11 @@ auto find_basins(Segmentation& seg){
             }
 
             if(!bfs.empty()){
-                // new basin has been created
-                counts.push_back(bfs.size());
-                for(auto it : bfs){
+                // create a new basin 
+                for(auto& it : bfs){
                     seg[it] = traits::high_bit | next_id;
                 }
+                counts.push_back(bfs.size());
                 next_id++;
                 bfs.clear();
             }
@@ -215,7 +213,7 @@ auto find_basins(Segmentation& seg){
         // clear high bit visited label
         seg[idx] &= traits::mask;
     }
-    return std::make_tuple(seg, counts, count0);
+    return std::make_tuple(seg, counts);
 }
 
 auto watershed(const AffinityMap& affs, const aff_edge_t& low, const aff_edge_t& high){
@@ -224,7 +222,7 @@ auto watershed(const AffinityMap& affs, const aff_edge_t& low, const aff_edge_t&
     std::cout<< "start divide plateaus..." << std::endl;
     divide_plateaus(sag);
     std::cout<< "start find basins ..." << std::endl;
-    auto [seg, counts, count0] = find_basins(sag);
+    auto [seg, counts] = find_basins(sag);
     return seg;
 }
 
