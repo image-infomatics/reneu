@@ -136,7 +136,7 @@ auto segment( const aff_edge_t &threshold ){
     auto segNum = index2segid.size();
     std::cout<< "number of fragments: "<< segNum << std::endl;
 
-    unordered_map<segid_t, segid_t> segid2index;
+    unordered_map<segid_t, size_t> segid2index;
     for(size_t index=0; index<segNum; index++){
         auto segid = index2segid[ index ];
         segid2index[ segid ] = index;
