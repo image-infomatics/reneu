@@ -161,7 +161,9 @@ auto segment( const aff_edge_t &threshold, const size_t& sizeThreshold){
     size_t mergeNum = 0;
     // greedy mean affinity agglomeration
     for(const auto &[segid0, segid1, aff] : dendrogram){
-        if(aff>=threshold){
+        if( (aff>=threshold) || 
+                (mapVoxelNum[segid0] <= sizeThreshold) || 
+                (mapVoxelNum[segid1] <= sizeThreshold) ){
             // Union the two sets that contain elements x and y. 
             // This is equivalent to link(find_set(x),find_set(y)).
             dsets.union_set(segid0, segid1);
@@ -172,19 +174,7 @@ auto segment( const aff_edge_t &threshold, const size_t& sizeThreshold){
             mapVoxelNum[segid1] = mergedVoxelNum;
         }
     }
-    std::cout<< "merged "<< mergeNum << " times by affinity threshold"<< std::endl; 
     
-    // merge small fragments
-    for(const auto& [segid0, segid1, aff] : dendrogram){
-        if(mapVoxelNum[segid0] <= sizeThreshold || mapVoxelNum[segid1] <= sizeThreshold){                
-            dsets.union_set(segid0, segid1);
-            mergeNum++;
-            size_t mergedVoxelNum = mapVoxelNum[segid0] + mapVoxelNum[segid1];
-            mapVoxelNum[segid0] = mergedVoxelNum;
-            mapVoxelNum[segid1] = mergedVoxelNum;
-        }
-    } 
-
     // Flatten the parents tree so that the parent of every element is its representative.
     dsets.compress_sets(segids.begin(), segids.end());
 
@@ -196,7 +186,7 @@ auto segment( const aff_edge_t &threshold, const size_t& sizeThreshold){
     // copy fragments  
     Segmentation segmentation = fragments;
     std::transform(fragments.begin(), fragments.end(), segmentation.begin(), 
-        [mapParent](segid_t segid)->segid_t{return mapParent[segid];} 
+        [&mapParent](segid_t segid)->segid_t{return mapParent[segid];} 
     );
 
     return segmentation;
