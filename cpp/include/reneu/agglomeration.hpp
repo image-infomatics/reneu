@@ -132,38 +132,40 @@ SupervoxelDendrogram(const PyAffinityMap &affs, const PySegmentation &fragments_
 }
 
 auto segment( const aff_edge_t &threshold ){
-    auto index2segid = xt::unique(fragments);
-    auto segNum = index2segid.size();
+    auto segids = xt::unique(fragments);
+    auto segNum = segids.size();
     std::cout<< "number of fragments: "<< segNum << std::endl;
 
-    unordered_map<segid_t, size_t> segid2index;
-    for(size_t index=0; index<segNum; index++){
-        auto segid = index2segid[ index ];
-        segid2index[ segid ] = index;
-    }
+    using Rank_t = std::map<segid_t, size_t>;
+    using Parent_t = std::map<segid_t, segid_t>;
+    using PropMapRank_t = boost::associative_property_map<Rank_t>;
+    using PropMapParent_t = boost::associative_property_map<Parent_t>;
 
-    xt::xtensor<segid_t, 1> rank = xt::ones<segid_t>({segNum});
-    xt::xtensor<segid_t, 1> parent = xt::arange<segid_t>(0, segNum);
-    boost::disjoint_sets dsets(rank.data(), parent.data());
-    
+    Rank_t mapRank;
+    Parent_t mapParent;
+    PropMapRank_t propMapRank(mapRank);
+    PropMapParent_t propMapParent(mapParent);
+    boost::disjoint_sets<PropMapRank_t, PropMapParent_t> dsets( propMapRank, propMapParent);
+
+    for(const segid_t& segid : segids){
+        dsets.make_set(segid);
+    }
+   
     size_t mergeNum = 0;
     for(const auto &[segid0, segid1, aff] : dendrogram){
         if(aff>=threshold){
-            // union these two sets
-            auto index0 = segid2index[ segid0 ];
-            auto index1 = segid2index[ segid1 ];
             // Union the two sets that contain elements x and y. 
             // This is equivalent to link(find_set(x),find_set(y)).
-            dsets.union_set(index0, index1);
+            dsets.union_set(segid0, segid1);
             mergeNum++;
         }
     }
 
     // Flatten the parents tree so that the parent of every element is its representative.
-    dsets.compress_sets(parent.begin(), parent.end());
+    dsets.compress_sets(segids.begin(), segids.end());
 
     std::cout<< "merged "<< mergeNum << " times to get "<< 
-                dsets.count_sets(parent.begin(), parent.end()) << 
+                dsets.count_sets(segids.begin(), segids.end()) << 
                 " final objects."<< std::endl;
 
     std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
@@ -171,9 +173,7 @@ auto segment( const aff_edge_t &threshold ){
     Segmentation segmentation = fragments;
     for(auto it=segmentation.begin(); it!=segmentation.end(); it++){
         auto childSegid = *it;
-        auto childIndex = segid2index[ childSegid ];
-        auto parentIndex = parent[ childIndex ];
-        auto parentSegid = index2segid[ parentIndex ];
+        auto parentSegid = mapParent[ childSegid ];
         *it = parentSegid;
     }
     return segmentation;
