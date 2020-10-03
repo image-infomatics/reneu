@@ -131,11 +131,7 @@ SupervoxelDendrogram(const PyAffinityMap &affs, const PySegmentation &fragments_
     greedy_mean_affinity_agglomeration(affs, minThreshold);
 }
 
-auto segment( const aff_edge_t &threshold ){
-    auto segids = xt::unique(fragments);
-    auto segNum = segids.size();
-    std::cout<< "number of fragments: "<< segNum << std::endl;
-
+auto segment( const aff_edge_t &threshold, const size_t& sizeThreshold){
     using Rank_t = std::map<segid_t, size_t>;
     using Parent_t = std::map<segid_t, segid_t>;
     using PropMapRank_t = boost::associative_property_map<Rank_t>;
@@ -147,19 +143,47 @@ auto segment( const aff_edge_t &threshold ){
     PropMapParent_t propMapParent(mapParent);
     boost::disjoint_sets<PropMapRank_t, PropMapParent_t> dsets( propMapRank, propMapParent);
 
+    auto segids = xt::unique(fragments);
     for(const segid_t& segid : segids){
         dsets.make_set(segid);
     }
-   
+    
+    // count voxel number
+    std::map<segid_t, size_t> mapVoxelNum = {};
+    segids = xt::unique(fragments);
+    for(const auto& segid : segids){
+        mapVoxelNum[segid] = 0;
+    }
+    for(const auto& segid : fragments){
+        mapVoxelNum[segid]++;
+    }
+    
     size_t mergeNum = 0;
+    // greedy mean affinity agglomeration
     for(const auto &[segid0, segid1, aff] : dendrogram){
         if(aff>=threshold){
             // Union the two sets that contain elements x and y. 
             // This is equivalent to link(find_set(x),find_set(y)).
             dsets.union_set(segid0, segid1);
             mergeNum++;
+            
+            size_t mergedVoxelNum = mapVoxelNum[segid0] + mapVoxelNum[segid1];
+            mapVoxelNum[segid0] = mergedVoxelNum;
+            mapVoxelNum[segid1] = mergedVoxelNum;
         }
     }
+    std::cout<< "merged "<< mergeNum << " times by affinity threshold"<< std::endl; 
+    
+    // merge small fragments
+    for(const auto& [segid0, segid1, aff] : dendrogram){
+        if(mapVoxelNum[segid0] <= sizeThreshold || mapVoxelNum[segid1] <= sizeThreshold){                
+            dsets.union_set(segid0, segid1);
+            mergeNum++;
+            size_t mergedVoxelNum = mapVoxelNum[segid0] + mapVoxelNum[segid1];
+            mapVoxelNum[segid0] = mergedVoxelNum;
+            mapVoxelNum[segid1] = mergedVoxelNum;
+        }
+    } 
 
     // Flatten the parents tree so that the parent of every element is its representative.
     dsets.compress_sets(segids.begin(), segids.end());
@@ -171,11 +195,10 @@ auto segment( const aff_edge_t &threshold ){
     std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
     // copy fragments  
     Segmentation segmentation = fragments;
-    for(auto it=segmentation.begin(); it!=segmentation.end(); it++){
-        auto childSegid = *it;
-        auto parentSegid = mapParent[ childSegid ];
-        *it = parentSegid;
-    }
+    std::transform(fragments.begin(), fragments.end(), segmentation.begin(), 
+        [mapParent](segid_t segid)->segid_t{return mapParent[segid];} 
+    );
+
     return segmentation;
 }
 
