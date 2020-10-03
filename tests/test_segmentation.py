@@ -10,19 +10,15 @@ def test_supervoxel_dendrogram():
     DIR = os.path.join(os.path.dirname(__file__), '../data/')
     with h5py.File(os.path.join(DIR, "aff_160k.h5"), "r") as f:
         affs = np.asarray(f["main"])
-    
+
     print('watershed ...')
-    seg = watershed(affs, 0.2, 0.9)
-    tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
-    
-    print('read fragments from watershed...')
-    with h5py.File(os.path.join(DIR, "ffn_seg.h5"), "r") as f:
-        fragments = np.asarray(f["seg"])
-    
+    fragments = watershed(affs, 0.2, 0.9)
+    tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=fragments)
+
     print('construct dendrogram and merge supervoxels')
-    dend = SupervoxelDendrogram(affs, fragments, 0.7)
-    seg = dend.segment(0.7)
-    
+    dend = SupervoxelDendrogram(affs, fragments, 0.3)
+    seg = dend.segment(0.3)
+
     print('save results...')
     tifffile.imwrite(os.path.join(DIR, "seg_test.tif"), data=seg)
     with h5py.File(os.path.join(DIR, "seg_test.h5"), "w") as f:

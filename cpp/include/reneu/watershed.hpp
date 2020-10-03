@@ -177,7 +177,7 @@ auto find_basins(Segmentation& seg){
                             // target is inside this volume
                             if( seg[him] & traits::high_bit ){
                                 // already assigned
-                                for(auto& it : bfs){
+                                for(const auto& it : bfs){
                                     // assign entire queue to same ID including high bit
                                     seg[it] = seg[him];
                                 }
@@ -199,7 +199,7 @@ auto find_basins(Segmentation& seg){
 
             if(!bfs.empty()){
                 // create a new basin 
-                for(auto& it : bfs){
+                for(const auto& it : bfs){
                     seg[it] = traits::high_bit | next_id;
                 }
                 counts.push_back(bfs.size());

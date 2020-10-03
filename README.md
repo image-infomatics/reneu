@@ -7,6 +7,10 @@ Computation for REal NEUral networks
 - [x] Watershed
 - [ ] Greedy mean-affinity agglomeration
 - [ ] Mutex watershed
+- [ ] Segmentation evaluation
+    - [ ] Rand error
+    - [ ] Variation of information
+    - [ ] Average run length
 - [x] NBLAST algorithm to compare neuron skeletons. 
 
 # Development
