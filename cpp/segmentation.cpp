@@ -3,11 +3,10 @@
 #define FORCE_IMPORT_ARRAY
 
 
-#include "reneu/reneu.hpp"
 #include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
-#include "reneu/watershed.hpp"
-#include "reneu/agglomeration.hpp"
+#include "reneu/segmentation/watershed.hpp"
+#include "reneu/segmentation/agglomeration.hpp"
 
 namespace py = pybind11;
 using namespace reneu;

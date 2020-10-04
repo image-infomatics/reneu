@@ -5,7 +5,7 @@ Computation for REal NEUral networks
 
 # Features
 - [x] Watershed
-- [ ] Greedy mean-affinity agglomeration
+- [x] Greedy mean-affinity agglomeration
 - [ ] Mutex watershed
 - [ ] Segmentation evaluation
     - [ ] Rand error
