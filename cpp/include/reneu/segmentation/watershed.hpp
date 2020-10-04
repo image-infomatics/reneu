@@ -6,13 +6,12 @@
 
 #include "reneu/type_aliase.hpp"
 
-#include "xtensor/xtensor.hpp"
 #include "xtensor/xbuilder.hpp"
 #include "xtensor/xfixed.hpp"
 
 namespace reneu{
 
-using SAG = Segmentation;
+using SteepestAscentGraph = Segmentation;
 
 template < typename T > struct watershed_traits;
 
@@ -44,8 +43,8 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     std::ptrdiff_t sy = affs.shape(2);
     std::ptrdiff_t sx = affs.shape(3);
     
-    SAG::shape_type sag_shape = {sz, sy, sx};
-    SAG sag = xt::zeros<segid_t>(sag_shape);
+    SteepestAscentGraph::shape_type sag_shape = {sz, sy, sx};
+    SteepestAscentGraph sag = xt::zeros<segid_t>(sag_shape);
 
     for(std::ptrdiff_t z=0; z<sz; z++){
         for(std::ptrdiff_t y=0; y<sy; y++){
@@ -76,7 +75,7 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     return sag;
 }
 
-auto divide_plateaus(SAG& sag){
+auto divide_plateaus(SteepestAscentGraph& sag){
     std::ptrdiff_t sz = sag.shape(0);
     std::ptrdiff_t sy = sag.shape(1);
     std::ptrdiff_t sx = sag.shape(2);
