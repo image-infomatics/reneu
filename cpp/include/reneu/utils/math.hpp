@@ -8,7 +8,7 @@
 #include "xtensor-python/pytensor.hpp"
 
 
-namespace reneu::utils{
+namespace reneu{
 
 /**
  * \brief compute the principle component, only return the first component to save some computation.
@@ -35,4 +35,4 @@ inline auto py_pca_first_component(xt::pytensor<float, 2> pysample){
     return pca_first_component( sample );
 }
 
-} // namespace reneu::utils
+} // namespace reneu
