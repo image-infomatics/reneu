@@ -7,7 +7,7 @@
 #include "reneu/type_aliase.hpp" 
 #include "reneu/segmentation/watershed.hpp"
 #include "reneu/segmentation/agglomeration.hpp"
-#include "reneu/segmentation/dilation.hpp"
+#include "reneu/segmentation/fill_background_with_affinity_guidance.hpp"
 
 namespace py = pybind11;
 using namespace reneu;
@@ -23,7 +23,7 @@ PYBIND11_MODULE(segmentation, m) {
     )pbdoc";
 
     m.def("watershed", &py_watershed);
-    m.def("dilate2d", &py_dilate2d);
+    m.def("fill_background_with_affinity_guidance", &py_fill_background_with_affinity_guidance);
 
     // agglomeration
     py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
