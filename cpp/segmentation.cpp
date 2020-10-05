@@ -23,7 +23,7 @@ PYBIND11_MODULE(segmentation, m) {
     )pbdoc";
 
     m.def("watershed", &py_watershed);
-    m.def("dilate", &py_dilate);
+    m.def("dilate2d", &py_dilate2d);
 
     // agglomeration
     py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
