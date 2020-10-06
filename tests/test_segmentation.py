@@ -1,5 +1,5 @@
 from reneu.lib.segmentation import XSupervoxelDendrogram as SupervoxelDendrogram
-from reneu.lib.segmentation import watershed
+from reneu.lib.segmentation import watershed, fill_background_with_affinity_guidance
 
 import h5py
 import os
@@ -14,16 +14,23 @@ def test_supervoxel_dendrogram():
     print('watershed ...')
     fragments = watershed(affs, 0.6, 0.9999)
     tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=fragments)
-
-    print('dilate the fragments...')
-    #fill_background_with_affinity_guidance(fragments, affs)
-    #assert fragments.min() > 0 
-    tifffile.imwrite(os.path.join(DIR, "watershed_basins_filled.tif"), data=fragments)
-
-    print('construct dendrogram and merge supervoxels')
+    
+    print('conservative agglomeration.')
     threshold = 0.999
     min_threshold = 0.0
-    size_threshold = 32 
+    size_threshold = 16 
+    dend = SupervoxelDendrogram(affs, fragments, min_threshold)
+    fragments = dend.segment(threshold, size_threshold)
+
+    print('dilate the fragments...')
+    fill_background_with_affinity_guidance(fragments, affs)
+    assert fragments.min() > 0 
+    tifffile.imwrite(os.path.join(DIR, "watershed_basins_filled.tif"), data=fragments)
+
+    print('more aggressive agglomeration.')
+    threshold = 0.99
+    min_threshold = 0.0
+    size_threshold = 200
     dend = SupervoxelDendrogram(affs, fragments, min_threshold)
     seg = dend.segment(threshold, size_threshold)
 
