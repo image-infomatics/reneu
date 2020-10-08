@@ -19,7 +19,7 @@ install dependencies
 
     conda env create -f environment.yml
 
-if you use OSX, please use the mac_environment.yml.
+if you use OSX, please use the mac-environment.yml.
 
 compile C++ backend
 
