@@ -165,7 +165,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     }
 }
 
-void greedy_merge_until(Segmentation& fragments, const aff_edge_t& threshold){
+void greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
     // fibonacci heap might be more efficient
     // use std data structure to avoid denpendency for now
     using Edge = std::tuple<segid_t, segid_t, aff_edge_t>;
