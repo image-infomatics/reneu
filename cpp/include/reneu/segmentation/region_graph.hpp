@@ -22,6 +22,13 @@ RegionEdge(): count(0.), sum(0.){}
 aff_edge_t get_mean(){
     return sum / count;
 }
+
+void absorb(RegionEdge& re2){
+    count += re2.count;
+    sum += re2.sum;
+    re2.count = 0;
+    re2.sum = 0;
+}
 }; // class of RegionEdge
 
 class RegionProps{
@@ -30,8 +37,25 @@ segid_t segid;
 size_t voxelNum;
 std::map<segid_t, RegionEdge> neighbors;
 
+private:
+void _cleanup(){
+    voxelNum = 0;
+    neighbors = {};
+}
+
+public:
 RegionProps(segid_t _segid):segid(_segid), voxelNum(0), neighbors({}){}
 
+
+void absorb(RegionProps& smallerRegionProps){
+    voxelNum += smallerRegionProps.voxelNum;
+    for(auto& [segid, regionEdge] : smallerRegionProps.neighbors){
+        neighbors[segid].absorb( regionEdge );
+    }
+
+    smallerRegionProps._cleanup();
+    return;
+}
 
 }; // class of RegionProps
 
@@ -44,12 +68,12 @@ private:
  */
 inline auto find_index(const segid_t& segid){
     auto compare = [](RegionProps rp1, RegionProps rp2){
-        return std::get<0>(rp1) < std::get<0>(rp2);
+        return rp1.voxelNum < rp2.voxelNum;
     };
     auto lower = std::lower_bound(_rg.begin(), _rg.end(), segid, compare);
     auto idx = std::distance(_rg.begin(), lower);
     // if we really want speed, we can delete this assersion after extensive tests.
-    assert(std::get<0>(_rg[idx]) == segid);
+    assert(_rg[idx].segid == segid);
     return idx;
 }
 
@@ -57,11 +81,9 @@ inline void accumulate_edge(const segid_t& segid1, const segid_t& segid2, const 
     // we assume that segid1 is greater than 0 !
     if(segid2>0 && segid1 != segid2){
         auto [s1, s2] = std::minmax(segid1, segid2);
-        auto idx = find_index(s1);
-        s1Neighbors = std::get<2>
-        std::get<2>(_rg[idx])[s2] += aff;
-        _rg[idx][s2][0]++;
-        _rg[idx][s2][1]+=aff;
+        auto idx1 = find_index(s1);
+        _rg[idx1].neighbors[s2].count++;
+        _rg[idx1].neighbors[s2].sum += aff;
     }
     return;
 }
@@ -72,32 +94,24 @@ inline void accumulate_edge(const segid_t& segid1, const segid_t& segid2, const 
 inline void merge(const segid_t& segid1, const segid_t& segid2){
     auto idx1 = find_index(segid1);
     auto idx2 = find_index(segid2);
-    auto voxelNum1 = std::get<1>(_rg[idx1]);
-    auto voxelNum2 = std::get<1>(_rg[idx2]);
+    auto& voxelNum1 = _rg[idx1].voxelNum;
+    auto& voxelNum2 = _rg[idx2].voxelNum;
     
     // make i1 the smaller segid index
+    size_t i1, i2;
     if(voxelNum1 < voxelNum2){
-        auto i1 = voxelNum1;
-        auto i2 = voxelNum2;
+        i1 = idx1;
+        i2 = idx2;
     } else {
-        auto i1 = voxelNum2;
-        auto i2 = voxelNum1;
+        i1 = idx2;
+        i2 = idx1;
     }
 
-    // merge i1 to i2
-    auto nbs1 = std::get<2>(_rg[i1]);
-    auto nbs2 = std::get<2>(_rg[i2]);
-    for(auto segid, props : nbs1){
-        // accumulate the voxel count and total affinity value
-        nbs2[segid][0] += props[0];
-        nbs2[segid][1] += props[1];
-    }
-    mergedVoxelNum = std::get<1>(_rg[i1]) + std::get<1>(_rg[i2]);
-    auto s1 = std::get<0>(_rg[r1]);
-    auto s2 = std::get<0>(_rg[r2]);
-    _rg[i2] = std::make_tuple(s2, mergedVoxelNum, nbs2);
-    // erase the smaller one
-    _rg[i1] = std::make_tuple(s1, 0, RegionNeighbors());
+    _rg[i2].absorb( _rg[i1] );
+    // To-Do: try really erase the element to see whether it will speed it up or not
+    // the erase operation is expensive, but it shrinks the region graph gradually.
+    // if we erase the element, we might not be able to find the segment id correctly 
+    // in the find_index function.
     return;
 }
 
@@ -127,8 +141,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     _rg.reserve(segids.size());
     for(auto segid : segids){
         if(segid > 0){
-            neighborsPtr = std::make_unique(RegionNeighbors());
-            _rg.push_back(std::make_tuple(segid, id2count[segid], neighborsPtr));
+            _rg.emplace_back( RegionProps(segid) );
         }
     }
 
@@ -157,14 +170,13 @@ void greedy_merge_until(Segmentation& fragments, const aff_edge_t& threshold){
     // use std data structure to avoid denpendency for now
     using Edge = std::tuple<segid_t, segid_t, aff_edge_t>;
     auto cmp = [](const Edge& left, const Edge& right){
-        return std::get<2>(left)  < std::get<2>(right);
+        return std::get<2>(left) < std::get<2>(right);
     };
     // TO-DO: replace with fibonacci heap
     priority_queue<Edge, vector<Edge>, decltype(cmp)> heap(cmp);
-    for(auto& segid1, voxelNum, neighbors : _rg){
-        for(auto& segid2, props : neighbors){
-            auto meanAffinity = props[1] / props[0];
-            heap.emplace(std::make_tuple(segid1, segid2, meanAffinity));
+    for(auto& rg1 : _rg){
+        for(auto& [segid2, props] : rg1.neighbors){
+            heap.emplace(std::make_tuple(rg1.segid, segid2, props.get_mean()));
         }
     }
 
@@ -185,7 +197,7 @@ void greedy_merge_until(Segmentation& fragments, const aff_edge_t& threshold){
 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        auto segid0, segid1, meanAffinity = heap.top();
+        auto [segid0, segid1, meanAffinity] = heap.top();
         if(meanAffinity < threshold) break;
         heap.pop();
 
@@ -212,7 +224,7 @@ void greedy_merge_until(Segmentation& fragments, const aff_edge_t& threshold){
 }
 
 inline void py_greedy_merge_until(PySegmentation& pyseg, const aff_edge_t& threshold){
-    greedy_merge_until(pyseg, threshold);
+    greedy_merge_until(std::move(pyseg), threshold);
     return;
 }
 
