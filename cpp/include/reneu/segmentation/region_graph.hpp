@@ -16,9 +16,11 @@ public:
 // we use the same type for both value for type stability in the average division. 
 aff_edge_t count;
 aff_edge_t sum;
+// version is used to tell whether an edge is outdated or not in priority queue
+size_t version;
 
-RegionEdge(): count(0.), sum(0.){}
-RegionEdge(const aff_edge_t& aff): count(1), sum(aff) {}
+RegionEdge(): count(0.), sum(0.), version(1){}
+RegionEdge(const aff_edge_t& aff): count(1), sum(aff), version(1){}
 
 inline aff_edge_t get_mean(){
     return sum / count;
@@ -32,14 +34,17 @@ inline void accumulate(const aff_edge_t& aff){
 inline void absorb(RegionEdge& re2){
     count += re2.count;
     sum += re2.sum;
-    re2.count = 0;
-    re2.sum = 0;
+    version++;
+    re2.cleanup();
 }
 
 inline void cleanup(){
     count = 0;
     sum = 0;
+    // other edges in the priority queue will always be outdated!
+    version = std::numeric_limits<size_t>::max();
 }
+
 }; // class of RegionEdge
 
 
@@ -70,6 +75,14 @@ inline bool has_neighbor(segid_t segid){
 }; // class of RegionProps
 
 
+struct EdgeInQueue{
+    segid_t segid0;
+    segid_t segid1;
+    aff_edge_t aff;
+    size_t version;
+};
+
+
 class RegionGraph{
 private:
     std::map<segid_t, RegionProps> _rg;
@@ -93,35 +106,6 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
             _rg[segid1][segid0] = edgeIndex;
         }
     }
-    return;
-}
-
-/** 
- * @brief always merge small segment to large one
- */
-inline void merge(segid_t segid0, segid_t segid1){
-    // make segid1 bigger than segid0
-    if(_rg[segid0].voxelNum > _rg[segid1].voxelNum){
-        std::swap(segid0, segid1);
-    }
-    assert(_rg[segid1].voxelNum > _rg[segid0].voxelNum);
-    _rg[segid1].voxelNum += _rg[segid0].voxelNum;
-
-    // merge all the edges to segid1
-    for(auto& [nid0, edgeIndex] : _rg[segid0].neighbors){
-        if(nid0 != segid1){
-            if (has_connection(segid1, nid0)){
-                auto& newEdgeIndex = _rg[segid1][nid0];
-                _edgeList[newEdgeIndex].absorb(_edgeList[edgeIndex]);
-            } else {
-                _rg[segid1][nid0] = _rg[segid0][nid0];
-                _rg[nid0][segid1] = _rg[nid0][segid0];
-            }
-        }
-        _rg[nid0].neighbors.erase(segid0);
-    }
-    _rg.erase(segid0);
-
     return;
 }
 
@@ -178,17 +162,16 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
 auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
     // fibonacci heap might be more efficient
     // use std data structure to avoid denpendency for now
-    using Edge = std::tuple<segid_t, segid_t, aff_edge_t>;
-    auto cmp = [](const Edge& left, const Edge& right){
-        return std::get<2>(left) < std::get<2>(right);
+    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
+        return left.aff < right.aff;
     };
     // TO-DO: replace with fibonacci heap
     std::cout<< "build priority queue..." << std::endl;
-    std::priority_queue<Edge, vector<Edge>, decltype(cmp)> heap(cmp);
+    std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
     for(auto& [segid0, regionProps] : _rg){
         for(auto& [segid1, edgeIndex] : regionProps.neighbors){
             auto meanAff = _edgeList[edgeIndex].get_mean();
-            heap.emplace(std::make_tuple(segid0, segid1, meanAff));
+            heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
         }
     }
 
@@ -208,14 +191,52 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         dsets.make_set(segid);
     }
 
+    std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        auto [segid0, segid1, meanAffinity] = heap.top();
-        if(meanAffinity < threshold) break;
+        auto edgeInQueue = heap.top();
+
+        if(edgeInQueue.aff < threshold) break;
+        auto segid0 = edgeInQueue.segid0;
+        auto segid1 = edgeInQueue.segid1;
+        auto& idx = _rg[segid1][segid0];
         heap.pop();
+        if(_edgeList[idx].version > edgeInQueue.version){
+            // skip outdated region edge
+            continue;
+        }
 
         mergeNum++;
-        merge(segid0, segid1);
+        
+        // make segid1 bigger than segid0
+        if(_rg[segid0].voxelNum > _rg[segid1].voxelNum){
+            std::swap(segid0, segid1);
+        }
+        assert(_rg[segid1].voxelNum > _rg[segid0].voxelNum);
+        _rg[segid1].voxelNum += _rg[segid0].voxelNum;
+
+        // merge all the edges to segid1
+        for(auto& [nid0, edgeIndex] : _rg[segid0].neighbors){
+            if(nid0 != segid1){
+                if (has_connection(segid1, nid0)){
+                    auto& newEdgeIndex = _rg[segid1][nid0];
+                    auto& newEdge = _edgeList[newEdgeIndex];
+                    newEdge.absorb(_edgeList[edgeIndex]);
+                    heap.emplace(EdgeInQueue({
+                        segid1, nid0, newEdge.get_mean(), newEdge.version}));
+                } else {
+                    // directly assign nid0-segid0 to nid0-segid1
+                    auto& edgeIndex = _rg[nid0][segid0];
+                    _rg[segid1][nid0] = edgeIndex;
+                    _rg[nid0][segid1] = edgeIndex;
+                    // make the original edge in priority queue outdated
+                    _edgeList[edgeIndex].version++;
+                }
+            }
+            _rg[nid0].neighbors.erase(segid0);
+        }
+        _rg.erase(segid0);
+
         // Union the two sets that contain elements x and y. 
         // This is equivalent to link(find_set(x),find_set(y)).
         dsets.union_set(segid0, segid1);
