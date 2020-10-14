@@ -18,24 +18,37 @@ aff_edge_t count;
 aff_edge_t sum;
 
 RegionEdge(): count(0.), sum(0.){}
+RegionEdge(const aff_edge_t& aff): count(1), sum(aff) {}
 
-aff_edge_t get_mean(){
+inline aff_edge_t get_mean(){
     return sum / count;
 }
 
-void absorb(RegionEdge& re2){
+inline void accumulate(const aff_edge_t& aff){
+    count++;
+    sum += aff;
+}
+
+inline void absorb(RegionEdge& re2){
     count += re2.count;
     sum += re2.sum;
     re2.count = 0;
     re2.sum = 0;
 }
+
+inline void cleanup(){
+    count = 0;
+    sum = 0;
+}
 }; // class of RegionEdge
+
 
 class RegionProps{
 public:
 segid_t segid;
 size_t voxelNum;
-std::map<segid_t, RegionEdge> neighbors;
+// segmentation ID --> index of the region edge list
+std::map<segid_t, size_t> neighbors;
 
 private:
 void _cleanup(){
@@ -47,33 +60,40 @@ public:
 RegionProps(): segid(0), voxelNum(0), neighbors({}){}
 RegionProps(segid_t _segid):segid(_segid), voxelNum(0), neighbors({}){}
 
-bool has_neighbor(segid_t segid){
+inline size_t& operator[](segid_t sid){
+    return neighbors[sid];
+}
+
+inline bool has_neighbor(segid_t segid){
     auto search = neighbors.find(segid);
     return (search != neighbors.end());
 }
 
-void absorb(RegionProps& smallerRegionProps){
-    voxelNum += smallerRegionProps.voxelNum;
-    for(auto& [segid, regionEdge] : smallerRegionProps.neighbors){
-        neighbors[segid].absorb( regionEdge );
-    }
-
-    smallerRegionProps._cleanup();
-    return;
-}
-
 }; // class of RegionProps
+
 
 class RegionGraph{
 private:
     std::map<segid_t, RegionProps> _rg;
+    std::vector<RegionEdge> _edgeList;
 
-inline void accumulate_edge(const segid_t& segid1, const segid_t& segid2, const aff_edge_t& aff){
-    // we assume that segid1 is greater than 0 !
-    if(segid2>0 && segid1 != segid2){
-        auto [s1, s2] = std::minmax(segid1, segid2);
-        _rg[s1].neighbors[s2].count++;
-        _rg[s1].neighbors[s2].sum += aff;
+inline bool has_connection(const segid_t& sid0, const segid_t& sid1){
+    return _rg[sid0].has_neighbor(sid1);
+}
+
+inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
+    // we assume that segid0 is greater than 0 !
+    if(segid1>0 && segid0 != segid1){
+        if(has_connection(segid0, segid1)){
+            auto& edgeIndex = _rg[segid0][segid1];
+            _edgeList[edgeIndex].accumulate(aff);
+        } else {
+            // create a new edge
+            _edgeList.emplace_back(RegionEdge(aff));
+            size_t edgeIndex = _edgeList.size()-1;
+            _rg[segid0][segid1] = edgeIndex;
+            _rg[segid1][segid0] = edgeIndex;
+        }
     }
     return;
 }
@@ -82,36 +102,25 @@ inline void accumulate_edge(const segid_t& segid1, const segid_t& segid2, const 
  * @brief always merge small segment to large one
  */
 inline void merge(segid_t segid0, segid_t segid1){
-    // make segid2 bigger than segid1
+    // make segid1 bigger than segid0
     if(_rg[segid0].voxelNum > _rg[segid1].voxelNum){
         std::swap(segid0, segid1);
     }
 
-    _rg[segid1].absorb( _rg[segid0] );
-    
-    // merge all the regions contacting segid2 to segid1
-    for(auto& [segID, regionProps] : _rg){
-        // we have already aborbed these region edges
-        if((segID < segid0) && (segID != segid1) && regionProps.has_neighbor(segid0)){
-            auto regionEdge = regionProps.neighbors[segid0];
-            if(segID < segid1){
-                // merge the region edge to segID
-                if(regionProps.has_neighbor(segid1)){
-                    _rg[segID].neighbors[segid1].absorb(regionEdge);
-                } else {
-                    _rg[segID].neighbors[segid1] = regionEdge;
-                }
+    // merge all the edges to segid1
+    for(auto& [nid0, edgeIndex] : _rg[segid0].neighbors){
+        if(nid0 != segid1){
+            if (has_connection(segid1, nid0)){
+                auto& newEdgeIndex = _rg[segid1][nid0];
+                _edgeList[newEdgeIndex].absorb(_edgeList[edgeIndex]);
             } else {
-                // merge the region Edge to segid1
-                if(_rg[segid1].has_neighbor(segID)){
-                    _rg[segid1].neighbors[segID].absorb(regionEdge);
-                } else {
-                    _rg[segid1].neighbors[segID] = regionEdge;
-                }
+                _rg[segid1][nid0] = _rg[segid0][nid0];
+                _rg[nid0][segid1] = _rg[nid0][segid0];
             }
-            regionProps.neighbors.erase(segid0);
         }
+        _rg[nid0].neighbors.erase(segid0);
     }
+    _rg.erase(segid0);
 
     return;
 }
@@ -174,13 +183,16 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         return std::get<2>(left) < std::get<2>(right);
     };
     // TO-DO: replace with fibonacci heap
-    priority_queue<Edge, vector<Edge>, decltype(cmp)> heap(cmp);
-    for(auto& [segid1, regionProps] : _rg){
-        for(auto& [segid2, props] : regionProps.neighbors){
-            heap.emplace(std::make_tuple(segid1, segid2, props.get_mean()));
+    std::cout<< "build priority queue..." << std::endl;
+    std::priority_queue<Edge, vector<Edge>, decltype(cmp)> heap(cmp);
+    for(auto& [segid0, regionProps] : _rg){
+        for(auto& [segid1, edgeIndex] : regionProps.neighbors){
+            auto meanAff = _edgeList[edgeIndex].get_mean();
+            heap.emplace(std::make_tuple(segid0, segid1, meanAff));
         }
     }
 
+    std::cout<< "build disjoint set..." << std::endl;
     using Rank_t = std::map<segid_t, size_t>;
     using Parent_t = std::map<segid_t, segid_t>;
     using PropMapRank_t = boost::associative_property_map<Rank_t>;
