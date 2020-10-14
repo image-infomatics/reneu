@@ -18,7 +18,7 @@ tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
 print('construct region graph...')
 rg = RegionGraph(affs, seg) 
 print('gready mean agglomeration...')
-seg=rg.greedy_merge_until(seg, 0.9)
+seg=rg.greedy_merge_until(seg, 0.7)
 
 print('save results...')
 tifffile.imwrite(os.path.join(DIR, "seg_rg.tif"), data=seg)

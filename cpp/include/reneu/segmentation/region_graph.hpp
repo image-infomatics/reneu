@@ -45,7 +45,6 @@ inline void cleanup(){
 
 class RegionProps{
 public:
-segid_t segid;
 size_t voxelNum;
 // segmentation ID --> index of the region edge list
 std::map<segid_t, size_t> neighbors;
@@ -57,8 +56,7 @@ void _cleanup(){
 }
 
 public:
-RegionProps(): segid(0), voxelNum(0), neighbors({}){}
-RegionProps(segid_t _segid):segid(_segid), voxelNum(0), neighbors({}){}
+RegionProps(): voxelNum(0), neighbors({}){}
 
 inline size_t& operator[](segid_t sid){
     return neighbors[sid];
@@ -106,6 +104,8 @@ inline void merge(segid_t segid0, segid_t segid1){
     if(_rg[segid0].voxelNum > _rg[segid1].voxelNum){
         std::swap(segid0, segid1);
     }
+    assert(_rg[segid1].voxelNum > _rg[segid0].voxelNum);
+    _rg[segid1].voxelNum += _rg[segid0].voxelNum;
 
     // merge all the edges to segid1
     for(auto& [nid0, edgeIndex] : _rg[segid0].neighbors){
@@ -150,7 +150,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
 
     for(auto segid : segids){
         if(segid > 0){
-            _rg[segid] =  RegionProps(segid);
+            _rg[segid] =  RegionProps();
         }
     }
 
