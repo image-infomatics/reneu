@@ -47,6 +47,10 @@ public:
 RegionProps(): segid(0), voxelNum(0), neighbors({}){}
 RegionProps(segid_t _segid):segid(_segid), voxelNum(0), neighbors({}){}
 
+bool has_neighbor(segid_t segid){
+    auto search = neighbors.find(segid);
+    return (search != neighbors.end());
+}
 
 void absorb(RegionProps& smallerRegionProps){
     voxelNum += smallerRegionProps.voxelNum;
@@ -77,17 +81,38 @@ inline void accumulate_edge(const segid_t& segid1, const segid_t& segid2, const 
 /** 
  * @brief always merge small segment to large one
  */
-inline void merge(segid_t segid1, segid_t segid2){
+inline void merge(segid_t segid0, segid_t segid1){
     // make segid2 bigger than segid1
-    if(_rg[segid1].voxelNum > _rg[segid2].voxelNum){
-        std::swap(segid1, segid2);
+    if(_rg[segid0].voxelNum > _rg[segid1].voxelNum){
+        std::swap(segid0, segid1);
     }
 
-    _rg[segid2].absorb( _rg[segid1] );
-    // To-Do: try really erase the element to see whether it will speed it up or not
-    // the erase operation is expensive, but it shrinks the region graph gradually.
-    // if we erase the element, we might not be able to find the segment id correctly 
-    // in the find_index function.
+    _rg[segid1].absorb( _rg[segid0] );
+    
+    // merge all the regions contacting segid2 to segid1
+    for(auto& [segID, regionProps] : _rg){
+        // we have already aborbed these region edges
+        if((segID < segid0) && (segID != segid1) && regionProps.has_neighbor(segid0)){
+            auto regionEdge = regionProps.neighbors[segid0];
+            if(segID < segid1){
+                // merge the region edge to segID
+                if(regionProps.has_neighbor(segid1)){
+                    _rg[segID].neighbors[segid1].absorb(regionEdge);
+                } else {
+                    _rg[segID].neighbors[segid1] = regionEdge;
+                }
+            } else {
+                // merge the region Edge to segid1
+                if(_rg[segid1].has_neighbor(segID)){
+                    _rg[segid1].neighbors[segID].absorb(regionEdge);
+                } else {
+                    _rg[segid1].neighbors[segID] = regionEdge;
+                }
+            }
+            regionProps.neighbors.erase(segid0);
+        }
+    }
+
     return;
 }
 
