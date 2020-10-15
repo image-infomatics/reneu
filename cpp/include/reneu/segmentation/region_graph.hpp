@@ -48,48 +48,15 @@ inline void cleanup(){
 }; // class of RegionEdge
 
 
-class RegionProps{
-public:
-size_t voxelNum;
-// segmentation ID --> index of the region edge list
-std::map<segid_t, size_t> neighbors;
-
-private:
-void _cleanup(){
-    voxelNum = 0;
-    neighbors = {};
-}
-
-public:
-RegionProps(): voxelNum(0), neighbors({}){}
-
-inline size_t& operator[](segid_t sid){
-    return neighbors[sid];
-}
-
-inline bool has_neighbor(segid_t segid){
-    auto search = neighbors.find(segid);
-    return (search != neighbors.end());
-}
-
-}; // class of RegionProps
-
-
-struct EdgeInQueue{
-    segid_t segid0;
-    segid_t segid1;
-    aff_edge_t aff;
-    size_t version;
-};
-
-
 class RegionGraph{
 private:
-    std::map<segid_t, RegionProps> _rg;
+    using Neighbors = std::map<segid_t, size_t>;
+    std::map<segid_t, Neighbors> _rg;
     std::vector<RegionEdge> _edgeList;
 
 inline bool has_connection(const segid_t& sid0, const segid_t& sid1){
-    return _rg[sid0].has_neighbor(sid1);
+    auto& neighbors = _rg[sid0];
+    return (neighbors.find(sid1) != neighbors.end());
 }
 
 inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
@@ -127,15 +94,9 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     assert(affs.shape(3)==fragments.shape(2));
 
     auto segids = xt::unique(fragments);
-    std::map<segid_t, size_t> id2count = {};
-    for(auto segid : fragments){
-        id2count[segid]++;
-    }
-
+    _edgeList.reserve(segids.size()*2);
     for(auto segid : segids){
-        if(segid > 0){
-            _rg[segid] =  RegionProps();
-        }
+        _rg[segid] =  {};
     }
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
@@ -160,18 +121,28 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
 }
 
 auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
+
+    std::cout<< "build priority queue..." << std::endl;
+    struct EdgeInQueue{
+        segid_t segid0;
+        segid_t segid1;
+        aff_edge_t aff;
+        size_t version;
+    };
     // fibonacci heap might be more efficient
     // use std data structure to avoid denpendency for now
     auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
         return left.aff < right.aff;
     };
     // TO-DO: replace with fibonacci heap
-    std::cout<< "build priority queue..." << std::endl;
     std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
-    for(auto& [segid0, regionProps] : _rg){
-        for(auto& [segid1, edgeIndex] : regionProps.neighbors){
-            auto meanAff = _edgeList[edgeIndex].get_mean();
-            heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
+    for(auto& [segid0, neighbors0] : _rg){
+        for(auto& [segid1, edgeIndex] : neighbors0){
+            if(segid0 < segid1){
+                auto meanAff = _edgeList[edgeIndex].get_mean();
+                // initial version is set to 1
+                heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
+            }
         }
     }
 
@@ -188,19 +159,19 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
 
     auto segids = xt::unique(fragments);
     for(const segid_t& segid : segids){
-        dsets.make_set(segid);
+        if(segid != 0) dsets.make_set(segid);
     }
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
         auto edgeInQueue = heap.top();
-
         if(edgeInQueue.aff < threshold) break;
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
-        auto& idx = _rg[segid1][segid0];
         heap.pop();
+        
+        auto& idx = _rg[segid1][segid0];
         if(_edgeList[idx].version > edgeInQueue.version){
             // skip outdated region edge
             continue;
@@ -209,31 +180,34 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         mergeNum++;
         
         // make segid1 bigger than segid0
-        if(_rg[segid0].voxelNum > _rg[segid1].voxelNum){
+        // always merge object with less neighbors to more neighbors
+        if(_rg[segid0].size() > _rg[segid1].size()){
             std::swap(segid0, segid1);
         }
-        assert(_rg[segid1].voxelNum > _rg[segid0].voxelNum);
-        _rg[segid1].voxelNum += _rg[segid0].voxelNum;
+        auto& neighbors0 = _rg[segid0];
+        auto& neighbors1 = _rg[segid1];
+
+        assert(neighbors1.size() > neighbors0.size());
 
         // merge all the edges to segid1
-        for(auto& [nid0, edgeIndex] : _rg[segid0].neighbors){
+        for(auto& [nid0, edgeIndex] : neighbors0){
             if(nid0 != segid1){
                 if (has_connection(segid1, nid0)){
-                    auto& newEdgeIndex = _rg[segid1][nid0];
+                    // combine two region edges
+                    auto& newEdgeIndex = neighbors1[nid0];
                     auto& newEdge = _edgeList[newEdgeIndex];
                     newEdge.absorb(_edgeList[edgeIndex]);
                     heap.emplace(EdgeInQueue({
                         segid1, nid0, newEdge.get_mean(), newEdge.version}));
                 } else {
                     // directly assign nid0-segid0 to nid0-segid1
-                    auto& edgeIndex = _rg[nid0][segid0];
-                    _rg[segid1][nid0] = edgeIndex;
+                    neighbors1[nid0] = edgeIndex;
                     _rg[nid0][segid1] = edgeIndex;
                     // make the original edge in priority queue outdated
                     _edgeList[edgeIndex].version++;
                 }
             }
-            _rg[nid0].neighbors.erase(segid0);
+            _rg[nid0].erase(segid0);
         }
         _rg.erase(segid0);
 
