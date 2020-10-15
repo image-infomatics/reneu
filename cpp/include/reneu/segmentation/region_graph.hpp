@@ -8,6 +8,8 @@
 #include <boost/pending/disjoint_sets.hpp>
 
 #include "reneu/type_aliase.hpp"
+#include "utils.hpp"
+
 
 namespace reneu{
 
@@ -76,6 +78,7 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
     return;
 }
 
+
 public:
 /**
  * @brief build region graph. 
@@ -92,12 +95,6 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     assert(affs.shape(1)==fragments.shape(0));
     assert(affs.shape(2)==fragments.shape(1));
     assert(affs.shape(3)==fragments.shape(2));
-
-    auto segids = xt::unique(fragments);
-    _edgeList.reserve(segids.size()*2);
-    for(auto segid : segids){
-        _rg[segid] =  {};
-    }
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
     for(std::ptrdiff_t z=0; z<fragments.shape(0); z++){
@@ -157,9 +154,9 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
     PropMapParent_t propMapParent(mapParent);
     boost::disjoint_sets<PropMapRank_t, PropMapParent_t> dsets( propMapRank, propMapParent);
 
-    auto segids = xt::unique(fragments);
-    for(const segid_t& segid : segids){
-        if(segid != 0) dsets.make_set(segid);
+    auto segids = get_nonzero_segids(fragments);
+    for(const auto& segid : segids){
+        dsets.make_set(segid);
     }
 
     std::cout<< "iterative greedy merging..." << std::endl; 
@@ -177,7 +174,11 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
             continue;
         }
 
+        // merge segid1 and segid0
         mergeNum++;
+        // Union the two sets that contain elements x and y. 
+        // This is equivalent to link(find_set(x),find_set(y)).
+        dsets.union_set(segid0, segid1);
         
         // make segid1 bigger than segid0
         // always merge object with less neighbors to more neighbors
@@ -210,15 +211,10 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
             _rg[nid0].erase(segid0);
         }
         _rg.erase(segid0);
-
-        // Union the two sets that contain elements x and y. 
-        // This is equivalent to link(find_set(x),find_set(y)).
-        dsets.union_set(segid0, segid1);
     }
 
     // Flatten the parents tree so that the parent of every element is its representative.
     dsets.compress_sets(segids.begin(), segids.end());
-
     std::cout<< "merged "<< mergeNum << " times to get "<< 
                 dsets.count_sets(segids.begin(), segids.end()) << 
                 " final objects."<< std::endl;
