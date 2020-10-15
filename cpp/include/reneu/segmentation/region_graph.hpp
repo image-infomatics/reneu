@@ -24,6 +24,8 @@ size_t version;
 RegionEdge(): count(0.), sum(0.), version(1){}
 RegionEdge(const aff_edge_t& aff): count(1), sum(aff), version(1){}
 
+friend std::ostream& operator<<(std::ostream& os, const RegionEdge& re);
+
 inline aff_edge_t get_mean(){
     return sum / count;
 }
@@ -48,6 +50,11 @@ inline void cleanup(){
 }
 
 }; // class of RegionEdge
+
+std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
+    os << "count: " << re.count << ", sum: "<< re.sum << ", version: "<< re.version << ". ";
+    return os;
+}
 
 
 class RegionGraph{
@@ -137,8 +144,10 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         for(auto& [segid1, edgeIndex] : neighbors0){
             if(segid0 < segid1){
                 auto meanAff = _edgeList[edgeIndex].get_mean();
-                // initial version is set to 1
-                heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
+                if(meanAff > threshold){
+                    // initial version is set to 1
+                    heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
+                }
             }
         }
     }
@@ -162,15 +171,16 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        auto edgeInQueue = heap.top();
-        if(edgeInQueue.aff < threshold) break;
-        auto segid0 = edgeInQueue.segid0;
-        auto segid1 = edgeInQueue.segid1;
+        const auto& edgeInQueue = heap.top();
+        segid_t segid0 = edgeInQueue.segid0;
+        segid_t segid1 = edgeInQueue.segid1;
         heap.pop();
         
-        auto& idx = _rg[segid1][segid0];
-        if(_edgeList[idx].version > edgeInQueue.version){
+        const auto& idx = _rg[segid1][segid0];
+        if((_edgeList[idx].count==0) || (_edgeList[idx].version > edgeInQueue.version)){
             // skip outdated region edge
+            //std::cout<< "skip outdated edge: "<< segid0 << " -- "<< segid1 << 
+            //                                " = " << edgeInQueue.aff<< std::endl;
             continue;
         }
 
@@ -187,25 +197,36 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         }
         auto& neighbors0 = _rg[segid0];
         auto& neighbors1 = _rg[segid1];
-
         assert(neighbors1.size() > neighbors0.size());
 
         // merge all the edges to segid1
-        for(auto& [nid0, edgeIndex] : neighbors0){
+        for(const auto& [nid0, edgeIndex] : neighbors0){
             if(nid0 != segid1){
                 if (has_connection(segid1, nid0)){
                     // combine two region edges
-                    auto& newEdgeIndex = neighbors1[nid0];
+                    const auto& newEdgeIndex = neighbors1[nid0];
                     auto& newEdge = _edgeList[newEdgeIndex];
                     newEdge.absorb(_edgeList[edgeIndex]);
-                    heap.emplace(EdgeInQueue({
-                        segid1, nid0, newEdge.get_mean(), newEdge.version}));
+                    const auto& meanAff = newEdge.get_mean();
+                    if(meanAff > threshold){
+                        heap.emplace(EdgeInQueue({
+                            segid1, nid0, meanAff, newEdge.version
+                        }));
+                    }
                 } else {
                     // directly assign nid0-segid0 to nid0-segid1
                     neighbors1[nid0] = edgeIndex;
                     _rg[nid0][segid1] = edgeIndex;
+                    auto& edge = _edgeList[edgeIndex];
+                    assert(edge.count > 0);
                     // make the original edge in priority queue outdated
-                    _edgeList[edgeIndex].version++;
+                    std::cout<< "edge version before: "<< edge << std::endl;
+                    edge.version++;
+                    std::cout<< "edge version after:  " << edge << std::endl;
+                    const auto& meanAff = edge.get_mean();
+                    if(meanAff > threshold){
+                        heap.emplace(EdgeInQueue({nid0, segid1, meanAff, edge.version}                        ));
+                    }
                 }
             }
             _rg[nid0].erase(segid0);
