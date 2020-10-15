@@ -93,15 +93,11 @@ public:
  */
 RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     // only contains x,y,z affinity 
-    assert(affs.shape(0)== 3);
     // Note that our format of affinity channels are ordered by x,y,z
     // although we are using C order with z,y,x in indexing!
     // This is reasonable, because the last axis x is always changing fastest in memory
     // when we tranvers the memory, the x axis changes first, so this is sort of 
     // consistent with the order of channels. 
-    assert(affs.shape(1)==fragments.shape(0));
-    assert(affs.shape(2)==fragments.shape(1));
-    assert(affs.shape(3)==fragments.shape(2));
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
     for(std::ptrdiff_t z=0; z<fragments.shape(0); z++){
@@ -176,14 +172,16 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         segid_t segid1 = edgeInQueue.segid1;
         heap.pop();
         
-        const auto& idx = _rg[segid1][segid0];
-        if((_edgeList[idx].count==0) || (_edgeList[idx].version > edgeInQueue.version)){
+        const auto& edgeIndex = _rg[segid1][segid0];
+        const auto& edge = _edgeList[edgeIndex];
+        if((edge.count==0) || (edge.version > edgeInQueue.version)){
             // skip outdated region edge
             //std::cout<< "skip outdated edge: "<< segid0 << " -- "<< segid1 << 
             //                                " = " << edgeInQueue.aff<< std::endl;
             continue;
         }
 
+        std::cout<< "merge edge: "<< edge<< std::endl;
         // merge segid1 and segid0
         mergeNum++;
         // Union the two sets that contain elements x and y. 
@@ -197,32 +195,35 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         }
         auto& neighbors0 = _rg[segid0];
         auto& neighbors1 = _rg[segid1];
-        assert(neighbors1.size() > neighbors0.size());
 
         // merge all the edges to segid1
         for(const auto& [nid0, edgeIndex] : neighbors0){
+            auto& edge = _edgeList[edgeIndex];
+            // skip the bad edges
+            // we should not have bad edges here since have already erased them in the 
+            // region graph! There is a bug here!
+            if(edge.count == 0) continue;
+
             if(nid0 != segid1){
                 if (has_connection(segid1, nid0)){
                     // combine two region edges
                     const auto& newEdgeIndex = neighbors1[nid0];
                     auto& newEdge = _edgeList[newEdgeIndex];
-                    newEdge.absorb(_edgeList[edgeIndex]);
+                    newEdge.absorb(edge);
                     const auto& meanAff = newEdge.get_mean();
                     if(meanAff > threshold){
-                        heap.emplace(EdgeInQueue({
-                            segid1, nid0, meanAff, newEdge.version
-                        }));
+                        heap.emplace(
+                            EdgeInQueue({segid1, nid0, meanAff, newEdge.version})
+                        );
                     }
                 } else {
                     // directly assign nid0-segid0 to nid0-segid1
                     neighbors1[nid0] = edgeIndex;
                     _rg[nid0][segid1] = edgeIndex;
-                    auto& edge = _edgeList[edgeIndex];
-                    assert(edge.count > 0);
                     // make the original edge in priority queue outdated
-                    std::cout<< "edge version before: "<< edge << std::endl;
+                    std::cout<< "edge before assignment: "<< edge << std::endl;
                     edge.version++;
-                    std::cout<< "edge version after:  " << edge << std::endl;
+                    std::cout<< "edge after  assignment: " << edge << std::endl;
                     const auto& meanAff = edge.get_mean();
                     if(meanAff > threshold){
                         heap.emplace(EdgeInQueue({nid0, segid1, meanAff, edge.version}                        ));
