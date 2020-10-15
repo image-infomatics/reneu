@@ -182,7 +182,7 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
             continue;
         }
 
-        std::cout<< "merge edge: "<< e << std::endl;
+        //std::cout<< "merge edge: "<< e << std::endl;
         // merge segid1 and segid0
         mergeNum++;
         // Union the two sets that contain elements x and y. 
@@ -204,6 +204,8 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
             auto& nid0 = it->first;
             auto& edgeIndex = it->second;
             auto& edge = _edgeList[edgeIndex];
+            if(edgeIndex == std::numeric_limits<size_t>::max())
+                continue;
             // skip the bad edges
             // we should not have bad edges here since have already erased them in the 
             // region graph! There is a bug here!
@@ -241,9 +243,12 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
                 }
             }
             // it seems that erase disrupted the iteration!
-            _rg[nid0].erase(segid0);
+            //_rg[nid0].erase(segid0);
+            // make it invalid
+            _rg[nid0][segid0] = std::numeric_limits<size_t>::max();
         }
-        _rg.erase(segid0);
+        //_rg.erase(segid0);
+        _rg[segid0].clear();
     }
 
     // Flatten the parents tree so that the parent of every element is its representative.
