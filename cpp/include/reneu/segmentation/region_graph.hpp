@@ -166,22 +166,23 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
+    //std::vector<segid_t> neighborSegIDs;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.top();
         segid_t segid0 = edgeInQueue.segid0;
         segid_t segid1 = edgeInQueue.segid1;
         heap.pop();
         
-        const auto& edgeIndex = _rg[segid1][segid0];
-        const auto& edge = _edgeList[edgeIndex];
-        if((edge.count==0) || (edge.version > edgeInQueue.version)){
+        const auto& ei = _rg[segid1][segid0];
+        const auto& e = _edgeList[ei];
+        if((e.count==0) || (e.version > edgeInQueue.version)){
             // skip outdated region edge
             //std::cout<< "skip outdated edge: "<< segid0 << " -- "<< segid1 << 
             //                                " = " << edgeInQueue.aff<< std::endl;
             continue;
         }
 
-        std::cout<< "merge edge: "<< edge<< std::endl;
+        std::cout<< "merge edge: "<< e << std::endl;
         // merge segid1 and segid0
         mergeNum++;
         // Union the two sets that contain elements x and y. 
@@ -197,17 +198,26 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         auto& neighbors1 = _rg[segid1];
 
         // merge all the edges to segid1
-        for(const auto& [nid0, edgeIndex] : neighbors0){
+        //neighborSegIDs.reserve(neighbors0.size())
+        //for(const auto& [nid0, edgeIndex] : neighbors0){
+        for(auto it = neighbors0.begin(); it != neighbors0.end(); it++){
+            auto& nid0 = it->first;
+            auto& edgeIndex = it->second;
             auto& edge = _edgeList[edgeIndex];
             // skip the bad edges
             // we should not have bad edges here since have already erased them in the 
             // region graph! There is a bug here!
-            if(edge.count == 0) continue;
+            if(edge.count == 0) {
+                std::cout<< "invalid edge should not be found: " << 
+                    edgeIndex<< ": "<< nid0 << "--" << segid0 << std::endl;
+                continue;
+            }
 
             if(nid0 != segid1){
                 if (has_connection(segid1, nid0)){
                     // combine two region edges
                     const auto& newEdgeIndex = neighbors1[nid0];
+                    _rg[nid0][segid1] = newEdgeIndex;
                     auto& newEdge = _edgeList[newEdgeIndex];
                     newEdge.absorb(edge);
                     const auto& meanAff = newEdge.get_mean();
@@ -218,18 +228,19 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
                     }
                 } else {
                     // directly assign nid0-segid0 to nid0-segid1
-                    neighbors1[nid0] = edgeIndex;
+                    _rg[segid1][nid0] = edgeIndex;
                     _rg[nid0][segid1] = edgeIndex;
                     // make the original edge in priority queue outdated
-                    std::cout<< "edge before assignment: "<< edge << std::endl;
+                    //std::cout<< "edge before assignment: "<< edge << std::endl;
                     edge.version++;
-                    std::cout<< "edge after  assignment: " << edge << std::endl;
+                    //std::cout<< "edge after  assignment: " << edge << std::endl;
                     const auto& meanAff = edge.get_mean();
                     if(meanAff > threshold){
                         heap.emplace(EdgeInQueue({nid0, segid1, meanAff, edge.version}                        ));
                     }
                 }
             }
+            // it seems that erase disrupted the iteration!
             _rg[nid0].erase(segid0);
         }
         _rg.erase(segid0);
