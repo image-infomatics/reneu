@@ -193,13 +193,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         auto& neighbors1 = _rg[segid1];
 
         // merge all the edges to segid1
-        neighborSegIDs.clear();
-        for(const auto& [nid0, edgeIndex] : neighbors0){
-            neighborSegIDs.push_back(nid0);
-        }
-        
-        for(auto& nid0 : neighborSegIDs){
-            auto& edgeIndex = neighbors0[nid0];
+        for(auto& [nid0, edgeIndex] : neighbors0){
             auto& edge = _edgeList[edgeIndex];
             //if(edgeIndex == std::numeric_limits<size_t>::max())
             //    continue;
