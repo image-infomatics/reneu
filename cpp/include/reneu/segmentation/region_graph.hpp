@@ -61,6 +61,13 @@ private:
     using Neighbors = std::unordered_map<segid_t, size_t>;
     std::unordered_map<segid_t, Neighbors> _rg;
     std::vector<RegionEdge> _edgeList;
+    
+    struct EdgeInQueue{
+        segid_t segid0;
+        segid_t segid1;
+        aff_edge_t aff;
+        size_t version;
+    };
 
 inline bool has_connection(const segid_t& sid0, const segid_t& sid1){
     auto& neighbors = _rg[sid0];
@@ -82,6 +89,31 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
         }
     }
     return;
+}
+
+
+auto build_priority_queue(const aff_edge_t& threshold){
+    // fibonacci heap might be more efficient
+    // use std data structure to avoid denpendency for now
+    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
+        return left.aff < right.aff;
+    };
+    // TO-DO: replace with fibonacci heap
+    std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
+    for(auto& [segid0, neighbors0] : _rg){
+        for(auto& [segid1, edgeIndex] : neighbors0){
+            // the connection is bidirectional, 
+            // so only half of the pairs need to be handled
+            if(segid0 < segid1){
+                auto meanAff = _edgeList[edgeIndex].get_mean();
+                if(meanAff > threshold){
+                    // initial version is set to 1
+                    heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
+                }
+            }
+        }
+    }
+    return heap;
 }
 
 
@@ -120,34 +152,9 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
 }
 
 auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
-
+    
     std::cout<< "build priority queue..." << std::endl;
-    struct EdgeInQueue{
-        segid_t segid0;
-        segid_t segid1;
-        aff_edge_t aff;
-        size_t version;
-    };
-    // fibonacci heap might be more efficient
-    // use std data structure to avoid denpendency for now
-    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
-        return left.aff < right.aff;
-    };
-    // TO-DO: replace with fibonacci heap
-    std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
-    for(auto& [segid0, neighbors0] : _rg){
-        for(auto& [segid1, edgeIndex] : neighbors0){
-            // the connection is bidirectional, 
-            // so only half of the pairs need to be handled
-            if(segid0 < segid1){
-                auto meanAff = _edgeList[edgeIndex].get_mean();
-                if(meanAff > threshold){
-                    // initial version is set to 1
-                    heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
-                }
-            }
-        }
-    }
+    auto heap = build_priority_queue(threshold);
 
     std::cout<< "build disjoint set..." << std::endl;
     auto dsets = DisjointSets(seg); 
@@ -240,7 +247,8 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         _rg.erase(segid0);
         //_rg[segid0].clear();
     }
-
+    
+    std::cout<< "merged "<< mergeNum << " times." << std::endl;
     dsets.relabel(seg);
     return seg;
 }
