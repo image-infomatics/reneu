@@ -173,7 +173,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         if((e.count==0) || (e.version > edgeInQueue.version)){
             // skip outdated region edge
             //std::cout<< "skip outdated edge: "<< segid0 << " -- "<< segid1 << 
-            //                                " = " << edgeInQueue.aff<< std::endl;
+             //                               " = " << edgeInQueue.aff<< std::endl;
             continue;
         }
 
@@ -191,22 +191,26 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         }
         auto& neighbors0 = _rg[segid0];
         auto& neighbors1 = _rg[segid1];
+        neighbors0.erase(segid1);
+        neighbors1.erase(segid0);
+
 
         // merge all the edges to segid1
         for(auto& [nid0, edgeIndex] : neighbors0){
-            auto& edge = _edgeList[edgeIndex];
-            //if(edgeIndex == std::numeric_limits<size_t>::max())
-            //    continue;
-            // skip the bad edges
-            // we should not have bad edges here since have already erased them in the 
-            // region graph! There is a bug here!
-            if(edge.count == 0) {
-                std::cout<< "invalid edge should not be found: " << 
-                    edgeIndex<< ": "<< nid0 << "--" << segid0 << std::endl;
+            
+            // it seems that erase disrupted the iteration!
+            _rg[nid0].erase(segid0);
+            // make it invalid
+            //_rg[nid0][segid0] = std::numeric_limits<size_t>::max();
+
+            if(!has_connection(nid0, segid0)){
+                std::cout<< "we are still iterating erased edges? "<< 
+                                    nid0 << "--" << segid0 << std::endl;
                 continue;
             }
+            auto& edge = _edgeList[edgeIndex];
 
-            if(nid0 != segid1){
+            if(nid0 = segid1){
                 if (has_connection(segid1, nid0)){
                     // combine two region edges
                     const auto& newEdgeIndex = neighbors1[nid0];
@@ -233,10 +237,6 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
                     }
                 }
             }
-            // it seems that erase disrupted the iteration!
-            _rg[nid0].erase(segid0);
-            // make it invalid
-            //_rg[nid0][segid0] = std::numeric_limits<size_t>::max();
         }
         _rg.erase(segid0);
         //_rg[segid0].clear();
