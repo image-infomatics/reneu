@@ -5,10 +5,9 @@
 
 #include <xtensor/xsort.hpp>
 
-#include <boost/pending/disjoint_sets.hpp>
-
 #include "reneu/type_aliase.hpp"
 #include "utils.hpp"
+#include "disjoint_sets.hpp"
 
 
 namespace reneu{
@@ -59,8 +58,8 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 
 class RegionGraph{
 private:
-    using Neighbors = std::map<segid_t, size_t>;
-    std::map<segid_t, Neighbors> _rg;
+    using Neighbors = std::unordered_map<segid_t, size_t>;
+    std::unordered_map<segid_t, Neighbors> _rg;
     std::vector<RegionEdge> _edgeList;
 
 inline bool has_connection(const segid_t& sid0, const segid_t& sid1){
@@ -70,7 +69,7 @@ inline bool has_connection(const segid_t& sid0, const segid_t& sid1){
 
 inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
     // we assume that segid0 is greater than 0 !
-    if(segid1>0 && segid0 != segid1){
+    if( (segid1>0) && (segid0 != segid1)){
         if(has_connection(segid0, segid1)){
             auto& edgeIndex = _rg[segid0][segid1];
             _edgeList[edgeIndex].accumulate(aff);
@@ -103,7 +102,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     for(std::ptrdiff_t z=0; z<fragments.shape(0); z++){
         for(std::ptrdiff_t y=0; y<fragments.shape(1); y++){
             for(std::ptrdiff_t x=0; x<fragments.shape(2); x++){
-                const auto segid = fragments(z,y,x);
+                const auto& segid = fragments(z,y,x);
                 // skip background voxels
                 if(segid>0){ 
                     if (z>0)
@@ -120,7 +119,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     }
 }
 
-auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
+auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
 
     std::cout<< "build priority queue..." << std::endl;
     struct EdgeInQueue{
@@ -138,6 +137,8 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
     std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
     for(auto& [segid0, neighbors0] : _rg){
         for(auto& [segid1, edgeIndex] : neighbors0){
+            // the connection is bidirectional, 
+            // so only half of the pairs need to be handled
             if(segid0 < segid1){
                 auto meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
@@ -149,28 +150,15 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
     }
 
     std::cout<< "build disjoint set..." << std::endl;
-    using Rank_t = std::map<segid_t, size_t>;
-    using Parent_t = std::map<segid_t, segid_t>;
-    using PropMapRank_t = boost::associative_property_map<Rank_t>;
-    using PropMapParent_t = boost::associative_property_map<Parent_t>;
-    Rank_t mapRank;
-    Parent_t mapParent;
-    PropMapRank_t propMapRank(mapRank);
-    PropMapParent_t propMapParent(mapParent);
-    boost::disjoint_sets<PropMapRank_t, PropMapParent_t> dsets( propMapRank, propMapParent);
-
-    auto segids = get_nonzero_segids(fragments);
-    for(const auto& segid : segids){
-        dsets.make_set(segid);
-    }
+    auto dsets = DisjointSets(seg); 
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
-    //std::vector<segid_t> neighborSegIDs;
+    std::vector<segid_t> neighborSegIDs;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.top();
-        segid_t segid0 = edgeInQueue.segid0;
-        segid_t segid1 = edgeInQueue.segid1;
+        auto segid0 = edgeInQueue.segid0;
+        auto segid1 = edgeInQueue.segid1;
         heap.pop();
         
         const auto& ei = _rg[segid1][segid0];
@@ -198,14 +186,16 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
         auto& neighbors1 = _rg[segid1];
 
         // merge all the edges to segid1
-        //neighborSegIDs.reserve(neighbors0.size())
-        //for(const auto& [nid0, edgeIndex] : neighbors0){
-        for(auto it = neighbors0.begin(); it != neighbors0.end(); it++){
-            auto& nid0 = it->first;
-            auto& edgeIndex = it->second;
+        neighborSegIDs.clear();
+        for(const auto& [nid0, edgeIndex] : neighbors0){
+            neighborSegIDs.push_back(nid0);
+        }
+        
+        for(auto& nid0 : neighborSegIDs){
+            auto& edgeIndex = neighbors0[nid0];
             auto& edge = _edgeList[edgeIndex];
-            if(edgeIndex == std::numeric_limits<size_t>::max())
-                continue;
+            //if(edgeIndex == std::numeric_limits<size_t>::max())
+            //    continue;
             // skip the bad edges
             // we should not have bad edges here since have already erased them in the 
             // region graph! There is a bug here!
@@ -243,26 +233,16 @@ auto greedy_merge_until(Segmentation&& fragments, const aff_edge_t& threshold){
                 }
             }
             // it seems that erase disrupted the iteration!
-            //_rg[nid0].erase(segid0);
+            _rg[nid0].erase(segid0);
             // make it invalid
-            _rg[nid0][segid0] = std::numeric_limits<size_t>::max();
+            //_rg[nid0][segid0] = std::numeric_limits<size_t>::max();
         }
-        //_rg.erase(segid0);
-        _rg[segid0].clear();
+        _rg.erase(segid0);
+        //_rg[segid0].clear();
     }
 
-    // Flatten the parents tree so that the parent of every element is its representative.
-    dsets.compress_sets(segids.begin(), segids.end());
-    std::cout<< "merged "<< mergeNum << " times to get "<< 
-                dsets.count_sets(segids.begin(), segids.end()) << 
-                " final objects."<< std::endl;
-
-    std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
-    std::transform(fragments.begin(), fragments.end(), fragments.begin(), 
-        [&dsets](segid_t segid)->segid_t{return dsets.find_set(segid);} 
-    );
-
-    return fragments;
+    dsets.relabel(seg);
+    return seg;
 }
 
 inline auto py_greedy_merge_until(PySegmentation& pyseg, const aff_edge_t& threshold){
