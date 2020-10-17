@@ -119,16 +119,6 @@ auto build_priority_queue(const aff_edge_t& threshold){
     return heap;
 }
 
-inline void remove_edge(const segid_t& sid0, const segid_t& sid1){
-    _rg[sid0].erase(sid1);
-    _rg[sid1].erase(sid0);
-}
-
-inline void add_edge(const segid_t& sid0, const segid_t& sid1, RegionEdgePtr edgePtr){
-    _rg[sid0][sid1] = edgePtr;
-    _rg[sid1][sid0] = edgePtr;
-}
-
 
 public:
 /**
@@ -144,9 +134,9 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments){
     // consistent with the order of channels. 
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
-    for(std::ptrdiff_t z=0; z<fragments.shape(0); z++){
-        for(std::ptrdiff_t y=0; y<fragments.shape(1); y++){
-            for(std::ptrdiff_t x=0; x<fragments.shape(2); x++){
+    for(std::size_t z=0; z<fragments.shape(0); z++){
+        for(std::size_t y=0; y<fragments.shape(1); y++){
+            for(std::size_t x=0; x<fragments.shape(2); x++){
                 const auto& segid = fragments(z,y,x);
                 // skip background voxels
                 if(segid>0){ 
@@ -174,7 +164,6 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
-    std::vector<segid_t> neighborSegIDs;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.top();
         auto segid0 = edgeInQueue.segid0;
@@ -185,8 +174,8 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
             // std::cout<< segid0 << "--" << segid1 << " do not exist anymore!" << std::endl;
             continue;
         }
-        const auto ePtr = _rg[segid1][segid0];
-        if((ePtr->count==0) || (ePtr->version > edgeInQueue.version)){
+        const auto edgePtr = _rg[segid1][segid0];
+        if(edgePtr->version > edgeInQueue.version){
             // skip outdated region edge
             //std::cout<< "skip outdated edge: "<< segid0 << " -- "<< segid1 << 
              //                               " = " << edgeInQueue.aff<< std::endl;
@@ -225,44 +214,40 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
             _rg[nid0].erase(segid0);
             // std::cout << "after  erase neighbor segid0 " << std::endl;
             //_rg[segid0].erase(nid0);
-            // make it invalid
-            //_rg[nid0][segid0] = std::numeric_limits<size_t>::max();
 
             if(neighborEdgePtr->count == 0){
                 std::cout<< "0 count edge: " << *neighborEdgePtr << std::endl;
                 continue;
             }
 
-            if(nid0 != segid1){
-                if (has_connection(segid1, nid0)){
-                    // combine two region edges
-                    const auto& newEdgePtr = neighbors1[nid0];
-                    // std::cout<< "before combine two region edges: "<< *newEdgePtr << std::endl;
-                    _rg[nid0][segid1] = newEdgePtr;
-                    newEdgePtr->absorb(neighborEdgePtr);
-                    // std::cout<< "after combine two region edges: "<< *newEdgePtr << std::endl;
-                    const auto& meanAff = newEdgePtr->get_mean();
-                    if(meanAff > threshold){
-                        heap.emplace(
-                            EdgeInQueue({segid1, nid0, meanAff, newEdgePtr->version})
-                        );
-                    }
-                } else {
-                    // directly assign nid0-segid0 to nid0-segid1
-                    _rg[segid1][nid0] = neighborEdgePtr;
-                    _rg[nid0][segid1] = neighborEdgePtr;
-                    // make the original edge in priority queue outdated
-                    // std::cout<< "edge before assignment: "<< *neighborEdgePtr << std::endl;
-                    neighborEdgePtr->version++;
-                    const auto& meanAff = neighborEdgePtr->get_mean();
-                    // std::cout<< "edge after  assignment: " << *neighborEdgePtr << std::endl;
-                    if(meanAff > threshold){
-                        heap.emplace(
-                            EdgeInQueue(
-                                {nid0, segid1, meanAff, neighborEdgePtr->version}
-                            )
-                        );
-                    }
+            if (has_connection(segid1, nid0)){
+                // combine two region edges
+                const auto& newEdgePtr = neighbors1[nid0];
+                // std::cout<< "before combine two region edges: "<< *newEdgePtr << std::endl;
+                _rg[nid0][segid1] = newEdgePtr;
+                newEdgePtr->absorb(neighborEdgePtr);
+                // std::cout<< "after combine two region edges: "<< *newEdgePtr << std::endl;
+                const auto& meanAff = newEdgePtr->get_mean();
+                if(meanAff > threshold){
+                    heap.emplace(
+                        EdgeInQueue({segid1, nid0, meanAff, newEdgePtr->version})
+                    );
+                }
+            } else {
+                // directly assign nid0-segid0 to nid0-segid1
+                _rg[segid1][nid0] = neighborEdgePtr;
+                _rg[nid0][segid1] = neighborEdgePtr;
+                // make the original edge in priority queue outdated
+                // std::cout<< "edge before assignment: "<< *neighborEdgePtr << std::endl;
+                neighborEdgePtr->version++;
+                const auto& meanAff = neighborEdgePtr->get_mean();
+                // std::cout<< "edge after  assignment: " << *neighborEdgePtr << std::endl;
+                if(meanAff > threshold){
+                    heap.emplace(
+                        EdgeInQueue(
+                            {nid0, segid1, meanAff, neighborEdgePtr->version}
+                        )
+                    );
                 }
             }
         }

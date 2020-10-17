@@ -38,7 +38,7 @@ inline void union_set(segid_t s0, segid_t s1){
     _dsets.union_set(s0, s1);
 }
 
-auto find_set(segid_t sid){
+inline auto find_set(segid_t sid){
     return _dsets.find_set(sid);
 }
 
