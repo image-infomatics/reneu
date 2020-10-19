@@ -12,12 +12,13 @@
 
 namespace reneu{
 
+class RegionGraph;
 class RegionEdge;
 using RegionEdgePtr = std::shared_ptr<RegionEdge>;
 
 
 class RegionEdge{
-public:
+private:
 // we use the same type for both value for type stability in the average division. 
 aff_edge_t count;
 aff_edge_t sum;
@@ -26,10 +27,14 @@ segid_t segid1;
 // version is used to tell whether an edge is outdated or not in priority queue
 size_t version;
 
+public:
+friend std::ostream& operator<<(std::ostream& os, const RegionEdge& re);
+friend class RegionGraph;
+
+
 RegionEdge(const segid_t& _segid0, const segid_t& _segid1, const aff_edge_t& aff): 
             count(1), sum(aff), segid0(_segid0), segid1(_segid1), version(1){}
 
-friend std::ostream& operator<<(std::ostream& os, const RegionEdge& re);
 
 inline aff_edge_t get_mean() const {
     return sum / count;
@@ -96,9 +101,6 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
             const auto& edgePtr = _rg.at(segid0).at(segid1);
             edgePtr->accumulate(aff);
         } else {
-            if(has_connection(segid1, segid0) != has_connection(segid0, segid1)){
-                std::cout<< "how can the connectivity not symmetric?"<< std::endl;
-            }
             // create a new edge
             _edgeList.emplace_back(RegionEdge(segid0, segid1, aff));
             const auto& edgePtr = std::make_shared<RegionEdge>(_edgeList.back());
@@ -121,9 +123,7 @@ auto build_priority_queue (const aff_edge_t& threshold) const {
     std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
     for(const auto& [segid0, neighbors0] : _rg){
         for(const auto& [segid1, edgePtr] : neighbors0){
-            if(std::minmax(segid0, segid1) != std::minmax(edgePtr->segid0, edgePtr->segid1)){
-                std::cout<< "the edge pointer is pointing to a wrong place!"<< std::endl;
-            }
+            
             if(segid0 == segid1){
                 std::cout<< "equivalant segmentation id: "<< segid0 << std::endl;
             }
@@ -190,11 +190,18 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
     }
     std::cout<< "effective edge number: "<< edgeNum << std::endl;
 
+    size_t totalEdgeNumInRegionGraph = 0;
     size_t edgeNumInRegionGraph0 = 0;
     size_t edgeNumInRegionGraph1 = 0;
     for(const auto& [segid0, neighbors0] : _rg){
         for(const auto& [segid1, edgePtr] : neighbors0){
+            edgePtr->version++;
+            std::cout<< "upgraded edge: "<< *edgePtr << std::endl;
+            if(std::minmax(segid0, segid1) != std::minmax(edgePtr->segid0, edgePtr->segid1)){
+                std::cout<< "the edge pointer is pointing to a wrong place!"<< std::endl;
+            }
             if(segid0 > segid1){
+                totalEdgeNumInRegionGraph++;
                 if(edgePtr->get_mean() > threshold ){
                     edgeNumInRegionGraph0++;
                 }
@@ -207,8 +214,20 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
             }
         }
     }
+    std::cout << "total edge number in region graph: "<< totalEdgeNumInRegionGraph << std::endl;
     std::cout << "effective edge number in region graph: "<< edgeNumInRegionGraph0 << std::endl;
     std::cout << "effective edge number in region graph: "<< edgeNumInRegionGraph1 << std::endl;
+
+    size_t lessPointedNum = 0;
+    for(const auto& edge : _edgeList){
+        if(edge.version>3){
+            std::cout<< "pointed by more than 2 nodes in region graph: "<< edge<< std::endl;
+        } else if(edge.version==1){
+            lessPointedNum++;
+            // std::cout<< "pointed by less than 2 nodes in region graph"<< edge << std::endl;
+        }
+    }
+    std::cout<<"less pointed edge number: "<< lessPointedNum<< std::endl;
 
     std::cout<< "build priority queue..." << std::endl;
     auto heap = build_priority_queue(threshold);
