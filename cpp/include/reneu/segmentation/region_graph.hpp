@@ -228,6 +228,8 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         // std::cout<< "edge: " << segid0 << "--" << segid1 << "=" << edgeInQueue.aff<<std::endl;
         heap.pop();
 
+        const auto& heapSize = heap.size();
+
         if(!has_connection(segid0, segid1)){
             // std::cout<< segid0 << "--" << segid1 << " do not exist anymore!" << std::endl;
             continue;
@@ -283,31 +285,31 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
             // it seems that erase disrupted the iteration!
             //std::cout << "before erase neighbor segid0 " << std::endl;
             _rg.at(nid0).erase(segid0);
-
+            
             auto& neighborEdge = _edgeList[neighborEdgeIndex];
-            if(neighborEdge.count == 0){
-                std::cout<< "0 count edge: " << neighborEdge << std::endl;
-                continue;
+            if(neighborEdge.get_mean() > edgeInQueue.aff){
+                std::cout<< "this neighbor edge should be merged first: "<< neighborEdge<<std::endl;
             }
 
             if (has_connection(segid1, nid0)){
                 // combine two region edges
                 const auto& newEdgeIndex = neighbors1[nid0];
                 auto& newEdge = _edgeList[newEdgeIndex];
-                // if(newEdgePtr->get_mean() > edgeInQueue.aff){
-                //     std::cout<< "we should iterate this new edge first!: "<< *newEdgePtr << std::endl;
+                // if(newEdge.get_mean() > edgeInQueue.aff){
+                //     std::cout<< "we should iterate this new edge first!: "<< newEdge << std::endl;
                 // }
+                
                 auto meanAff0 = neighborEdge.get_mean();
                 auto meanAff1 = newEdge.get_mean();
                 newEdge.absorb(neighborEdge);
                 // std::cout<< "after combine two region edges: "<< *newEdgePtr << std::endl;
                 const auto& meanAff = newEdge.get_mean();
                 
-                // if(meanAff > edgeInQueue.aff){
-                    // std::cout<< meanAff0 <<" + " <<meanAff1 << " = "<< meanAff<< std::endl; 
-                    // std::cout<< "combined new edge: "<< *newEdgePtr<< ", mean: "<<meanAff<<std::endl;
-                // }
                 if(meanAff > threshold){
+                    // if(meanAff > edgeInQueue.aff){
+                    //     std::cout<< meanAff0 <<" + " <<meanAff1 << " = "<< meanAff<< std::endl; 
+                    // }
+
                     heap.emplace(
                         EdgeInQueue(
                             {nid0, segid1, meanAff, newEdge.version}
@@ -317,8 +319,8 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
             } else {
                 // directly assign nid0-segid0 to nid0-segid1
                 // std::cout<< "edge before assignment: " << *neighborEdgePtr << std::endl;
-                _rg[segid1][nid0] = neighborEdgeIndex;
-                _rg[nid0][segid1] = neighborEdgeIndex;
+                _rg.at(segid1)[nid0] = neighborEdgeIndex;
+                _rg.at(nid0)[segid1] = neighborEdgeIndex;
                 // make the original edge in priority queue outdated
                 // std::cout<< "edge before assignment: "<< *neighborEdgePtr << std::endl;
                 // this is a new edge, so the version should be 1
@@ -328,10 +330,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
 
                 const auto& meanAff = neighborEdge.get_mean();
                 if(meanAff > threshold){
-                    // if(meanAff > edgeInQueue.aff){
-                    //     std::cout<< "assigned new edge: "<< *neighborEdgePtr<<std::endl;
-                    // }
-
+                    // std::cout<<"assigned and emplace a new edge: "<< neighborEdge<<std::endl; 
                     heap.emplace(
                         EdgeInQueue(
                             {nid0, segid1, meanAff, neighborEdge.version}
@@ -344,6 +343,10 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         _rg.erase(segid0);
         // std::cout<< "after  erase segid0 map" << std::endl;
         //_rg[segid0].clear();
+
+        if(heap.size() > heapSize){
+            std::cout<< "great, inserted a number of edges: "<< heap.size()-heapSize << std::endl;
+        }
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
