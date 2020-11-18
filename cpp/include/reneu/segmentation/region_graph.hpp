@@ -9,6 +9,8 @@
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
 
+#include <boost/container/flat_map.hpp>
+
 
 namespace reneu{
 
@@ -69,8 +71,8 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 
 class RegionGraph{
 private:
-    using Neighbors = std::map<segid_t, size_t>;
-    using RegionMap = std::map<segid_t, Neighbors>;
+    using Neighbors = boost::container::flat_map<segid_t, size_t>;
+    using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
     RegionMap _rg;
     std::vector<RegionEdge> _edgeList;
 
@@ -344,9 +346,9 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         // std::cout<< "after  erase segid0 map" << std::endl;
         //_rg[segid0].clear();
 
-        if(heap.size() > heapSize){
-            std::cout<< "great, inserted a number of edges: "<< heap.size()-heapSize << std::endl;
-        }
+        // if(heap.size() > heapSize){
+        //     std::cout<< "great, inserted a number of edges: "<< heap.size()-heapSize << std::endl;
+        // }
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
