@@ -28,6 +28,7 @@ PYBIND11_MODULE(segmentation, m) {
 
     py::class_<RegionGraph>(m, "RegionGraph")
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
+        .def("print", &RegionGraph::print)
         .def("greedy_merge_until", &RegionGraph::py_greedy_merge_until);
 
     // agglomeration
