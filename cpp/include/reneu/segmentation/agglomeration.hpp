@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <boost/functional/hash.hpp>
-#include <boost/pending/disjoint_sets.hpp>
+#include "boost/container_hash/hash.hpp"
+#include "boost/pending/disjoint_sets.hpp"
 
 #include "xtensor/xsort.hpp"
 #include "xtensor/xbuilder.hpp"
