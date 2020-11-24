@@ -6,6 +6,7 @@ import os
 import tifffile
 import numpy as np
 
+np.random.seed(0)
 
 
 def segment(affs: np.ndarray, seg: np.ndarray, threshold: float):
@@ -25,6 +26,7 @@ def segment(affs: np.ndarray, seg: np.ndarray, threshold: float):
     #    f['main'] = seg
     print("shape of segmentation: ", seg.shape)
     print(seg)
+    return seg
     
     
 # #def test_region_graph():
@@ -46,7 +48,7 @@ def segment(affs: np.ndarray, seg: np.ndarray, threshold: float):
 #     seg[z,:,:] = z
 
 
-def test_region_graph():
+def test_agglomeration():
     seg = np.arange(4)
     seg = np.reshape(seg, (1,2,2))
     seg += 1
@@ -58,5 +60,31 @@ def test_region_graph():
     affs[1, 0, 1, 1] = 0.5
 
     print('affinity map: \n', affs)
-    segment(affs, seg, 0.7)
+    seg = segment(affs, seg, 0.7)
 
+    print('segmentation after agglomeration: ', seg)
+    
+    np.testing.assert_array_equal(seg, np.array([[[2,2],[4,4]]]))
+
+
+def get_random_affinity_map(sz: int):
+    affs = np.random.rand(3,1,sz,sz).astype(np.float32)
+    affs[2,...] = 0
+    print('random affinity map \n: ', affs)
+    return affs
+
+
+def test_watershed():
+    affs = get_random_affinity_map(3)
+    seg = watershed(affs, 0, 0.9)
+    np.testing.assert_array_equal(seg, np.array([[[1,1,1], [1,1,2], [2,2,2]]]))
+
+def test_random_agglomeration():
+    sz = 4
+    affs = get_random_affinity_map(sz)
+    seg = np.arange(sz*sz, dtype=np.uint32).reshape((1,sz,sz))
+    # seg += 1 
+
+    seg = segment(affs, seg, 0.1)
+    print('segmentation after agglomeration: ')
+    print(seg)
