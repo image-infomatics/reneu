@@ -245,6 +245,14 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         const auto& edgeInQueue = heap.back();
         heap.pop_back();
         
+        // // print out heap
+        // std::cout<< "heap: " << std::endl;
+        // for(const auto& edge : heap){
+        //     std::cout<< edge.segid0 << "--" << edge.segid1 << ": " 
+        //                 << edge.aff << "," << edge.version << "; "; 
+        // }
+        // print();
+
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
         // std::cout<< "edge: " << segid0 << "--" << segid1 << "=" << edgeInQueue.aff<<std::endl;
@@ -256,12 +264,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
             continue;
         }
 
-        //std::cout<< 'heap: ' << std::endl;
-        //for(const auto& edge : heap){
-        //    std::cout<< edge.segid0 << "--" << edge.segid1 << ": " << edge.aff << "," << edge.version << "; "; 
-        //}
-        // print();
-
+        
         const auto& edgeIndex = _rm.at(segid1).at(segid0);
         const auto& edge = _edgeList[edgeIndex];
         // std::cout<< "checking edge: "<< *edgePtr << 
@@ -369,6 +372,8 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         // if(heap.size() > heapSize){
         //     std::cout<< "great, inserted a number of edges: "<< heap.size()-heapSize << std::endl;
         // }
+        
+        
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
