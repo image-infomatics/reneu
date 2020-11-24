@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12.0)
 set(RENEU_VERSION 0.2.0)
-project(libreneu VERSION ${RENEU_VERSION})
+project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 
 # this only works with absolute path!
 set(CONDA_PREFIX /Users/jwu/opt/anaconda3/envs/reneu)
@@ -19,9 +19,10 @@ if(Boost_NO_SYSTEM_PATH)
     set(BOOST_ROOT /Users/jwu/opt/boost_1_74_0)
     set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include")
     set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
-    set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} ${BOOST_INCLUDEDIR})
-    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${BOOST_LIBRARYDIR})
-endif (Boost_NO_SYSTEM_PATH)
+    set(CMAKE_INCLUDE_PATH ${BOOST_INCLUDEDIR} ${CMAKE_INCLUDE_PATH} )
+    set(CMAKE_LIBRARY_PATH ${BOOST_LIBRARYDIR} ${CMAKE_LIBRARY_PATH})
+    message(STATUS "found Boost libraries in ${BOOST_LIBRARYDIR}")
+endif(Boost_NO_SYSTEM_PATH)
 find_package(Boost REQUIRED)
 
 set(RENEU_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -54,7 +55,8 @@ pybind11_add_module(segmentation ${CMAKE_CURRENT_SOURCE_DIR}/segmentation.cpp)
 # we need to add it explicitly
 target_include_directories(skeleton PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
 target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
-target_link_libraries(skeleton ${Boost_LIBRARIES})
+target_link_libraries(skeleton)
+
 target_link_libraries(segmentation ${Boost_LIBRARIES})
 
 # options

@@ -113,7 +113,6 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
 
 
 auto build_priority_queue (const aff_edge_t& threshold) const {
-    // fibonacci heap might be more efficient
     // use std data structure to avoid denpendency for now
     auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
         return left.aff < right.aff;
@@ -316,9 +315,9 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
                 // combine two region edges
                 const auto& newEdgeIndex = neighbors1[nid0];
                 auto& newEdge = _edgeList[newEdgeIndex];
-                // if(newEdge.get_mean() > edgeInQueue.aff){
-                //     std::cout<< "we should iterate this new edge first!: "<< newEdge << std::endl;
-                // }
+                if(newEdge.get_mean() > edgeInQueue.aff){
+                    std::cout<< "we should iterate this new edge first!: "<< newEdge << std::endl;
+                }
                 
                 auto meanAff0 = neighborEdge.get_mean();
                 auto meanAff1 = newEdge.get_mean();
