@@ -64,23 +64,23 @@ def test_random_agglomeration():
     seg = np.arange(sz*sz, dtype=np.uint32).reshape((1,sz,sz))
     # seg += 1 
 
-    seg = segment(affs, seg, 0.2)
+    seg = segment(affs, seg, 0.3)
     print('segmentation after agglomeration: ')
     print(seg)
 
-def test_segment_large_affinity_map():
-    DIR = os.path.join(os.path.dirname(__file__), '../data/')
-    with h5py.File(os.path.join(DIR, "aff_160k.h5"), "r") as f:
-        affs = np.asarray(f["main"])
-    
-    print('watershed ...')
-    seg = watershed(affs, 0, 0.9999)
-    print(seg)
-    tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
-
-    print('agglomeration...')
-    seg = segment(affs, seg, 0.3)
-    print('save results...')
-    tifffile.imwrite(os.path.join(DIR, "seg_rg.tif"), data=seg)
-    with h5py.File(os.path.join(DIR, "seg_rg.h5"), "w") as f:
-        f['main'] = seg
+#def test_segment_large_affinity_map():
+#    DIR = os.path.join(os.path.dirname(__file__), '../data/')
+#    with h5py.File(os.path.join(DIR, "aff_160k.h5"), "r") as f:
+#        affs = np.asarray(f["main"])
+#    
+#    print('watershed ...')
+#    seg = watershed(affs, 0, 0.9999)
+#    print(seg)
+#    tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
+#
+#    print('agglomeration...')
+#    seg = segment(affs, seg, 0.5)
+#    print('save results...')
+#    tifffile.imwrite(os.path.join(DIR, "seg_rg.tif"), data=seg)
+#    with h5py.File(os.path.join(DIR, "seg_rg.h5"), "w") as f:
+#        f['main'] = seg
