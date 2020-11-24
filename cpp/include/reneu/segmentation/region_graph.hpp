@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <initializer_list>
 
 #include <xtensor/xsort.hpp>
@@ -113,12 +114,8 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
 
 
 auto build_priority_queue (const aff_edge_t& threshold) const {
-    // use std data structure to avoid denpendency for now
-    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
-        return left.aff < right.aff;
-    };
-    // TO-DO: replace with fibonacci heap
-    std::priority_queue<EdgeInQueue, vector<EdgeInQueue>, decltype(cmp)> heap(cmp);
+    std::vector<EdgeInQueue> heap({});
+    heap.reserve(_rm.size() * 4);
     for(const auto& [segid0, neighbors0] : _rm){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             
@@ -131,13 +128,14 @@ auto build_priority_queue (const aff_edge_t& threshold) const {
                 const auto& meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
                     // initial version is set to 1
-                    heap.emplace(EdgeInQueue({segid0, segid1, meanAff, 1}));
+                    heap.emplace_back(EdgeInQueue({segid0, segid1, meanAff, 1}));
                     // const auto& newEdgeInQueue = EdgeInQueue({segid0, segid1, meanAff, 1});
                     // heap.push(newEdgeInQueue);
                 }
             }
         }
     }
+
     std::cout<< "initial heap size: "<< heap.size() << std::endl;
     return heap;
 }
@@ -232,6 +230,9 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
 
     std::cout<< "build priority queue..." << std::endl;
     auto heap = build_priority_queue(threshold);
+    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
+        return left.aff < right.aff;
+    };
 
     std::cout<< "build disjoint set..." << std::endl;
     auto dsets = DisjointSets(seg); 
@@ -239,20 +240,27 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        const auto& edgeInQueue = heap.top();
+        std::make_heap(heap.begin(), heap.end(), cmp);
+        std::pop_heap(heap.begin(), heap.end(), cmp);
+        const auto& edgeInQueue = heap.back();
+        heap.pop_back();
+        
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
-        std::cout<< "edge: " << segid0 << "--" << segid1 << "=" << edgeInQueue.aff<<std::endl;
-        heap.pop();
+        // std::cout<< "edge: " << segid0 << "--" << segid1 << "=" << edgeInQueue.aff<<std::endl;
 
         const auto& heapSize = heap.size();
 
         if(!has_connection(segid0, segid1)){
-            std::cout<< segid0 << "--" << segid1 << " do not exist anymore!" << std::endl;
+            // std::cout<< segid0 << "--" << segid1 << " do not exist anymore!" << std::endl;
             continue;
         }
 
-        print();
+        //std::cout<< 'heap: ' << std::endl;
+        //for(const auto& edge : heap){
+        //    std::cout<< edge.segid0 << "--" << edge.segid1 << ": " << edge.aff << "," << edge.version << "; "; 
+        //}
+        // print();
 
         const auto& edgeIndex = _rm.at(segid1).at(segid0);
         const auto& edge = _edgeList[edgeIndex];
@@ -296,28 +304,22 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         for(auto& [nid0, neighborEdgeIndex] : neighbors0){
             //std::cout<< "find neighbor edge: " << *neighborEdgePtr << std::endl; 
             
-            if(!has_connection(nid0, segid0)){
-                std::cout<< "we are still iterating erased edges? "<< 
-                                    nid0 << "--" << segid0 << std::endl;
-                continue;
-            }
-            
             // it seems that erase disrupted the iteration!
             //std::cout << "before erase neighbor segid0 " << std::endl;
             _rm.at(nid0).erase(segid0);
             
             auto& neighborEdge = _edgeList[neighborEdgeIndex];
-            if(neighborEdge.get_mean() > edgeInQueue.aff){
-                std::cout<< "this neighbor edge should be merged first: "<< neighborEdge<<std::endl;
-            }
+            // if(neighborEdge.get_mean() > edgeInQueue.aff){
+            //     std::cout<< "this neighbor edge should be merged first: "<< neighborEdge<<std::endl;
+            // }
 
             if (has_connection(segid1, nid0)){
                 // combine two region edges
                 const auto& newEdgeIndex = neighbors1[nid0];
                 auto& newEdge = _edgeList[newEdgeIndex];
-                if(newEdge.get_mean() > edgeInQueue.aff){
-                    std::cout<< "we should iterate this new edge first!: "<< newEdge << std::endl;
-                }
+                // if(newEdge.get_mean() > edgeInQueue.aff){
+                //     std::cout<< "we should iterate this new edge first!: "<< newEdge << std::endl;
+                // }
                 
                 auto meanAff0 = neighborEdge.get_mean();
                 auto meanAff1 = newEdge.get_mean();
@@ -330,7 +332,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
                     //     std::cout<< meanAff0 <<" + " <<meanAff1 << " = "<< meanAff<< std::endl; 
                     // }
 
-                    heap.emplace(
+                    heap.emplace_back(
                         EdgeInQueue(
                             {nid0, segid1, meanAff, newEdge.version}
                         )
@@ -351,7 +353,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
                 const auto& meanAff = neighborEdge.get_mean();
                 if(meanAff > threshold){
                     // std::cout<<"assigned and emplace a new edge: "<< neighborEdge<<std::endl; 
-                    heap.emplace(
+                    heap.emplace_back(
                         EdgeInQueue(
                             {nid0, segid1, meanAff, neighborEdge.version}
                         )
