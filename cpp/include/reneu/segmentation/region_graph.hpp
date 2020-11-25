@@ -233,6 +233,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
     auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
         return left.aff < right.aff;
     };
+    std::make_heap(heap.begin(), heap.end(), cmp);
 
     std::cout<< "build disjoint set..." << std::endl;
     auto dsets = DisjointSets(seg); 
@@ -240,7 +241,6 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        std::make_heap(heap.begin(), heap.end(), cmp);
         std::pop_heap(heap.begin(), heap.end(), cmp);
         const auto& edgeInQueue = heap.back();
         heap.pop_back();
@@ -340,6 +340,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
                             {nid0, segid1, meanAff, newEdge.version}
                         )
                     );
+                    std::push_heap(heap.begin(), heap.end(), cmp);
                 }
             } else {
                 // directly assign nid0-segid0 to nid0-segid1
@@ -361,6 +362,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
                             {nid0, segid1, meanAff, neighborEdge.version}
                         )
                     );
+                    std::push_heap(heap.begin(), heap.end(), cmp);
                 }
             }
         }
