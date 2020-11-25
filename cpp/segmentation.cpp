@@ -6,7 +6,6 @@
 #include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
 #include "reneu/segmentation/watershed.hpp"
-#include "reneu/segmentation/agglomeration.hpp"
 #include "reneu/segmentation/region_graph.hpp"
 #include "reneu/segmentation/fill_background_with_affinity_guidance.hpp"
 
@@ -30,12 +29,6 @@ PYBIND11_MODULE(segmentation, m) {
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
         .def("print", &RegionGraph::print)
         .def("greedy_merge_until", &RegionGraph::py_greedy_merge_until);
-
-    // agglomeration
-    py::class_<SupervoxelDendrogram>(m, "XSupervoxelDendrogram")
-        .def(py::init<const PyAffinityMap &, const PySegmentation &, aff_edge_t &>())
-        .def("segment", &SupervoxelDendrogram::segment);
-
 
 
 #ifdef VERSION_INFO
