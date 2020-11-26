@@ -11,7 +11,7 @@
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
 
-#include <boost/container/flat_map.hpp>
+// #include <boost/container/flat_map.hpp>
 
 
 namespace reneu{
@@ -71,7 +71,8 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 }
 
 using Neighbors = std::map<segid_t, size_t>;
-using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
+// using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
+using RegionMap = std::map<segid_t, Neighbors>;
 
 class RegionGraph{
 private:
