@@ -23,6 +23,8 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, threshold: float):
 
     print("shape of segmentation: ", seg.shape)
     # print(seg)
+
+    print('dendrogram as array: \n', dend.array)
     return seg
     
     
