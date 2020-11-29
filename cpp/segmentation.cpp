@@ -3,9 +3,9 @@
 #define FORCE_IMPORT_ARRAY
 
 
-#include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
 #include "reneu/segmentation/watershed.hpp"
+#include "reneu/segmentation/dendrogram.hpp"
 #include "reneu/segmentation/region_graph.hpp"
 #include "reneu/segmentation/fill_background_with_affinity_guidance.hpp"
 
@@ -24,6 +24,14 @@ PYBIND11_MODULE(segmentation, m) {
 
     m.def("watershed", &py_watershed);
     m.def("fill_background_with_affinity_guidance", &py_fill_background_with_affinity_guidance);
+
+    py::class_<Dendrogram>(m, "Dendrogram")
+        .def(py::init<const aff_edge_t&>())
+        .def_property_readonly("array", &Dendrogram::as_array)
+        .def("print", &Dendrogram::print)
+        .def("push_edge", &Dendrogram::push_edge)
+        .def("merge", &Dendrogram::merge)
+        .def("materialize", &Dendrogram::py_materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())

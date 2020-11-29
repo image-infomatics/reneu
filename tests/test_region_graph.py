@@ -16,15 +16,16 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, threshold: float):
     print('region graph before segmentation:')
     # rg.print() 
     print('gready mean agglomeration...')
-    seg=rg.greedy_merge_until(seg, threshold)
+    dend = rg.greedy_merge_until(seg, threshold)
+    seg = dend.materialize(seg, threshold)
     print('region graph after segmentation: ')
     # rg.print()
 
     print("shape of segmentation: ", seg.shape)
     # print(seg)
+
+    print('dendrogram as array: \n', dend.array)
     return seg
-    
-    
 
 
 def test_agglomeration():

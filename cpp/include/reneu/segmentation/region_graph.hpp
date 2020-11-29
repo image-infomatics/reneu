@@ -10,8 +10,7 @@
 #include "reneu/type_aliase.hpp"
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
-
-// #include <boost/container/flat_map.hpp>
+#include "dendrogram.hpp"
 
 
 namespace reneu{
@@ -230,8 +229,8 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
     };
     std::make_heap(heap.begin(), heap.end(), cmp);
 
-    std::cout<< "build disjoint set..." << std::endl;
-    auto dsets = DisjointSets(seg); 
+
+    Dendrogram dend(threshold);
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
@@ -265,10 +264,9 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
         
         // merge segid1 and segid0
         mergeNum++;
-        // Union the two sets that contain elements x and y. 
-        // This is equivalent to link(find_set(x),find_set(y)).
-        dsets.union_set(segid0, segid1);
         
+        dend.push_edge(segid0, segid1, edge.get_mean());
+
         // make segid1 bigger than segid0
         // always merge object with less neighbors to more neighbors
         if(_rm.at(segid0).size() > _rm.at(segid1).size()){
@@ -328,8 +326,7 @@ auto greedy_merge_until(Segmentation&& seg, const aff_edge_t& threshold){
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
-    dsets.relabel(seg);
-    return seg;
+    return dend;
 }
 
 inline auto py_greedy_merge_until(PySegmentation& pyseg, const aff_edge_t& threshold){
