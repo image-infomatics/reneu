@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <execution>
 
 #include <xtensor/xtensor.hpp>
 #include "disjoint_sets.hpp"
@@ -17,7 +18,7 @@ aff_edge_t affinity;
 };
 
 bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
-    return (de1.affinity < de2.affinity);
+    return (de1.affinity > de2.affinity);
 }
 
 class Dendrogram{
@@ -70,7 +71,7 @@ auto merge(Dendrogram other){
         _edgeList.push_back(dendEdge);
     }
     // sort the dendEdge?
-    std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
 }
 
 auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
