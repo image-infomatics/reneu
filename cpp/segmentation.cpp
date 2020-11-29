@@ -3,7 +3,6 @@
 #define FORCE_IMPORT_ARRAY
 
 
-#include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
 #include "reneu/segmentation/watershed.hpp"
 #include "reneu/segmentation/dendrogram.hpp"
@@ -29,6 +28,9 @@ PYBIND11_MODULE(segmentation, m) {
     py::class_<Dendrogram>(m, "Dendrogram")
         .def(py::init<const aff_edge_t&>())
         .def_property_readonly("array", &Dendrogram::as_array)
+        .def("print", &Dendrogram::print)
+        .def("push_edge", &Dendrogram::push_edge)
+        .def("merge", &Dendrogram::merge)
         .def("materialize", &Dendrogram::py_materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")

@@ -26,8 +26,6 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, threshold: float):
 
     print('dendrogram as array: \n', dend.array)
     return seg
-    
-    
 
 
 def test_agglomeration():
