@@ -33,7 +33,7 @@ aff_edge_t _minThreshold;
 public:
 Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){}
 
-void print(){
+void print() const {
     std::cout<<"dendrogram minimum threshold: "<< _minThreshold<< std::endl;
     for(const auto& edge: _edgeList){
         std::cout<< edge.segid0 << "--"<< edge.segid1<<":"<<edge.affinity<<", ";
@@ -41,7 +41,7 @@ void print(){
     std::cout<<std::endl;
 }
 
-auto as_array(){
+auto as_array() const {
     xt::xtensor<aff_edge_t, 2>::shape_type sh = {_edgeList.size(),3};
     auto arr = xt::empty<aff_edge_t>(sh);
     for(std::size_t i=0; i<_edgeList.size(); i++){
@@ -51,6 +51,10 @@ auto as_array(){
         arr(i, 2) = dendEdge.affinity;
     }
     return arr;
+}
+
+auto get_min_threshold() const {
+    return _minThreshold;
 }
 
 // Note that the edges should be pushed in descending order
@@ -69,7 +73,7 @@ auto merge(Dendrogram other){
     std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
 }
 
-auto materialize(Segmentation&& seg, const aff_edge_t& threshold){
+auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
 
     std::cout<< "build disjoint set..." << std::endl;
@@ -88,7 +92,7 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold){
     return seg;
 }
 
-inline auto py_materialize(PySegmentation& pySeg, const aff_edge_t& threshold){
+inline auto py_materialize(PySegmentation& pySeg, const aff_edge_t& threshold) const {
     return materialize(std::move(pySeg), threshold);
 }
 
