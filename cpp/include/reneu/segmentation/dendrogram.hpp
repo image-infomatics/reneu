@@ -2,12 +2,10 @@
 
 #include <vector>
 #include <algorithm>
-#include <execution>
+// #include <execution>
 #include <string>
 #include <sstream>
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/list.hpp>
 
@@ -29,6 +27,7 @@ public:
 segid_t segid0, segid1;
 aff_edge_t affinity;
 
+friend class boost::serialization::access;
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
     ar & segid0;
@@ -36,6 +35,8 @@ void serialize(Archive& ar, const unsigned int version){
     ar & affinity;
 }
 
+
+DendEdge(): segid0(0), segid1(0), affinity(0){}
 DendEdge(segid_t _segid0, segid_t _segid1, aff_edge_t _affinity): 
             segid0(_segid0), segid1(segid1), affinity(_affinity){}
 
@@ -46,7 +47,6 @@ bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
 }
 
 class Dendrogram{
-friend class boost::serialization::access;
 
 private:
 // segid0, segid1, affinity
@@ -57,10 +57,11 @@ std::vector<DendEdge> _edgeList;
 // Thus, it is an error if we merge supervoxels lower than this threshold
 aff_edge_t _minThreshold;
 
+friend class boost::serialization::access;
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
     ar & _minThreshold;
-    for(const auto& edge: _edgeList){
+    for(auto& edge: _edgeList){
         ar & edge;
     }
 }
@@ -108,7 +109,8 @@ auto merge(Dendrogram other){
         _edgeList.push_back(dendEdge);
     }
     // sort the dendEdge
-    std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    // std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
 }
 
 auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {

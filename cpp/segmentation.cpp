@@ -45,9 +45,9 @@ PYBIND11_MODULE(segmentation, m) {
             },
             [](const std::string str){ // __setstate__
                 std::stringstream ss(str);
-                boost::archive::text_oarchive ia(ss);
+                boost::archive::text_iarchive ia(ss);
                 Dendrogram dend;
-                ia >> &dend;
+                ia >> (dend);
                 return dend;
             }
         ))
