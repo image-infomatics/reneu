@@ -6,9 +6,8 @@
 #include <string>
 #include <sstream>
 
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/binary_object.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/list.hpp>
 
@@ -58,11 +57,6 @@ std::vector<DendEdge> _edgeList;
 // Thus, it is an error if we merge supervoxels lower than this threshold
 aff_edge_t _minThreshold;
 
-public:
-
-Dendrogram(): _edgeList({}), _minThreshold(0){};
-Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){}
-
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
     ar & _minThreshold;
@@ -70,6 +64,12 @@ void serialize(Archive& ar, const unsigned int version){
         ar & edge;
     }
 }
+
+public:
+
+Dendrogram(): _edgeList({}), _minThreshold(0){};
+Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){}
+
 
 void print() const {
     std::cout<<"dendrogram minimum threshold: "<< _minThreshold<< std::endl;

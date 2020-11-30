@@ -14,6 +14,6 @@ def test_dendrogram():
     print('dendrogram after merging:')
     dend1.print()
 
-    print('test serialization')
+    print('test serialization...')
     data = pickle.dump(dend1)
     dend3 = pickle.load(data) 

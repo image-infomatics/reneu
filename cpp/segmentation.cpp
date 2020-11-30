@@ -4,6 +4,8 @@
 #include <pybind11/stl.h>
 #define FORCE_IMPORT_ARRAY
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include "reneu/type_aliase.hpp" 
 #include "reneu/segmentation/watershed.hpp"
@@ -37,16 +39,15 @@ PYBIND11_MODULE(segmentation, m) {
         .def(py::pickle(
             [](const Dendrogram& dend){ // __getstate__
                 std::stringstream ss;
-                boost::archive::binary_oarchive oa(ss);
+                boost::archive::text_oarchive oa(ss);
                 oa << dend;
-                return py::bytes(ss.str());
+                return ss.str();
             },
-            [](py::bytes data){ // __setstate__
-                auto str = data.str();
+            [](const std::string str){ // __setstate__
                 std::stringstream ss(str);
-                boost::archive::binary_iarchive ia(ss);
+                boost::archive::text_oarchive ia(ss);
                 Dendrogram dend;
-                ia >> dend;
+                ia >> &dend;
                 return dend;
             }
         ))
