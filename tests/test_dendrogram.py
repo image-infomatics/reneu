@@ -1,3 +1,5 @@
+import pickle
+
 from reneu.lib.segmentation import Dendrogram
 
 
@@ -11,3 +13,7 @@ def test_dendrogram():
     dend1.merge(dend2)
     print('dendrogram after merging:')
     dend1.print()
+
+    print('test serialization')
+    data = pickle.dump(dend1)
+    dend3 = pickle.load(data) 

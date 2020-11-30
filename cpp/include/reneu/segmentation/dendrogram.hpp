@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <execution>
 #include <string>
-#include <fstream>
+#include <sstream>
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
@@ -23,9 +23,10 @@ class Dendrogram;
 
 class DendEdge{
 friend class Dendrogram;
-friend class boost::serialization::access;
+friend bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2);
 
-private:
+
+public:
 segid_t segid0, segid1;
 aff_edge_t affinity;
 
@@ -35,6 +36,10 @@ void serialize(Archive& ar, const unsigned int version){
     ar & segid1;
     ar & affinity;
 }
+
+DendEdge(segid_t _segid0, segid_t _segid1, aff_edge_t _affinity): 
+            segid0(_segid0), segid1(segid1), affinity(_affinity){}
+
 };
 
 bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
@@ -53,7 +58,6 @@ std::vector<DendEdge> _edgeList;
 // Thus, it is an error if we merge supervoxels lower than this threshold
 aff_edge_t _minThreshold;
 
-
 public:
 
 Dendrogram(): _edgeList({}), _minThreshold(0){};
@@ -62,21 +66,9 @@ Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
     ar & _minThreshold;
-    ar & _edgeList;
-}
-
-void save(const string& fileName){
-    std::ofstream ofs(fileName, std::ofstream::binary);
-    boost::archive::binary_oarchive oa(ofs, boost::archive::no_header);
-    oa << _minThreshold;
-    oa << _edgeList;
-}
-
-void load(const string& fileName){
-    std::ifstream ifs(fileName, std::ifstream::binary);
-    boost::archive::binary_iarchive ia(ifs, boost::archive::no_header);
-
-
+    for(const auto& edge: _edgeList){
+        ar & edge;
+    }
 }
 
 void print() const {
@@ -107,7 +99,7 @@ auto get_min_threshold() const {
 // this is an implicity assumption, otherwise the materialize function will not work correctly!
 inline auto push_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& affinity){
     assert(affinity >= _minThreshold);
-    _edgeList.emplace_back(DendEdge({segid0, segid1, affinity}));
+    _edgeList.emplace_back(DendEdge(segid0, segid1, affinity));
 }
 
 auto merge(Dendrogram other){
