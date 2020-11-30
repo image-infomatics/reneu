@@ -3,6 +3,11 @@
 #include <vector>
 #include <algorithm>
 #include <execution>
+#include <string>
+#include <fstream>
+
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/list.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include "disjoint_sets.hpp"
@@ -22,6 +27,7 @@ bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
 }
 
 class Dendrogram{
+friend class boost::serialization::access;
 private:
 // segid0, segid1, affinity
 std::vector<DendEdge> _edgeList;
@@ -31,7 +37,14 @@ std::vector<DendEdge> _edgeList;
 // Thus, it is an error if we merge supervoxels lower than this threshold
 aff_edge_t _minThreshold;
 
+template<class Archive>
+void serialize(Archive& ar, const unsigned int /* file_version */){
+    ar & _minThreshold;
+    
+}
+
 public:
+Dendrogram(): _edgeList({}), _minThreshold(0){};
 Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){}
 
 void print() const {
@@ -56,6 +69,16 @@ auto as_array() const {
 
 auto get_min_threshold() const {
     return _minThreshold;
+}
+
+void serialize(std::string fileName) const {
+    std::ofstream ostrm(fileName, std::ios::binary);
+    ostrm.write(_minThreshold);
+    for(const auto& e : _edgeList){
+        ostrm.write(reinterpret_cast<char*>(&e.segid0), sizeof(e.segid0));
+        ostrm.write(reinterpret_cast<char*>(&e.segid1), sizeof(e.segid1));
+
+    }
 }
 
 // Note that the edges should be pushed in descending order
