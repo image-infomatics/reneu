@@ -13,7 +13,7 @@ set(xtl_DIR ${CONDA_PREFIX}/lib/cmake/xtl)
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_NO_SYSTEM_PATH FALSE)
+set(Boost_NO_SYSTEM_PATH TRUE)
 
 if(Boost_NO_SYSTEM_PATH)
     set(BOOST_ROOT /Users/jwu/opt/boost_1_74_0)
