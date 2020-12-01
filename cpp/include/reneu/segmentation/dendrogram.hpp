@@ -7,7 +7,7 @@
 #include <sstream>
 
 #include <boost/serialization/serialization.hpp>
-#include <boost/serialization/list.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include "disjoint_sets.hpp"
@@ -61,9 +61,7 @@ friend class boost::serialization::access;
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
     ar & _minThreshold;
-    for(auto& edge: _edgeList){
-        ar & edge;
-    }
+    ar & _edgeList;
 }
 
 public:

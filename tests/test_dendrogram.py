@@ -15,9 +15,11 @@ def test_dendrogram():
     dend1.print()
 
     print('test serialization...')
+    dend1.print()
     data = pickle.dumps(dend1)
     # print('bytes of dendrogram 1 : ', data)
     dend3 = pickle.loads(data)
+    dend3.print()
     data3 = pickle.dumps(dend3)
     # print('bytes of dendrogram 3: ', data3)
     assert data == data3

@@ -15,7 +15,6 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED OFF)  
 set(Boost_USE_STATIC_RUNTIME OFF)
 set(Boost_NO_SYSTEM_PATH TRUE)
-set(Boost_NO_EXCEPTIONS TRUE)
 
 if(Boost_NO_SYSTEM_PATH)
     set(BOOST_ROOT /usr/local/Cellar/boost/1.74.0)
