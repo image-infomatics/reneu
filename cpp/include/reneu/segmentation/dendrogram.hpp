@@ -2,7 +2,12 @@
 
 #include <vector>
 #include <algorithm>
-#include <execution>
+// #include <execution>
+#include <string>
+#include <sstream>
+
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include <xtensor/xtensor.hpp>
 #include "disjoint_sets.hpp"
@@ -11,10 +16,30 @@
 
 namespace reneu{
 
+class Dendrogram;
 
-struct DendEdge{
+class DendEdge{
+friend class Dendrogram;
+friend bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2);
+
+
+public:
 segid_t segid0, segid1;
 aff_edge_t affinity;
+
+friend class boost::serialization::access;
+template<class Archive>
+void serialize(Archive& ar, const unsigned int version){
+    ar & segid0;
+    ar & segid1;
+    ar & affinity;
+}
+
+
+DendEdge(): segid0(0), segid1(0), affinity(0){}
+DendEdge(segid_t _segid0, segid_t _segid1, aff_edge_t _affinity): 
+            segid0(_segid0), segid1(segid1), affinity(_affinity){}
+
 };
 
 bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
@@ -22,6 +47,7 @@ bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
 }
 
 class Dendrogram{
+
 private:
 // segid0, segid1, affinity
 std::vector<DendEdge> _edgeList;
@@ -31,8 +57,18 @@ std::vector<DendEdge> _edgeList;
 // Thus, it is an error if we merge supervoxels lower than this threshold
 aff_edge_t _minThreshold;
 
+friend class boost::serialization::access;
+template<class Archive>
+void serialize(Archive& ar, const unsigned int version){
+    ar & _minThreshold;
+    ar & _edgeList;
+}
+
 public:
+
+Dendrogram(): _edgeList({}), _minThreshold(0){};
 Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){}
+
 
 void print() const {
     std::cout<<"dendrogram minimum threshold: "<< _minThreshold<< std::endl;
@@ -62,7 +98,7 @@ auto get_min_threshold() const {
 // this is an implicity assumption, otherwise the materialize function will not work correctly!
 inline auto push_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& affinity){
     assert(affinity >= _minThreshold);
-    _edgeList.emplace_back(DendEdge({segid0, segid1, affinity}));
+    _edgeList.emplace_back(DendEdge(segid0, segid1, affinity));
 }
 
 auto merge(Dendrogram other){
@@ -70,8 +106,9 @@ auto merge(Dendrogram other){
     for(const auto& dendEdge: other._edgeList){
         _edgeList.push_back(dendEdge);
     }
-    // sort the dendEdge?
-    std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    // sort the dendEdge
+    // std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
 }
 
 auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {

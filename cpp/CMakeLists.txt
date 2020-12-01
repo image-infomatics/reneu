@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.12.0)
 set(RENEU_VERSION 0.2.0)
 project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 
+set(CMAKE_VERBOSE_MAKEFILE on)
 # this only works with absolute path!
 set(CONDA_PREFIX /Users/jwu/opt/anaconda3/envs/reneu)
 # set(CONDA_PREFIX ${CONDA_PREFIX_1}/envs/reneu)
@@ -11,19 +12,19 @@ set(xtensor-python_DIR ${CONDA_PREFIX}/lib/cmake/xtensor-python)
 set(xtl_DIR ${CONDA_PREFIX}/lib/cmake/xtl)
 
 set(Boost_USE_STATIC_LIBS OFF) 
-set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_MULTITHREADED OFF)  
 set(Boost_USE_STATIC_RUNTIME OFF)
 set(Boost_NO_SYSTEM_PATH TRUE)
 
 if(Boost_NO_SYSTEM_PATH)
-    set(BOOST_ROOT /Users/jwu/opt/boost_1_74_0)
+    set(BOOST_ROOT /usr/local/Cellar/boost/1.74.0)
     set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include")
     set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
     set(CMAKE_INCLUDE_PATH ${BOOST_INCLUDEDIR} ${CMAKE_INCLUDE_PATH} )
     set(CMAKE_LIBRARY_PATH ${BOOST_LIBRARYDIR} ${CMAKE_LIBRARY_PATH})
     message(STATUS "found Boost libraries in ${BOOST_LIBRARYDIR}")
 endif(Boost_NO_SYSTEM_PATH)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED serialization)
 
 set(RENEU_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR} 
@@ -57,7 +58,10 @@ target_include_directories(skeleton PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_
 target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
 target_link_libraries(skeleton)
 
-target_link_libraries(segmentation ${Boost_LIBRARIES})
+message("boost libarries: ${Boost_LIBRARIES}")
+target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES})
+# target_link_libraries(segmentation ${Boost_LIBRARIES} )
+# target_link_libraries(segmentation "${Boost_LIBRARIES}/libboost_serialization.dylib" )
 
 # options
 option(BUILD_TESTS "build test suite" OFF)
