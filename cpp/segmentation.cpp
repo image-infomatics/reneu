@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 #define FORCE_IMPORT_ARRAY
 
+#include <boost/serialization/serialization.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
