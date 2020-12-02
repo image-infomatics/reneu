@@ -43,7 +43,7 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     std::ptrdiff_t sy = affs.shape(2);
     std::ptrdiff_t sx = affs.shape(3);
     
-    SteepestAscentGraph::shape_type sag_shape = {sz, sy, sx};
+    SteepestAscentGraph::shape_type sag_shape = {affs.shape(1), affs.shape(2), affs.shape(3)};
     SteepestAscentGraph sag = xt::zeros<segid_t>(sag_shape);
 
     for(std::ptrdiff_t z=0; z<sz; z++){

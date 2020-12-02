@@ -38,7 +38,7 @@ void serialize(Archive& ar, const unsigned int version){
 
 DendEdge(): segid0(0), segid1(0), affinity(0){}
 DendEdge(segid_t _segid0, segid_t _segid1, aff_edge_t _affinity): 
-            segid0(_segid0), segid1(segid1), affinity(_affinity){}
+            segid0(_segid0), segid1(_segid1), affinity(_affinity){}
 
 };
 
