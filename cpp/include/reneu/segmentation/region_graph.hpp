@@ -137,6 +137,14 @@ auto build_priority_queue (const aff_edge_t& threshold) const {
 
 public:
 
+auto get_edge_num() const {
+    std::size_t edgeNum = 0;
+    for(const auto& [segid0, neighbors0] : _rm){
+        edgeNum += neighbors0.size();
+    }
+    return edgeNum / 2;
+}
+
 void print(){
     std::cout<<std::endl << "region graph: " <<std::endl;
     for(const auto& [segid0, neighbors0] : _rm){
@@ -149,6 +157,22 @@ void print(){
     }
     std::cout<< std::endl;
     return; 
+}
+
+auto as_array() const {
+    auto edgeNum = get_edge_num();
+    xt::xtensor<aff_edge_t, 2>::shape_type sh = {edgeNum, 3};
+    auto arr = xt::empty<aff_edge_t>(sh);
+
+    std::size_t n = 0;
+    for(const auto& [segid0, neighbors0] : _rm){
+        for(const auto& [segid1, edgeIndex] : neighbors0){
+            arr(n, 0) = segid0;
+            arr(n, 1) = segid1;
+            arr(n, 2) = _edgeList[edgeIndex].get_mean();
+        }
+    }
+    return arr;
 }
 
 /**

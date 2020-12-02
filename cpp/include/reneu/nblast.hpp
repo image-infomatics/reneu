@@ -160,10 +160,10 @@ private:
 
 public:
     VectorCloud( const Points &points_, const Points &vectors_, const KDTree &kdTree_ ):
-                points(points), vectors(vectors_), kdTree(kdTree_){}
+                points(points_), vectors(vectors_), kdTree(kdTree_){}
     
     VectorCloud( const PyPoints &points_, const PyPoints &vectors_, const KDTree &kdTree_ ):
-                points(points), vectors(vectors_), kdTree(kdTree_){}
+                points(points_), vectors(vectors_), kdTree(kdTree_){}
     
     // our points array contains radius direction, but we do not need it.
     VectorCloud( const Points &points_, const Index &leafSize, 
