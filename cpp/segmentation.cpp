@@ -34,8 +34,10 @@ PYBIND11_MODULE(segmentation, m) {
         .def(py::init())
         .def(py::init<const aff_edge_t&>())
         .def_property_readonly("array", &Dendrogram::as_array)
+        .def_property_readonly("edge_num", &Dendrogram::get_edge_num)
         .def("print", &Dendrogram::print)
         .def("push_edge", &Dendrogram::push_edge)
+        .def("keep_only_contacting_edges", &Dendrogram::py_keep_only_contacting_edges)
         .def("merge", &Dendrogram::merge)
         .def(py::pickle(
             [](const Dendrogram& dend){ // __getstate__
