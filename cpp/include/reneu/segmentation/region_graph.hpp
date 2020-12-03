@@ -170,6 +170,7 @@ auto as_array() const {
             arr(n, 0) = segid0;
             arr(n, 1) = segid1;
             arr(n, 2) = _edgeList[edgeIndex].get_mean();
+            n++;
         }
     }
     return arr;

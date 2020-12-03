@@ -10,7 +10,7 @@ using namespace std;
 using namespace xt::placeholders;  // required for `_` in range view to work
 
 using aff_edge_t = float;
-using segid_t = std::uint32_t;
+using segid_t = std::uint64_t;
 
 using AffinityMap = xt::xtensor<aff_edge_t, 4>;
 using PyAffinityMap = xt::pytensor<aff_edge_t, 4>;

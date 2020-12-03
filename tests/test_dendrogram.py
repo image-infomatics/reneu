@@ -1,4 +1,6 @@
 import pickle
+import numpy as np
+np.random.seed(0)
 
 from reneu.lib.segmentation import Dendrogram
 
@@ -23,4 +25,14 @@ def test_dendrogram():
     data3 = pickle.dumps(dend3)
     # print('bytes of dendrogram 3: ', data3)
     assert data == data3
-    # dend3.print() 
+    # dend3.print()
+
+
+    print('test keep contacting edges...')
+    seg = np.random.randint(20, dtype=np.uint64, size=(64,64,64))
+    dend1.push_edge(22, 21, 0.4)
+    # dend1.print()
+    assert dend1.edge_num == 3
+    dend1.keep_only_contacting_edges(seg, (8,8,8))
+    # dend1.print()
+    assert dend1.edge_num == 2

@@ -94,11 +94,78 @@ auto get_min_threshold() const {
     return _minThreshold;
 }
 
+auto get_edge_num() const {
+    return _edgeList.size();
+}
+
 // Note that the edges should be pushed in descending order
 // this is an implicity assumption, otherwise the materialize function will not work correctly!
 inline auto push_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& affinity){
     assert(affinity >= _minThreshold);
     _edgeList.emplace_back(DendEdge(segid0, segid1, affinity));
+}
+
+void py_keep_only_contacting_edges(PySegmentation& seg, std::tuple<std::size_t, std::size_t, std::size_t> margin_sizes){
+    keep_only_contacting_edges(std::move(seg), margin_sizes);
+}
+
+void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std::size_t, std::size_t> margin_sizes){
+    const auto& [mz, my, mx] = margin_sizes;
+    assert( mz > 0 );
+    assert( my > 0 );
+    assert( mx > 0 );
+
+    const auto& [sz, sy, sx] = seg.shape();
+    
+    // the edges across internal chunk boundary
+    // only lower part edges are included
+    // The upper edges will be handled in the upper chunk processing
+    // this is like the voxel wise affinity edges.
+    using EdgeType = std::pair<segid_t, segid_t>;
+    std::set<EdgeType> edgeSet({});
+
+    for(std::size_t y = my; y<sy-my; y++){
+        for(std::size_t x = mx; x<sx-mx; x++){
+            const segid_t& id0 = seg(mz-1, y, x);
+            const segid_t& id1 = seg(mz, y, x);
+            if(id0>0 && id1>0){
+                assert(id0 < id1);
+                edgeSet.emplace(std::minmax(id0, id1));
+            }
+        }
+    }
+
+    for(std::size_t z = mz; z<sz-mz; z++){
+        for(std::size_t x=mx; x<sx-mx; x++){
+            const segid_t& id0 = seg(z, my-1, x);
+            const segid_t& id1 = seg(z, my, x);
+            if(id0>0 && id1>0){
+                assert(id0 < id1);
+                edgeSet.emplace(std::minmax(id0, id1));
+            }
+        }
+    }
+
+    for(std::size_t z = mz; z<sz-mz; z++){
+        for(std::size_t y=my; y<sy-my; y++){
+            const segid_t& id0 = seg(z, y, mx-1);
+            const segid_t& id1 = seg(z, y, mx);
+            if(id0>0 && id1>0){
+                assert(id0 < id1);
+                edgeSet.emplace(std::minmax(id0, id1));
+            }
+        }
+    }
+
+    // To-Do: c++20 have erase_if function
+    _edgeList.erase(std::remove_if(_edgeList.begin(), _edgeList.end(),
+        [edgeSet](const auto& edge)->bool{
+            const auto& e = std::minmax(edge.segid0, edge.segid1);
+            const auto& search = edgeSet.find(e);
+            return search == edgeSet.end();
+        }
+    ));
+    return;
 }
 
 auto merge(Dendrogram other){
