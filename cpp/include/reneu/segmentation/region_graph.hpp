@@ -160,17 +160,24 @@ void print(){
 }
 
 auto as_array() const {
-    auto edgeNum = get_edge_num();
+    const auto& edgeNum = get_edge_num();
+    std::cout<<"edge number: "<< edgeNum << std::endl;
+
     xt::xtensor<aff_edge_t, 2>::shape_type sh = {edgeNum, 3};
     auto arr = xt::empty<aff_edge_t>(sh);
 
     std::size_t n = 0;
     for(const auto& [segid0, neighbors0] : _rm){
         for(const auto& [segid1, edgeIndex] : neighbors0){
-            arr(n, 0) = segid0;
-            arr(n, 1) = segid1;
-            arr(n, 2) = _edgeList[edgeIndex].get_mean();
-            n++;
+            if(segid0 < segid1){
+                arr(n, 0) = segid0;
+                arr(n, 1) = segid1;
+                arr(n, 2) = _edgeList[edgeIndex].get_mean();
+                n++;
+                if(n>edgeNum){
+                    std::cout<< "exceed the range of n: "<< n <<std::endl;
+                }
+            }
         }
     }
     return arr;

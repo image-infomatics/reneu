@@ -31,7 +31,7 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, threshold: float):
 
 
 def test_agglomeration():
-    seg = np.arange(4)
+    seg = np.arange(4, dtype=np.uint64)
     seg = np.reshape(seg, (1,2,2))
     seg += 1
 
@@ -69,7 +69,7 @@ def test_watershed_and_fill_background():
 def test_random_agglomeration():
     sz = 4
     affs = get_random_affinity_map(sz)
-    seg = np.arange(sz*sz, dtype=np.uint32).reshape((1,sz,sz))
+    seg = np.arange(sz*sz, dtype=np.uint64).reshape((1,sz,sz))
 
     seg = agglomerate(affs, seg, 0.3)
     np.testing.assert_array_equal(seg,

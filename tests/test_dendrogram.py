@@ -12,9 +12,11 @@ def test_dendrogram():
     dend2 = Dendrogram(0.3)
     dend2.push_edge(2,3,0.4)
 
+
     dend1.merge(dend2)
     print('dendrogram after merging:')
     dend1.print()
+    print('as array: \n', dend1.array)
 
     print('test serialization...')
     dend1.print()
