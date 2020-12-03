@@ -161,7 +161,6 @@ void print(){
 
 auto as_array() const {
     const auto& edgeNum = get_edge_num();
-    std::cout<<"edge number: "<< edgeNum << std::endl;
 
     xt::xtensor<aff_edge_t, 2>::shape_type sh = {edgeNum, 3};
     auto arr = xt::empty<aff_edge_t>(sh);
@@ -174,9 +173,6 @@ auto as_array() const {
                 arr(n, 1) = segid1;
                 arr(n, 2) = _edgeList[edgeIndex].get_mean();
                 n++;
-                if(n>edgeNum){
-                    std::cout<< "exceed the range of n: "<< n <<std::endl;
-                }
             }
         }
     }
