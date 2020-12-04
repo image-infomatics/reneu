@@ -185,10 +185,13 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     auto dsets = DisjointSets();
 
     for(const auto& edge : _edgeList){
-        dsets.make_set(edge.segid0);
-        dsets.make_set(edge.segid1);
+        if(edge.affinity >= threshold){
+            dsets.make_set(edge.segid0);
+            dsets.make_set(edge.segid1);
+        }
     }
 
+    // the make_set and union_set should be done separately!
     for(const auto& edge : _edgeList){
         if(edge.affinity >= threshold){
             dsets.union_set(edge.segid0, edge.segid1);
