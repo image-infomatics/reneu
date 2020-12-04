@@ -182,7 +182,7 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
 
     std::cout<< "build disjoint set..." << std::endl;
-    auto dsets = DisjointSets(seg);
+    auto dsets = DisjointSets();
 
     for(const auto& edge : _edgeList){
         dsets.make_set(edge.segid0);
