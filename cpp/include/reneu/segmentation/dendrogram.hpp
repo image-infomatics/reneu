@@ -182,17 +182,18 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
 
     std::cout<< "build disjoint set..." << std::endl;
-    auto dsets = DisjointSets(seg); 
+    auto dsets = DisjointSets(seg);
 
-    for(const auto& dendEdge: _edgeList){
-        const auto& segid0 = dendEdge.segid0;
-        const auto& segid1 = dendEdge.segid1;
-        const auto& affinity = dendEdge.affinity;
-
-        // Union the two sets that contain elements x and y. 
-        // This is equivalent to link(find_set(x),find_set(y)).
-        dsets.union_set(segid0, segid1);
+    for(const auto& edge : _edgeList){
+        dsets.make_set(edge.segid0);
+        dsets.make_set(edge.segid1);
     }
+
+    for(const auto& edge : _edgeList){
+        if(edge.affinity >= threshold){
+            dsets.union_set(edge.segid0, edge.segid1);
+        }
+    } 
     dsets.relabel(seg);
     return seg;
 }

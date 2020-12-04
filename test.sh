@@ -1,6 +1,7 @@
 #!/bin/bash
 
 rm -rf ./build
+mv python/reneu/lib/*.so /tmp/
 
 python setup.py develop
 

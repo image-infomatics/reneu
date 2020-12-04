@@ -23,6 +23,11 @@ PropMapParent_t _propMapParent;
 BoostDisjointSets _dsets;
 
 public:
+DisjointSets():
+    _propMapRank(_mapRank), _propMapParent(_mapParent),
+    _dsets(_propMapRank, _propMapParent){}
+
+
 DisjointSets(const Segmentation& seg):
         _propMapRank(_mapRank), _propMapParent(_mapParent),
         _dsets(_propMapRank, _propMapParent){
@@ -33,6 +38,9 @@ DisjointSets(const Segmentation& seg):
     }
 }
 
+void make_set(const segid_t& segid ){
+    _dsets.make_set(segid);
+}
 
 inline void union_set(segid_t s0, segid_t s1){
     _dsets.union_set(s0, s1);
@@ -50,9 +58,25 @@ void relabel(Segmentation& seg){
                 _dsets.count_sets(segids.begin(), segids.end()) << 
                 " final objects."<< std::endl;
 
-    std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
+    //std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
+    //const auto& [sz, sy, sx] = seg.shape();
+    //for(std::size_t z=0; z<sz; z++){
+    //    for(std::size_t y=0; y<sy; y++){
+    //        for(std::size_t x=0; x<sx; x++){
+    //            const auto& sid = seg(z,y,x);
+    //            const auto& rootID = _dsets.find_set(sid);
+    //            if(sid>0 && rootID>0 && sid!=rootID){
+    //                seg(z,y,x) = rootID; 
+    //            }
+    //        }
+    //    }
+    //}
+
+
+    // this implementation will mask out all the objects that is not in the set!
+    // We should not do it in the global materialization stage.
     std::transform(seg.begin(), seg.end(), seg.begin(), 
-        [this](segid_t segid)->segid_t{return this->find_set(segid);}
+       [this](segid_t segid)->segid_t{return this->find_set(segid);}
     );
     return;
 }
