@@ -173,13 +173,16 @@ auto merge(Dendrogram other){
     for(const auto& dendEdge: other._edgeList){
         _edgeList.push_back(dendEdge);
     }
-    // sort the dendEdge
-    // std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
-    std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
 }
 
 auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
+    
+    // if(threshold > _minThreshold){
+    //     // sort the dendEdge
+    //     // std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    //     std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
+    // }
 
     std::cout<< "build disjoint set..." << std::endl;
     auto dsets = DisjointSets();

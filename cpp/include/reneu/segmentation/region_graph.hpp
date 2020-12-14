@@ -242,7 +242,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments): _edgeNum(0)
     std::cout<<"total edge number: "<< _edgeNum<<std::endl;
 }
 
-auto greedy_merge(Segmentation&& seg, const aff_edge_t& threshold){
+auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
 
     size_t edgeNum = 0;
     for(const auto& edge : _edgeList){
@@ -386,8 +386,8 @@ auto greedy_merge(Segmentation&& seg, const aff_edge_t& threshold){
     return dend;
 }
 
-inline auto py_greedy_merge(PySegmentation& pyseg, const aff_edge_t& threshold){
-    return greedy_merge(std::move(pyseg), threshold);
+inline auto py_greedy_merge(const PySegmentation& pyseg, const aff_edge_t& threshold){
+    return greedy_merge(pyseg, threshold);
 }
 
 }; // class of RegionGraph
