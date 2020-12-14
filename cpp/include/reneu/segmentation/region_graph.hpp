@@ -7,6 +7,10 @@
 
 #include <xtensor/xsort.hpp>
 
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
+
 #include "reneu/type_aliase.hpp"
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
@@ -27,10 +31,21 @@ segid_t segid1;
 // version is used to tell whether an edge is outdated or not in priority queue
 size_t version;
 
+friend class boost::serialization::access;
+template<class Archive>
+void serialize(Archive& ar, const unsigned int version){
+    ar & segid0;
+    ar & segid1;
+    ar & count;
+    ar & sum;
+}
+
+
 public:
 friend std::ostream& operator<<(std::ostream& os, const RegionEdge& re);
 friend class RegionGraph;
 
+RegionEdge(): count(0), sum(0), segid0(0), segid1(0) {}
 
 RegionEdge(const segid_t& _segid0, const segid_t& _segid1, const aff_edge_t& aff): 
             count(1), sum(aff), segid0(_segid0), segid1(_segid1), version(1){}
@@ -69,12 +84,14 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
     return os;
 }
 
-using Neighbors = std::map<segid_t, size_t>;
-// using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
-using RegionMap = std::map<segid_t, Neighbors>;
 
 class RegionGraph{
 private:
+    using Neighbors = std::map<segid_t, size_t>;
+    // flat_map is much slower than std::map 
+    // using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
+    using RegionMap = std::map<segid_t, Neighbors>;
+
     RegionMap _rm;
     std::vector<RegionEdge> _edgeList;
 
@@ -86,6 +103,15 @@ private:
         aff_edge_t aff;
         size_t version;
     };
+
+friend class boost::serialization::access;
+template<class Archive>
+void serialize(Archive& ar, const unsigned int version){
+    ar & _rm;
+    ar & _edgeList;
+    ar & _edgeNum;
+}
+
 
 
 inline bool has_connection (const segid_t& sid0, const segid_t& sid1) const {
@@ -178,6 +204,9 @@ auto as_array() const {
     }
     return arr;
 }
+
+
+RegionGraph(): _edgeNum(0), _rm({}), _edgeList({}){}
 
 /**
  * @brief build region graph. 

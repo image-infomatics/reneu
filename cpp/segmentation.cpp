@@ -60,6 +60,21 @@ PYBIND11_MODULE(segmentation, m) {
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
         .def_property_readonly("array", &RegionGraph::as_array)
         .def("print", &RegionGraph::print)
+        .def(py::pickle(
+            [](const RegionGraph& rg){ // __getstate__
+                std::stringstream ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << rg;
+                return ss.str();
+            },
+            [](const std::string str){
+                std::stringstream ss(str);
+                boost::archive::text_iarchive ia(ss);
+                RegionGraph rg;
+                ia >> (rg);
+                return rg;
+            }
+        ))
         .def("greedy_merge_until", &RegionGraph::py_greedy_merge_until);
 
 

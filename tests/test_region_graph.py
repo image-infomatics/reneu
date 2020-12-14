@@ -1,3 +1,4 @@
+import pickle
 from reneu.lib.segmentation import RegionGraph 
 from reneu.lib.segmentation import watershed, fill_background_with_affinity_guidance 
 
@@ -56,6 +57,7 @@ def get_random_affinity_map(sz: int):
     return affs
 
 
+
 def test_watershed_and_fill_background():
     affs = get_random_affinity_map(3)
     seg = watershed(affs, 0, 0.9)
@@ -97,3 +99,12 @@ def test_random_agglomeration():
 #    tifffile.imwrite(os.path.join(DIR, "seg_rg.tif"), data=seg)
 #    with h5py.File(os.path.join(DIR, "seg_rg.h5"), "w") as f:
 #        f['main'] = seg
+
+def test_pickle():
+    affs = get_random_affinity_map(8)
+    seg = watershed(affs, 0, 0.9)
+    rg = RegionGraph(affs, seg)
+    data = pickle.dumps(rg)
+    rg2 = pickle.loads(data)
+    assert data == pickle.dumps(rg2)
+
