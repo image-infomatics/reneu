@@ -75,7 +75,7 @@ PYBIND11_MODULE(segmentation, m) {
                 return rg;
             }
         ))
-        .def("greedy_merge_until", &RegionGraph::py_greedy_merge_until);
+        .def("greedy_merge", &RegionGraph::py_greedy_merge);
 
 
 #ifdef VERSION_INFO
