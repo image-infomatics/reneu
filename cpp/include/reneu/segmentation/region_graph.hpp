@@ -163,6 +163,42 @@ auto build_priority_queue (const aff_edge_t& threshold) const {
 
 public:
 
+RegionGraph(): _edgeNum(0), _rm({}), _edgeList({}){}
+
+/**
+ * @brief build region graph. 
+ * 
+ */
+RegionGraph(const AffinityMap& affs, const Segmentation& fragments): _edgeNum(0){
+    // only contains x,y,z affinity 
+    // Note that our format of affinity channels are ordered by x,y,z
+    // although we are using C order with z,y,x in indexing!
+    // This is reasonable, because the last axis x is always changing fastest in memory
+    // when we tranvers the memory, the x axis changes first, so this is sort of 
+    // consistent with the order of channels. 
+
+    std::cout<< "accumulate the affinity edges..." << std::endl;
+    for(std::size_t z=0; z<fragments.shape(0); z++){
+        for(std::size_t y=0; y<fragments.shape(1); y++){
+            for(std::size_t x=0; x<fragments.shape(2); x++){
+                const auto& segid = fragments(z,y,x);
+                // skip background voxels
+                if(segid>0){ 
+                    if (z>0)
+                        accumulate_edge(segid, fragments(z-1,y,x), affs(2,z,y,x));
+                    
+                    if (y>0)
+                        accumulate_edge(segid, fragments(z,y-1,x), affs(1,z,y,x));
+                    
+                    if (x>0)
+                        accumulate_edge(segid, fragments(z,y,x-1), affs(0,z,y,x));
+                }
+            }
+        }
+    }
+    std::cout<<"total edge number: "<< _edgeNum<<std::endl;
+}
+
 auto get_edge_num() const {
     std::size_t edgeNum = 0;
     for(const auto& [segid0, neighbors0] : _rm){
@@ -206,41 +242,6 @@ auto as_array() const {
 }
 
 
-RegionGraph(): _edgeNum(0), _rm({}), _edgeList({}){}
-
-/**
- * @brief build region graph. 
- * 
- */
-RegionGraph(const AffinityMap& affs, const Segmentation& fragments): _edgeNum(0){
-    // only contains x,y,z affinity 
-    // Note that our format of affinity channels are ordered by x,y,z
-    // although we are using C order with z,y,x in indexing!
-    // This is reasonable, because the last axis x is always changing fastest in memory
-    // when we tranvers the memory, the x axis changes first, so this is sort of 
-    // consistent with the order of channels. 
-
-    std::cout<< "accumulate the affinity edges..." << std::endl;
-    for(std::size_t z=0; z<fragments.shape(0); z++){
-        for(std::size_t y=0; y<fragments.shape(1); y++){
-            for(std::size_t x=0; x<fragments.shape(2); x++){
-                const auto& segid = fragments(z,y,x);
-                // skip background voxels
-                if(segid>0){ 
-                    if (z>0)
-                        accumulate_edge(segid, fragments(z-1,y,x), affs(2,z,y,x));
-                    
-                    if (y>0)
-                        accumulate_edge(segid, fragments(z,y-1,x), affs(1,z,y,x));
-                    
-                    if (x>0)
-                        accumulate_edge(segid, fragments(z,y,x-1), affs(0,z,y,x));
-                }
-            }
-        }
-    }
-    std::cout<<"total edge number: "<< _edgeNum<<std::endl;
-}
 
 auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
 
