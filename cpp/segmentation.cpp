@@ -12,6 +12,7 @@
 #include "reneu/segmentation/watershed.hpp"
 #include "reneu/segmentation/dendrogram.hpp"
 #include "reneu/segmentation/region_graph.hpp"
+#include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/fill_background_with_affinity_guidance.hpp"
 
 namespace py = pybind11;
@@ -77,6 +78,24 @@ PYBIND11_MODULE(segmentation, m) {
         ))
         .def("greedy_merge", &RegionGraph::py_greedy_merge);
 
+    py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
+        .def(py::init<const PyAffinityMap&, const PySegmentation&>())
+        .def(py::pickle(
+            [](const RegionGraphChunk& rg){ // __getstate__
+                std::stringstream ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << rg;
+                return ss.str();
+            },
+            [](const std::string str){
+                std::stringstream ss(str);
+                boost::archive::text_iarchive ia(ss);
+                RegionGraphChunk rg;
+                ia >> (rg);
+                return rg;
+            }
+        ))
+        .def("greedy_merge", &RegionGraphChunk::py_greedy_merge);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
