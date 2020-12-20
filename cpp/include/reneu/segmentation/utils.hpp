@@ -4,7 +4,7 @@
 
 #include <boost/pending/disjoint_sets.hpp>
 
-#include "reneu/type_aliase.hpp"
+#include "../type_aliase.hpp"
 
 namespace reneu{
 

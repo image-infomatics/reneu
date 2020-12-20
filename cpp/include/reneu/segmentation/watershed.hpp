@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <tuple>
 
-#include "reneu/type_aliase.hpp"
+#include "../type_aliase.hpp"
 
 #include "xtensor/xbuilder.hpp"
 #include "xtensor/xfixed.hpp"

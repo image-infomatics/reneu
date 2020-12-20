@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <queue>
 #include <algorithm>
 #include <initializer_list>
 
@@ -11,10 +12,11 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>
 
-#include "reneu/type_aliase.hpp"
+#include "../type_aliase.hpp"
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
 #include "dendrogram.hpp"
+#include "priority_queue.hpp"
 
 
 namespace reneu{
@@ -97,13 +99,7 @@ protected:
 
     size_t _edgeNum;
 
-    struct EdgeInQueue{
-        segid_t segid0;
-        segid_t segid1;
-        aff_edge_t aff;
-        size_t version;
-    };
-
+    
 friend class boost::serialization::access;
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
@@ -130,7 +126,7 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
             _edgeList[edgeIndex].accumulate(aff);
         } else {
             // create a new edge
-            _edgeList.emplace_back(RegionEdge(segid0, segid1, aff));
+            _edgeList.emplace_back(segid0, segid1, aff);
             const size_t& edgeIndex = _edgeList.size() - 1;
             _rm[segid0][segid1] = edgeIndex; 
             _rm[segid1][segid0] = edgeIndex;
@@ -142,8 +138,7 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
 
 
 auto _build_priority_queue (const aff_edge_t& threshold) const {
-    std::vector<EdgeInQueue> heap({});
-    heap.reserve(_rm.size() * 4);
+    PriorityQueue heap;
     for(const auto& [segid0, neighbors0] : _rm){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
@@ -152,7 +147,7 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
                 const auto& meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
                     // initial version is set to 1
-                    heap.emplace_back(EdgeInQueue({segid0, segid1, meanAff, 1}));
+                    heap.emplace(segid0, segid1, meanAff, 1);
                 }
             }
         }
@@ -163,12 +158,9 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
 }
 
 auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
-            Dendrogram& dend, std::vector<EdgeInQueue>& heap, 
+            Dendrogram& dend, PriorityQueue& heap, 
             const aff_edge_t& threshold){
-    // comparison function for heap
-    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
-        return left.aff < right.aff;
-    };
+    
     dend.push_edge(segid0, segid1, edge.get_mean());
 
     // always merge object with less neighbors to more neighbors
@@ -197,12 +189,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             const auto& meanAff = newEdge.get_mean();
             
             if(meanAff > threshold){
-                heap.emplace_back(
-                    EdgeInQueue(
-                        {nid0, segid1, meanAff, newEdge.version}
-                    )
-                );
-                std::push_heap(heap.begin(), heap.end(), cmp);
+                heap.emplace(nid0, segid1, meanAff, newEdge.version);
             }
         } else {
             // directly assign nid0-segid0 to nid0-segid1
@@ -216,12 +203,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
 
             const auto& meanAff = neighborEdge.get_mean();
             if(meanAff > threshold){
-                heap.emplace_back(
-                    EdgeInQueue(
-                        {nid0, segid1, meanAff, neighborEdge.version}
-                    )
-                );
-                std::push_heap(heap.begin(), heap.end(), cmp);
+                heap.emplace(nid0, segid1, meanAff, neighborEdge.version);
             }
         }
     }
@@ -314,20 +296,14 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
 
     std::cout<< "build priority queue..." << std::endl;
     auto heap = _build_priority_queue(threshold);
-    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
-        return left.aff < right.aff;
-    };
-    std::make_heap(heap.begin(), heap.end(), cmp);
-
 
     Dendrogram dend(threshold);
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        std::pop_heap(heap.begin(), heap.end(), cmp);
-        const auto& edgeInQueue = heap.back();
-        heap.pop_back();
+        const auto& edgeInQueue = heap.top();
+        heap.pop();
         
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
