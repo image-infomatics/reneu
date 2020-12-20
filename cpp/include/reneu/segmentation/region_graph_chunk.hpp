@@ -98,19 +98,13 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
 
     std::cout<< "build heap/priority queue..." << std::endl;
     auto heap = _build_priority_queue(threshold);
-    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
-        return left.aff < right.aff;
-    };
-    std::make_heap(heap.begin(), heap.end(), cmp);
 
     Dendrogram dend(threshold);
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        std::pop_heap(heap.begin(), heap.end(), cmp);
-        const auto& edgeInQueue = heap.back();
-        heap.pop_back();
+        const auto& edgeInQueue = heap.pop();
         
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
@@ -135,64 +129,7 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
 
         // merge segid1 and segid0
         mergeNum++;
-        
-        dend.push_edge(segid0, segid1, edge.get_mean());
-
-        // always merge object with less neighbors to more neighbors
-        if(_rm.at(segid0).size() > _rm.at(segid1).size()){
-            std::swap(segid0, segid1);
-        }
-        auto& neighbors0 = _rm.at(segid0);
-        auto& neighbors1 = _rm.at(segid1);
-        neighbors0.erase(segid1);
-        neighbors1.erase(segid0);
-
-        // merge all the edges to segid1
-        for(auto& [nid0, neighborEdgeIndex] : neighbors0){
-            _rm.at(nid0).erase(segid0);
-            
-            auto& neighborEdge = _edgeList[neighborEdgeIndex];
-
-            if (has_connection(segid1, nid0)){
-                // combine two region edges
-                const auto& newEdgeIndex = neighbors1[nid0];
-                auto& newEdge = _edgeList[newEdgeIndex];
-                                
-                auto meanAff0 = neighborEdge.get_mean();
-                auto meanAff1 = newEdge.get_mean();
-                newEdge.absorb(neighborEdge);
-                const auto& meanAff = newEdge.get_mean();
-                
-                if(meanAff > threshold){
-                    heap.emplace_back(
-                        EdgeInQueue(
-                            {nid0, segid1, meanAff, newEdge.version}
-                        )
-                    );
-                    std::push_heap(heap.begin(), heap.end(), cmp);
-                }
-            } else {
-                // directly assign nid0-segid0 to nid0-segid1
-                _rm.at(segid1)[nid0] = neighborEdgeIndex;
-                _rm.at(nid0)[segid1] = neighborEdgeIndex;
-                // make the original edge in priority queue outdated
-                // this is a new edge, so the version should be 1
-                neighborEdge.version = 1;
-                neighborEdge.segid0 = nid0;
-                neighborEdge.segid1 = segid1;
-
-                const auto& meanAff = neighborEdge.get_mean();
-                if(meanAff > threshold){
-                    heap.emplace_back(
-                        EdgeInQueue(
-                            {nid0, segid1, meanAff, neighborEdge.version}
-                        )
-                    );
-                    std::push_heap(heap.begin(), heap.end(), cmp);
-                }
-            }
-        }
-        _rm.erase(segid0);
+        _merge_segments(segid0, segid1, edge, dend, heap, threshold); 
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
