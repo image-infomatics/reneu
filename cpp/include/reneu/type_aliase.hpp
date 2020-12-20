@@ -1,8 +1,8 @@
 # pragma once
 
-#include "xtensor/xtensor.hpp"
-#include "xtensor/xfixed.hpp"
-#include "xtensor-python/pytensor.hpp"
+#include <xtensor/xtensor.hpp>
+#include <xtensor/xfixed.hpp>
+#include <xtensor-python/pytensor.hpp>
 
 namespace reneu{
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <boost/pending/disjoint_sets.hpp>
-#include "reneu/type_aliase.hpp"
-#include "reneu/segmentation/utils.hpp"
+#include "../type_aliase.hpp"
+#include "./utils.hpp"
 
 
 namespace reneu{
