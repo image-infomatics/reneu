@@ -2,8 +2,8 @@
 
 #include <deque>
 
-#include "reneu/type_aliase.hpp"
-#include "xtensor/xview.hpp"
+#include "../type_aliase.hpp"
+#include <xtensor/xview.hpp>
 
 namespace reneu{
 

@@ -147,11 +147,13 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
                 const auto& meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
                     // initial version is set to 1
-                    heap.emplace(segid0, segid1, meanAff, 1);
+                    heap.emplace_back(segid0, segid1, meanAff, 1);
                 }
             }
         }
     }
+
+    heap.make_heap();
 
     std::cout<< "initial heap size: "<< heap.size() << std::endl;
     return heap;
@@ -189,7 +191,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             const auto& meanAff = newEdge.get_mean();
             
             if(meanAff > threshold){
-                heap.emplace(nid0, segid1, meanAff, newEdge.version);
+                heap.emplace_push(nid0, segid1, meanAff, newEdge.version);
             }
         } else {
             // directly assign nid0-segid0 to nid0-segid1
@@ -203,7 +205,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
 
             const auto& meanAff = neighborEdge.get_mean();
             if(meanAff > threshold){
-                heap.emplace(nid0, segid1, meanAff, neighborEdge.version);
+                heap.emplace_push(nid0, segid1, meanAff, neighborEdge.version);
             }
         }
     }
@@ -302,8 +304,7 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
-        const auto& edgeInQueue = heap.top();
-        heap.pop();
+        const auto& edgeInQueue = heap.pop();
         
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
