@@ -1,5 +1,4 @@
 #pragma once
-#include <limits>
 #include <map>
 
 #include <boost/serialization/serialization.hpp>
@@ -32,14 +31,21 @@ static const std::uint8_t POS_X = POS_Y >> 1;
 
 friend class boost::serialization::access;
 template<class Archive>
-void serialize(Archive& ar, const unsigned int version){
+void serialize(Archive& ar, const unsigned int version) {
+    // To-Do: clean up merged segments?
+    // do we need to propagate the freezing face?
     ar & boost::serialization::base_object<RegionGraph>(*this);
     ar & _segid2frozen; 
 }
 
 
-inline bool _is_frozen(const segid_t& sid){
-    return (_segid2frozen[sid] >> 1) > 0;
+inline bool _is_frozen(const segid_t& sid) const {
+    return (_segid2frozen.at(sid) >> 1) > 0;
+}
+
+inline auto _freeze_both(const segid_t& sid0, const segid_t& sid1){
+    _segid2frozen[sid0] |= _segid2frozen.at(sid1);
+    _segid2frozen[sid1] |= _segid2frozen.at(sid0);
 }
 
 public:
@@ -62,19 +68,19 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 if(_segid2frozen[segid] == 0)
                     _segid2frozen[segid] = 1;
                 
-                if(z==0 && ~volumeBoundaryFlags[0])
+                if(z==0 && !volumeBoundaryFlags[0])
                     _segid2frozen[segid] |= NEG_Z;
-                else if(z==seg.shape(0)-1 && ~volumeBoundaryFlags[3])
+                else if(z==seg.shape(0)-1 && !volumeBoundaryFlags[3])
                     _segid2frozen[segid] |= POS_Z;
 
-                if(y==0 && ~volumeBoundaryFlags[1])
+                if(y==0 && !volumeBoundaryFlags[1])
                     _segid2frozen[segid] |= NEG_Y;
-                else if(y==seg.shape(1)-1 && ~volumeBoundaryFlags[4])
+                else if(y==seg.shape(1)-1 && !volumeBoundaryFlags[4])
                     _segid2frozen[segid] |= POS_Y;
                 
-                if(x==0 && ~volumeBoundaryFlags[2])
+                if(x==0 && !volumeBoundaryFlags[2])
                     _segid2frozen[segid] |= NEG_X;
-                else if(x==seg.shape(2)-1 && ~volumeBoundaryFlags[5])
+                else if(x==seg.shape(2)-1 && !volumeBoundaryFlags[5])
                     _segid2frozen[segid] |= POS_X;
 
             }
@@ -83,13 +89,128 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     return;
 }
 
+/** Merge fragments inside a leaf node.
+ * 
+ * @param seg The segmentation volume containing many small fragments.
+ * @param threshold The stopping threshold of the agglomeration.
+ */
+auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
 
-auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold) {
+    std::cout<< "build heap/priority queue..." << std::endl;
+    auto heap = _build_priority_queue(threshold);
+    auto cmp = [](const EdgeInQueue& left, const EdgeInQueue& right){
+        return left.aff < right.aff;
+    };
+    std::make_heap(heap.begin(), heap.end(), cmp);
+
+    Dendrogram dend(threshold);
+
+    std::cout<< "iterative greedy merging..." << std::endl; 
+    size_t mergeNum = 0;
+    while(!heap.empty()){
+        std::pop_heap(heap.begin(), heap.end(), cmp);
+        const auto& edgeInQueue = heap.back();
+        heap.pop_back();
+        
+        auto segid0 = edgeInQueue.segid0;
+        auto segid1 = edgeInQueue.segid1;
+
+        if(!has_connection(segid0, segid1)){
+            continue;
+        }
+        
+        const auto& edgeIndex = _get_edge_index(segid1, segid0);
+        const auto& edge = _edgeList[edgeIndex];
+        if(edge.version > edgeInQueue.version){
+            // found an outdated edge
+            continue;
+        }
+
+        if(_is_frozen(segid0) || _is_frozen(segid1)){
+            // mark both segment as frozen from both chunk faces
+            // these two could be merged in the 
+            _freeze_both(segid0, segid1);
+            continue;
+        } 
+
+        // merge segid1 and segid0
+        mergeNum++;
+        
+        dend.push_edge(segid0, segid1, edge.get_mean());
+
+        // always merge object with less neighbors to more neighbors
+        if(_rm.at(segid0).size() > _rm.at(segid1).size()){
+            std::swap(segid0, segid1);
+        }
+        auto& neighbors0 = _rm.at(segid0);
+        auto& neighbors1 = _rm.at(segid1);
+        neighbors0.erase(segid1);
+        neighbors1.erase(segid0);
+
+        // merge all the edges to segid1
+        for(auto& [nid0, neighborEdgeIndex] : neighbors0){
+            _rm.at(nid0).erase(segid0);
+            
+            auto& neighborEdge = _edgeList[neighborEdgeIndex];
+
+            if (has_connection(segid1, nid0)){
+                // combine two region edges
+                const auto& newEdgeIndex = neighbors1[nid0];
+                auto& newEdge = _edgeList[newEdgeIndex];
+                                
+                auto meanAff0 = neighborEdge.get_mean();
+                auto meanAff1 = newEdge.get_mean();
+                newEdge.absorb(neighborEdge);
+                const auto& meanAff = newEdge.get_mean();
+                
+                if(meanAff > threshold){
+                    heap.emplace_back(
+                        EdgeInQueue(
+                            {nid0, segid1, meanAff, newEdge.version}
+                        )
+                    );
+                    std::push_heap(heap.begin(), heap.end(), cmp);
+                }
+            } else {
+                // directly assign nid0-segid0 to nid0-segid1
+                _rm.at(segid1)[nid0] = neighborEdgeIndex;
+                _rm.at(nid0)[segid1] = neighborEdgeIndex;
+                // make the original edge in priority queue outdated
+                // this is a new edge, so the version should be 1
+                neighborEdge.version = 1;
+                neighborEdge.segid0 = nid0;
+                neighborEdge.segid1 = segid1;
+
+                const auto& meanAff = neighborEdge.get_mean();
+                if(meanAff > threshold){
+                    heap.emplace_back(
+                        EdgeInQueue(
+                            {nid0, segid1, meanAff, neighborEdge.version}
+                        )
+                    );
+                    std::push_heap(heap.begin(), heap.end(), cmp);
+                }
+            }
+        }
+        _rm.erase(segid0);
+    }
     
+    std::cout<< "merged "<< mergeNum << " times." << std::endl;
+    return dend;
 }
 
-inline auto py_greedy_merge(const Segmentation& seg, const aff_edge_t& threshold) {
-    return greedy_merge(seg, threshold);
+inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
+    return merge_in_leaf(seg, threshold);
+}
+
+/** Merge the other node in the binary bounding box tree. 
+ * 
+ * The nodes freezed by the contacting face should be melted.
+ * 
+ * @param rgc2 The other region graph chunk with some frozen nodes.
+ */
+auto merge_another_node(const RegionGraphChunk& rgc2){
+    return;
 }
 
 }; // class of RegionGraphChunk
