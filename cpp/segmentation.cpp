@@ -79,7 +79,7 @@ PYBIND11_MODULE(segmentation, m) {
         .def("greedy_merge", &RegionGraph::py_greedy_merge);
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
-        .def(py::init<const PyAffinityMap&, const PySegmentation&>())
+        .def(py::init<const PyAffinityMap&, const PySegmentation&, const std::array<bool, 6>&>())
         .def(py::pickle(
             [](const RegionGraphChunk& rg){ // __getstate__
                 std::stringstream ss;
