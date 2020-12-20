@@ -6,8 +6,8 @@
 
 #include "../type_aliase.hpp"
 
-#include "xtensor/xbuilder.hpp"
-#include "xtensor/xfixed.hpp"
+#include <xtensor/xbuilder.hpp>
+#include <xtensor/xfixed.hpp>
 
 namespace reneu{
 
