@@ -78,6 +78,10 @@ inline void cleanup(){
     version = std::numeric_limits<size_t>::max();
 }
 
+// inline bool operator<(const RegionEdge& other) const {
+//     return get_mean() < other.get_mean();
+// }
+
 }; // class of RegionEdge
 
 std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
@@ -86,6 +90,7 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
     return os;
 }
 
+using RegionEdgeList = std::vector<RegionEdge>;
 
 class RegionGraph{
 protected:
@@ -95,9 +100,7 @@ protected:
     using RegionMap = std::map<segid_t, Neighbors>;
 
     RegionMap _rm;
-    std::vector<RegionEdge> _edgeList;
-
-    size_t _edgeNum;
+    RegionEdgeList _edgeList;
 
     
 friend class boost::serialization::access;
@@ -105,7 +108,6 @@ template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
     ar & _rm;
     ar & _edgeList;
-    ar & _edgeNum;
 }
 
 inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
@@ -130,7 +132,6 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
             const size_t& edgeIndex = _edgeList.size() - 1;
             _rm[segid0][segid1] = edgeIndex; 
             _rm[segid1][segid0] = edgeIndex;
-            _edgeNum++;
         }
     }
     return;
@@ -214,13 +215,15 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
 }
 public:
 
-RegionGraph(): _edgeNum(0), _rm({}), _edgeList({}){}
+RegionGraph(): _rm({}), _edgeList({}){}
+RegionGraph(const RegionMap& regionMap, const RegionEdgeList& edgeList): 
+    _rm(regionMap), _edgeList(edgeList) {}
 
 /**
  * @brief build region graph. 
  * 
  */
-RegionGraph(const AffinityMap& affs, const Segmentation& fragments): _edgeNum(0){
+RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
     // only contains x,y,z affinity 
     // Note that our format of affinity channels are ordered by x,y,z
     // although we are using C order with z,y,x in indexing!
@@ -247,7 +250,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments): _edgeNum(0)
             }
         }
     }
-    std::cout<<"total edge number: "<< _edgeNum<<std::endl;
+    std::cout<<"total edge number: "<< _edgeList.size() <<std::endl;
 }
 
 auto get_edge_num() const {

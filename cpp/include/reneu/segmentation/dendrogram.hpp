@@ -5,6 +5,7 @@
 // #include <execution>
 #include <string>
 #include <sstream>
+#include <set>
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/vector.hpp>
@@ -20,7 +21,6 @@ class Dendrogram;
 
 class DendEdge{
 friend class Dendrogram;
-friend bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2);
 
 
 public:
@@ -40,11 +40,12 @@ DendEdge(): segid0(0), segid1(0), affinity(0){}
 DendEdge(segid_t _segid0, segid_t _segid1, aff_edge_t _affinity): 
             segid0(_segid0), segid1(_segid1), affinity(_affinity){}
 
+bool operator<(const DendEdge& other){
+    return affinity < other.affinity;
+}
+
 };
 
-bool compare_edgeList_edge(const DendEdge& de1, const DendEdge& de2) {
-    return (de1.affinity > de2.affinity);
-}
 
 class Dendrogram{
 
@@ -175,15 +176,7 @@ auto merge(Dendrogram other){
     }
 }
 
-auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
-    assert(threshold >= _minThreshold);
-    
-    // if(threshold > _minThreshold){
-    //     // sort the dendEdge
-    //     // std::sort(std::execution::par_unseq, _edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
-    //     std::sort(_edgeList.begin(), _edgeList.end(), compare_edgeList_edge);
-    // }
-
+auto to_disjoint_sets(const aff_edge_t& threshold) const {
     std::cout<< "build disjoint set..." << std::endl;
     auto dsets = DisjointSets();
 
@@ -199,7 +192,14 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
         if(edge.affinity >= threshold){
             dsets.union_set(edge.segid0, edge.segid1);
         }
-    } 
+    }
+    return dsets;
+}
+
+auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
+    assert(threshold >= _minThreshold);
+    auto dsets = to_disjoint_sets(threshold);
+    
     dsets.relabel(seg);
     return seg;
 }

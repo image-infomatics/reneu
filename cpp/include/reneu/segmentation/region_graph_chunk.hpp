@@ -16,7 +16,8 @@ private:
 // for the last bit, if it is 1, this segment exist
 // otherwise, this segment do not belong to this region graph.
 // since the map will have a default value of 0 for all the keys
-std::map<segid_t, std::uint8_t> _segid2frozen;
+using SegID2Frozen = std::map<segid_t, std::uint8_t>;
+SegID2Frozen _segid2frozen;
 
 // bit flag of chunk surface
 // if the bit is 1, the segment is frozen by the corresponding surface
@@ -51,6 +52,8 @@ inline auto _freeze_both(const segid_t& sid0, const segid_t& sid1){
 public:
 
 RegionGraphChunk(): RegionGraph(), _segid2frozen({}){}
+RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen): 
+    RegionGraph(rg), _segid2frozen(segid2frozen) {}
 
 RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::array<bool, 6> &volumeBoundaryFlags): 
         RegionGraph(affs, seg), _segid2frozen({}){
@@ -133,7 +136,44 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
-    return dend;
+
+    // clean up the edge list 
+    auto dsets = dend.to_disjoint_sets(threshold);
+    auto residualRegionMap = RegionMap({});
+    auto residualEdgeList = RegionEdgeList({});
+    auto residualSegid2frozen = SegID2Frozen({});
+
+    for(const auto& [segid0, neighbors0] : _rm){
+        for(const auto& [segid1, edgeIndex] : neighbors0){
+            if(segid0 < segid1){
+                if(_is_frozen(segid0) && _is_frozen(segid1)){
+                    // keep frozen edges to be proccessed in future
+                    auto root0 = dsets.find_set(segid0);
+                    auto root1 = dsets.find_set(segid1);
+                    if(root0 ==0 ){
+                        root0 = segid0;
+                    }
+                    if(root1 == 0){
+                        root1 = segid1;
+                    }
+                    assert(root0 != root1);
+                    if(root0 == root1){
+                        std::cout<< "segment "<< segid0 << " and " << segid1 << " has same root " << root0 << std::endl;
+                    }
+
+                    residualRegionMap[root0][root1] = residualEdgeList.size();
+                    residualEdgeList.push_back(_edgeList[edgeIndex]);
+                    residualSegid2frozen[root0] = _segid2frozen[segid0] | _segid2frozen[root0];
+                    residualSegid2frozen[root1] = _segid2frozen[segid1] | _segid2frozen[root1];
+                } 
+            }
+        }
+    }
+
+    auto residualRegionGraph = RegionGraph(residualRegionMap, residualEdgeList);
+    auto residualRegionGraphChunk = RegionGraphChunk(residualRegionGraph, residualSegid2frozen);
+
+    return dend, residualRegionGraphChunk;
 }
 
 inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {

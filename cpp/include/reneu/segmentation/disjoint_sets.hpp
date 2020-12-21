@@ -47,7 +47,7 @@ inline void union_set(segid_t s0, segid_t s1){
 }
 
 inline auto find_set(segid_t sid){
-    return _dsets.find_set(sid);
+    return _dsets.find_set(sid); 
 }
 
 void relabel(Segmentation& seg){
