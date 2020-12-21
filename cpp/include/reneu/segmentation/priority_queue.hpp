@@ -1,3 +1,5 @@
+#pragma once
+
 #include <queue>
 #include "../type_aliase.hpp"
 
