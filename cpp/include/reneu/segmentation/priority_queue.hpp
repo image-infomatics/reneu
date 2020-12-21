@@ -6,7 +6,6 @@
 
 namespace reneu{
 
-
 struct EdgeInQueue{
     segid_t segid0;
     segid_t segid1;
