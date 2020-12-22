@@ -32,6 +32,7 @@ static const std::uint8_t NEG_X = 0x20;
 static const std::uint8_t POS_Z = 0x08;
 static const std::uint8_t POS_Y = 0x04;
 static const std::uint8_t POS_X = 0x02;
+static const std::array<std::uint8_t, 6> SURFACE_BITS = {NEG_Z, NEG_Y, NEG_X, POS_Z, POS_Y, POS_X};
 
 friend class boost::serialization::access;
 template<class Archive>
@@ -227,9 +228,35 @@ inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshol
  * 
  * @param rgc2 The other region graph chunk with some frozen nodes.
  */
-auto merge_upper_region_graph_chunk(const RegionGraphChunk& upperRegionGraphChunk, const std::size_t& dim){
+auto merge_upper_region_graph_chunk(const RegionGraphChunk& upperRegionGraphChunk, 
+                                const std::size_t& dim, const aff_edge_t& threshold){
     assert(dim>=0 && dim<3);
+    const auto& LOWER_SURFACE_BIT = SURFACE_BITS[dim];
+    const auto& UPPER_SURFACE_BIT = SURFACE_BITS[3+dim];
 
+    SegID2Frozen newSegid2frozen = {};
+    for(const auto& [segid, frozen] : _segid2frozen){
+        const std::uint8_t& newFrozen = (frozen & (~LOWER_SURFACE_BIT));
+        if(newFrozen > 0){
+            newSegid2frozen[segid] = newFrozen;
+        }
+    }
+    for(const auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
+        const std::uint8_t& newFrozen = (frozen & (~(UPPER_SURFACE_BIT))) | (newSegid2frozen[segid]);
+        if(newFrozen != newSegid2frozen[segid]){
+            newSegid2frozen[segid] = newFrozen;
+        }
+    }
+
+    Segid2Neighbor newSegid2Neighbor = {};
+    RegionEdgeList newEdgeList = {};
+    for(const auto& [segid0, neighbor] : _segid2neighbor){
+        for(const auto& [segid1, edgeIndex] : neighbor){
+            if(segid0 < segid1){
+                
+            }
+        }
+    }
 
     return;
 }
