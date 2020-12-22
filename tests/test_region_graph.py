@@ -78,7 +78,7 @@ def test_random_agglomeration():
             np.array([[[0,  11, 11,  7], 
                        [11, 11, 11,  7],
                        [11, 11, 11, 11],
-                       [0, 11, 11, 11]]])
+                       [12, 11, 11, 11]]])
     )
 
 def test_segment_large_affinity_map():
