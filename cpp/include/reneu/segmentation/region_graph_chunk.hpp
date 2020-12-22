@@ -23,12 +23,15 @@ SegID2Frozen _segid2frozen;
 // if the bit is 1, the segment is frozen by the corresponding surface
 // it should be melted in that bit if the corresponding surface got merged
 // if the bit is 0, the segment is not frozen by the corresponding surface 
-static const std::uint8_t NEG_Z = ~(std::numeric_limits<std::uint8_t>::max() >> 1);
-static const std::uint8_t NEG_Y = NEG_Z >> 1;
-static const std::uint8_t NEG_X = NEG_Y >> 1;
-static const std::uint8_t POS_Z = NEG_X >> 1;
-static const std::uint8_t POS_Y = POS_Z >> 1;
-static const std::uint8_t POS_X = POS_Y >> 1;
+
+
+// bit order: NEG_Z, NEG_Y, NEG_X, 0, POS_Z, POS_Y, POS_X, 0 
+static const std::uint8_t NEG_Z = 0x80;
+static const std::uint8_t NEG_Y = 0x40;
+static const std::uint8_t NEG_X = 0x20;
+static const std::uint8_t POS_Z = 0x08;
+static const std::uint8_t POS_Y = 0x04;
+static const std::uint8_t POS_X = 0x02;
 
 friend class boost::serialization::access;
 template<class Archive>
@@ -55,37 +58,75 @@ RegionGraphChunk(): RegionGraph(), _segid2frozen({}){}
 RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen): 
     RegionGraph(rg), _segid2frozen(segid2frozen) {}
 
+/**
+ * @brief Construct a new Region Graph Chunk object
+ * 
+ * @param affs affinity map. the starting offset should be (1,1,1) compared with segmentation
+ * @param seg segmentation. The size should be larger than affinity map by (1,1,1).
+ * @param volumeBoundaryFlags 
+ */
 RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::array<bool, 6> &volumeBoundaryFlags): 
         RegionGraph(affs, seg), _segid2frozen({}){
-    
+    assert(affs.shape(1) == seg.shape(0) + 1);
+    assert(affs.shape(2) == seg.shape(1) + 1);
+    assert(affs.shape(3) == seg.shape(2) + 1);
+   
     // freeze the segment ids touching chunk boundary 
     // the ones touching volume boundary are excluded
-    for(std::size_t z=0; z<seg.shape(0); z++){
-        for(std::size_t y=0; y<seg.shape(1); y++){
-            for(std::size_t x=0; x<seg.shape(2); x++){
+    for(std::size_t z=1; z<seg.shape(0); z++){
+        for(std::size_t y=1; y<seg.shape(1); y++){
+            for(std::size_t x=1; x<seg.shape(2); x++){
                 const auto& segid = seg(z,y,x);
                 if(segid == 0) continue;
 
-                // mark that this segment id exist
-                // std::map will return 0 for nonexist segmentation id
-                if(_segid2frozen[segid] == 0)
-                    _segid2frozen[segid] = 1;
-                
-                if(z==0 && !volumeBoundaryFlags[0])
+                if(z==1 && !volumeBoundaryFlags[0]){
                     _segid2frozen[segid] |= NEG_Z;
-                else if(z==seg.shape(0)-1 && !volumeBoundaryFlags[3])
+                    const auto& contactingSegid = seg(z-1, y, x);
+                    if(contactingSegid > 0){
+                        _segid2frozen[contactingSegid] |= NEG_Z;
+                    }
+                }else if(z==seg.shape(0)-1 && !volumeBoundaryFlags[3])
                     _segid2frozen[segid] |= POS_Z;
 
-                if(y==0 && !volumeBoundaryFlags[1])
+                if(y==1 && !volumeBoundaryFlags[1]){
                     _segid2frozen[segid] |= NEG_Y;
-                else if(y==seg.shape(1)-1 && !volumeBoundaryFlags[4])
+                    const auto& contactingSegid = seg(z, y-1, x);
+                    if(contactingSegid > 0){
+                        _segid2frozen[contactingSegid] |= NEG_Y;
+                    }
+                }else if(y==seg.shape(1)-1 && !volumeBoundaryFlags[4])
                     _segid2frozen[segid] |= POS_Y;
                 
-                if(x==0 && !volumeBoundaryFlags[2])
+                if(x==1 && !volumeBoundaryFlags[2]){
                     _segid2frozen[segid] |= NEG_X;
-                else if(x==seg.shape(2)-1 && !volumeBoundaryFlags[5])
+                    const auto& contactingSegid = seg(z, y, x-1);
+                    if(contactingSegid > 0){
+                        _segid2frozen[contactingSegid] |= NEG_X;
+                    }
+                }else if(x==seg.shape(2)-1 && !volumeBoundaryFlags[5])
                     _segid2frozen[segid] |= POS_X;
 
+            }
+        }
+    }
+
+    std::cout<< "accumulate the affinity edges..." << std::endl;
+    // start from 1 since we included the contacting neighbor chunk segmentation
+    for(std::size_t z=1; z<seg.shape(0); z++){
+        for(std::size_t y=1; y<seg.shape(1); y++){
+            for(std::size_t x=1; x<seg.shape(2); x++){
+                const auto& segid = seg(z,y,x);
+                // skip background voxels
+                if(segid>0){ 
+                    if (z>0)
+                        accumulate_edge(segid, seg(z-1,y,x), affs(2,z-1,y,x));
+                    
+                    if (y>0)
+                        accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y-1,x));
+                    
+                    if (x>0)
+                        accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x-1));
+                }
             }
         }
     }
@@ -173,7 +214,7 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
     auto residualRegionGraph = RegionGraph(residualRegionMap, residualEdgeList);
     auto residualRegionGraphChunk = RegionGraphChunk(residualRegionGraph, residualSegid2frozen);
 
-    return dend, residualRegionGraphChunk;
+    return std::make_pair(dend, residualRegionGraphChunk);
 }
 
 inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
@@ -186,7 +227,10 @@ inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshol
  * 
  * @param rgc2 The other region graph chunk with some frozen nodes.
  */
-auto merge_another_node(const RegionGraphChunk& rgc2){
+auto merge_upper_region_graph_chunk(const RegionGraphChunk& upperRegionGraphChunk, const std::size_t& dim){
+    assert(dim>=0 && dim<3);
+
+
     return;
 }
 

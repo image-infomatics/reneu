@@ -7,6 +7,7 @@
 #include <initializer_list>
 
 #include <xtensor/xsort.hpp>
+#include <xtensor/xview.hpp>
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/vector.hpp>
@@ -220,8 +221,10 @@ RegionGraph(const RegionMap& regionMap, const RegionEdgeList& edgeList):
     _rm(regionMap), _edgeList(edgeList) {}
 
 /**
- * @brief build region graph. 
+ * @brief Construct a new Region Graph object
  * 
+ * @param affs 
+ * @param fragments 
  */
 RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
     // only contains x,y,z affinity 
@@ -230,6 +233,9 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
     // This is reasonable, because the last axis x is always changing fastest in memory
     // when we tranvers the memory, the x axis changes first, so this is sort of 
     // consistent with the order of channels. 
+    assert(affs.shape(1) == fragments.shape(0));
+    assert(affs.shape(1) == fragments.shape(0));
+    assert(affs.shape(1) == fragments.shape(0));
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
     for(std::size_t z=0; z<fragments.shape(0); z++){
