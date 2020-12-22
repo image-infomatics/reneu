@@ -47,7 +47,11 @@ inline void union_set(segid_t s0, segid_t s1){
 }
 
 inline auto find_set(segid_t sid){
-    return _dsets.find_set(sid); 
+    const auto& root = _dsets.find_set(sid);
+    if(root == 0)
+        return sid;
+    else
+        return root;
 }
 
 void relabel(Segmentation& seg){
@@ -61,15 +65,18 @@ void relabel(Segmentation& seg){
     std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
     const auto& [sz, sy, sx] = seg.shape();
     for(std::size_t z=0; z<sz; z++){
-       for(std::size_t y=0; y<sy; y++){
-           for(std::size_t x=0; x<sx; x++){
-               const auto& sid = seg(z,y,x);
-               const auto& rootID = _dsets.find_set(sid);
-               if(sid>0 && rootID>0 && sid!=rootID){
-                   seg(z,y,x) = rootID; 
-               }
-           }
-       }
+        for(std::size_t y=0; y<sy; y++){
+            for(std::size_t x=0; x<sx; x++){
+                const auto& sid = seg(z,y,x);
+                if(sid > 0){
+                    const auto& rootID = _dsets.find_set(sid);
+                    if(sid!=rootID){
+                        assert(rootID > 0);
+                        seg(z,y,x) = rootID;
+                    }
+                }
+            }
+        }
     }
 
 
