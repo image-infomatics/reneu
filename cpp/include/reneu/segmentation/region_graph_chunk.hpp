@@ -32,7 +32,7 @@ static const std::uint8_t NEG_X = 0x20;
 static const std::uint8_t POS_Z = 0x08;
 static const std::uint8_t POS_Y = 0x04;
 static const std::uint8_t POS_X = 0x02;
-static const std::array<std::uint8_t, 6> SURFACE_BITS = {NEG_Z, NEG_Y, NEG_X, POS_Z, POS_Y, POS_X};
+static const std::array<std::uint8_t, 6> constexpr SURFACE_BITS = {NEG_Z, NEG_Y, NEG_X, POS_Z, POS_Y, POS_X};
 
 friend class boost::serialization::access;
 template<class Archive>
@@ -181,11 +181,11 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
 
     // clean up the edge list 
     auto dsets = dend.to_disjoint_sets(threshold);
-    auto residualRegionMap = RegionMap({});
+    auto residualSegid2Neighbor = Segid2Neighbor({});
     auto residualEdgeList = RegionEdgeList({});
     auto residualSegid2frozen = SegID2Frozen({});
 
-    for(const auto& [segid0, neighbors0] : _rm){
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             if(segid0 < segid1){
                 if(_is_frozen(segid0) && _is_frozen(segid1)){
@@ -203,7 +203,7 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
                         std::cout<< "segment "<< segid0 << " and " << segid1 << " has same root " << root0 << std::endl;
                     }
 
-                    residualRegionMap[root0][root1] = residualEdgeList.size();
+                    residualSegid2Neighbor[root0][root1] = residualEdgeList.size();
                     residualEdgeList.push_back(_edgeList[edgeIndex]);
                     residualSegid2frozen[root0] = _segid2frozen[segid0] | _segid2frozen[root0];
                     residualSegid2frozen[root1] = _segid2frozen[segid1] | _segid2frozen[root1];
@@ -212,7 +212,7 @@ auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
         }
     }
 
-    auto residualRegionGraph = RegionGraph(residualRegionMap, residualEdgeList);
+    auto residualRegionGraph = RegionGraph(residualSegid2Neighbor, residualEdgeList);
     auto residualRegionGraphChunk = RegionGraphChunk(residualRegionGraph, residualSegid2frozen);
 
     return std::make_pair(dend, residualRegionGraphChunk);
@@ -234,6 +234,11 @@ auto merge_upper_region_graph_chunk(const RegionGraphChunk& upperRegionGraphChun
     const auto& LOWER_SURFACE_BIT = SURFACE_BITS[dim];
     const auto& UPPER_SURFACE_BIT = SURFACE_BITS[3+dim];
 
+    // clean up the frozen set
+    for(auto& [segid, frozen] : _segid2frozen){
+        
+    }
+
     SegID2Frozen newSegid2frozen = {};
     for(const auto& [segid, frozen] : _segid2frozen){
         const std::uint8_t& newFrozen = (frozen & (~LOWER_SURFACE_BIT));
@@ -253,7 +258,7 @@ auto merge_upper_region_graph_chunk(const RegionGraphChunk& upperRegionGraphChun
     for(const auto& [segid0, neighbor] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbor){
             if(segid0 < segid1){
-                
+
             }
         }
     }
