@@ -70,7 +70,7 @@ void relabel(Segmentation& seg){
                 const auto& sid = seg(z,y,x);
                 if(sid > 0){
                     const auto& rootID = _dsets.find_set(sid);
-                    if(sid!=rootID){
+                    if(sid!=rootID && rootID>0){
                         assert(rootID > 0);
                         seg(z,y,x) = rootID;
                     }
