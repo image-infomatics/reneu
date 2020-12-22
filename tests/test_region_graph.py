@@ -78,27 +78,27 @@ def test_random_agglomeration():
             np.array([[[0,  11, 11,  7], 
                        [11, 11, 11,  7],
                        [11, 11, 11, 11],
-                       [12, 11, 11, 11]]])
+                       [0, 11, 11, 11]]])
     )
 
-#def test_segment_large_affinity_map():
-#    DIR = os.path.join(os.path.dirname(__file__), '../data/')
-#    with h5py.File(os.path.join(DIR, "aff_160k.h5"), "r") as f:
-#        affs = np.asarray(f["main"])
-#    
-#    print('watershed ...')
-#    seg = watershed(affs, 0, 0.9999)
-#    tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
-#    # ws_seg = np.copy(seg)
-#    # fill_background_with_affinity_guidance(seg, affs)
-#    # print('filled voxel number: ', np.count_nonzero(ws_seg - seg))
-#
-#    print('agglomeration...')
-#    seg = agglomerate(affs, seg, 0.5)
-#    print('save results...')
-#    tifffile.imwrite(os.path.join(DIR, "seg_rg.tif"), data=seg)
-#    with h5py.File(os.path.join(DIR, "seg_rg.h5"), "w") as f:
-#        f['main'] = seg
+def test_segment_large_affinity_map():
+    DIR = os.path.join(os.path.dirname(__file__), '../data/')
+    with h5py.File(os.path.join(DIR, "aff_160k.h5"), "r") as f:
+        affs = np.asarray(f["main"])
+    
+    print('watershed ...')
+    seg = watershed(affs, 0, 0.9999)
+    tifffile.imwrite(os.path.join(DIR, "watershed_basins.tif"), data=seg)
+    # ws_seg = np.copy(seg)
+    # fill_background_with_affinity_guidance(seg, affs)
+    # print('filled voxel number: ', np.count_nonzero(ws_seg - seg))
+
+    print('agglomeration...')
+    seg = agglomerate(affs, seg, 0.5)
+    print('save results...')
+    tifffile.imwrite(os.path.join(DIR, "seg_rg.tif"), data=seg)
+    with h5py.File(os.path.join(DIR, "seg_rg.h5"), "w") as f:
+        f['main'] = seg
 
 def test_pickle():
     affs = get_random_affinity_map(8)
