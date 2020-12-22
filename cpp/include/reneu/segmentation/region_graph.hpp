@@ -92,47 +92,47 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 }
 
 using RegionEdgeList = std::vector<RegionEdge>;
+using Neighbors = std::map<segid_t, size_t>;
+using Segid2Neighbor = std::map<segid_t, Neighbors>;
 
 class RegionGraph{
 protected:
-    using Neighbors = std::map<segid_t, size_t>;
     // flat_map is much slower than std::map 
     // using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
-    using RegionMap = std::map<segid_t, Neighbors>;
 
-    RegionMap _rm;
+    Segid2Neighbor _segid2neighbor;
     RegionEdgeList _edgeList;
 
     
 friend class boost::serialization::access;
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
-    ar & _rm;
+    ar & _segid2neighbor;
     ar & _edgeList;
 }
 
 inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
-    return _rm.at(sid0).at(sid1);
+    return _segid2neighbor.at(sid0).at(sid1);
 }
 
 inline bool has_connection (const segid_t& sid0, const segid_t& sid1) const {
-    // return _rm[sid0].count(sid1);
-    return (_rm.count(sid0)) && (_rm.at(sid0).count(sid1));
-    // return (_rm.find(sid0) != _rm.end()) && (_rm[sid0].find(sid1)!= _rm[sid0].end());
+    // return _segid2neighbor[sid0].count(sid1);
+    return (_segid2neighbor.count(sid0)) && (_segid2neighbor.at(sid0).count(sid1));
+    // return (_segid2neighbor.find(sid0) != _segid2neighbor.end()) && (_segid2neighbor[sid0].find(sid1)!= _segid2neighbor[sid0].end());
 }
 
 inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
     // we assume that segid0 is greater than 0 !
     if( (segid1>0) && (segid0 != segid1)){
         if(has_connection(segid0, segid1)){
-            const auto& edgeIndex = _rm.at(segid0).at(segid1);
+            const auto& edgeIndex = _segid2neighbor.at(segid0).at(segid1);
             _edgeList[edgeIndex].accumulate(aff);
         } else {
             // create a new edge
             _edgeList.emplace_back(segid0, segid1, aff);
             const size_t& edgeIndex = _edgeList.size() - 1;
-            _rm[segid0][segid1] = edgeIndex; 
-            _rm[segid1][segid0] = edgeIndex;
+            _segid2neighbor[segid0][segid1] = edgeIndex; 
+            _segid2neighbor[segid1][segid0] = edgeIndex;
         }
     }
     return;
@@ -141,7 +141,7 @@ inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const 
 
 auto _build_priority_queue (const aff_edge_t& threshold) const {
     PriorityQueue heap;
-    for(const auto& [segid0, neighbors0] : _rm){
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
             // so only half of the pairs need to be handled
@@ -168,17 +168,17 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
     dend.push_edge(segid0, segid1, edge.get_mean());
 
     // always merge object with less neighbors to more neighbors
-    if(_rm.at(segid0).size() > _rm.at(segid1).size()){
+    if(_segid2neighbor.at(segid0).size() > _segid2neighbor.at(segid1).size()){
         std::swap(segid0, segid1);
     }
-    auto& neighbors0 = _rm.at(segid0);
-    auto& neighbors1 = _rm.at(segid1);
+    auto& neighbors0 = _segid2neighbor.at(segid0);
+    auto& neighbors1 = _segid2neighbor.at(segid1);
     neighbors0.erase(segid1);
     neighbors1.erase(segid0);
 
     // merge all the edges to segid1
     for(auto& [nid0, neighborEdgeIndex] : neighbors0){
-        _rm.at(nid0).erase(segid0);
+        _segid2neighbor.at(nid0).erase(segid0);
         
         auto& neighborEdge = _edgeList[neighborEdgeIndex];
 
@@ -197,8 +197,8 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             }
         } else {
             // directly assign nid0-segid0 to nid0-segid1
-            _rm.at(segid1)[nid0] = neighborEdgeIndex;
-            _rm.at(nid0)[segid1] = neighborEdgeIndex;
+            _segid2neighbor.at(segid1)[nid0] = neighborEdgeIndex;
+            _segid2neighbor.at(nid0)[segid1] = neighborEdgeIndex;
             // make the original edge in priority queue outdated
             // this is a new edge, so the version should be 1
             neighborEdge.version = 1;
@@ -211,14 +211,14 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             }
         }
     }
-    _rm.erase(segid0);
+    _segid2neighbor.erase(segid0);
 
 }
 public:
 
-RegionGraph(): _rm({}), _edgeList({}){}
-RegionGraph(const RegionMap& regionMap, const RegionEdgeList& edgeList): 
-    _rm(regionMap), _edgeList(edgeList) {}
+RegionGraph(): _segid2neighbor({}), _edgeList({}){}
+RegionGraph(const segid2neighbor& segid2neighbor, const RegionEdgeList& edgeList): 
+    _segid2neighbor(segid2neighbor), _edgeList(edgeList) {}
 
 /**
  * @brief Construct a new Region Graph object
@@ -261,7 +261,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
 
 auto get_edge_num() const {
     std::size_t edgeNum = 0;
-    for(const auto& [segid0, neighbors0] : _rm){
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
         edgeNum += neighbors0.size();
     }
     return edgeNum / 2;
@@ -269,7 +269,7 @@ auto get_edge_num() const {
 
 void print(){
     std::cout<<std::endl << "region graph: " <<std::endl;
-    for(const auto& [segid0, neighbors0] : _rm){
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
         std::cout << segid0 << ": ";
         for(const auto& [segid1, edgeIndex] : neighbors0){
             const auto& meanAff = _edgeList[edgeIndex].get_mean();
@@ -288,7 +288,7 @@ auto as_array() const {
     auto arr = xt::empty<aff_edge_t>(sh);
 
     std::size_t n = 0;
-    for(const auto& [segid0, neighbors0] : _rm){
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             if(segid0 < segid1){
                 arr(n, 0) = segid0;
