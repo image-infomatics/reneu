@@ -69,8 +69,8 @@ void relabel(Segmentation& seg){
             for(std::size_t x=0; x<sx; x++){
                 const auto& sid = seg(z,y,x);
                 if(sid > 0){
-                    const auto& rootID = _dsets.find_set(sid);
-                    if(sid!=rootID && rootID>0){
+                    const auto& rootID = find_set(sid);
+                    if(sid!=rootID){
                         assert(rootID > 0);
                         seg(z,y,x) = rootID;
                     }
