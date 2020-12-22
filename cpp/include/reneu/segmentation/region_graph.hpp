@@ -217,7 +217,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
 public:
 
 RegionGraph(): _segid2neighbor({}), _edgeList({}){}
-RegionGraph(const segid2neighbor& segid2neighbor, const RegionEdgeList& edgeList): 
+RegionGraph(const Segid2Neighbor& segid2neighbor, const RegionEdgeList& edgeList): 
     _segid2neighbor(segid2neighbor), _edgeList(edgeList) {}
 
 /**
