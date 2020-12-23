@@ -3,6 +3,7 @@ from collections import defaultdict
 import numpy as np
 
 from cloudvolume.lib import Bbox
+import cc3d
 
 from .test_region_graph import agglomerate, get_random_affinity_map
 from reneu.lib.binary_bounding_box_tree import BinaryBoundingBoxTree
@@ -15,6 +16,16 @@ def test_region_graph_chunk():
     sz = 32
     affs = get_random_affinity_map(sz)
     fragments = watershed(affs, 0, 0.9)
+
+    # split the chunks, so the contacting surface 
+    # do not have continuous segmentation id
+    lower_fragments = fragments[:sz//2, :, :]
+    lower_fragments = cc3d.connected_components(
+        lower_fragments, connectivity=6)
+    upper_fragments = fragments[sz//2:, :, :]
+    upper_fragments = cc3d.connected_components(
+        upper_fragments, connectivity=6)
+    upper_fragments[upper_fragments>0] += np.max(lower_fragments)
 
     threshold = 0.3
     rg = RegionGraph(affs, fragments)
@@ -36,7 +47,18 @@ def test_region_graph_chunk():
         if order == 0:
             for bbox, task in tasks.items():
                 boundary_flags = task[0]
-                region_graph_chunk = RegionGraphChunk(affs, fragments, boundary_flags)
+                
+                leaf_affs = affs[
+                    bbox.minpt[0] : bbox.maxpt[0],
+                    bbox.minpt[1] : bbox.maxpt[1],
+                    bbox.minpt[2] : bbox.maxpt[2],
+                ]
+                leaf_fragments = fragments[
+                    bbox.minpt[0] - 1 : bbox.maxpt[0],
+                    bbox.minpt[1] - 1 : bbox.maxpt[1],
+                    bbox.minpt[2] - 1 : bbox.maxpt[2]
+                ]
+                region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
                 rgcs[order][bbox] = region_graph_chunk
                 dends[order][bbox] = dend
@@ -60,8 +82,14 @@ def test_region_graph_chunk():
     seg2 = dend.materialize(fragments, threshold)
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
+    assert score == 1
 
 
+# def test_rand_score():
+#     sz = 64
+#     seg = np.arange(sz*sz*sz, dtype=np.uint64).reshape((sz,sz,sz))
+
+    # print('rand score: ', rand_score(seg.flatten(), seg.flatten()))
 
 
 
