@@ -95,7 +95,8 @@ PYBIND11_MODULE(segmentation, m) {
                 return rg;
             }
         ))
-        .def("greedy_merge", &RegionGraphChunk::py_greedy_merge);
+        .def("merge_in_leaf_chunk", &RegionGraphChunk::merge_in_leaf_chunk)
+        .def("merge_upper_chunk", &RegionGraphChunk::merge_upper_chunk);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

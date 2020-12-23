@@ -45,12 +45,108 @@ void serialize(Archive& ar, const unsigned int version) {
 
 
 inline bool _is_frozen(const segid_t& sid) const {
-    return (_segid2frozen.at(sid) >> 1) > 0;
+    const auto& search = _segid2frozen.find(sid);
+    return search != _segid2frozen.end();
 }
 
 inline auto _freeze_both(const segid_t& sid0, const segid_t& sid1){
     _segid2frozen[sid0] |= _segid2frozen.at(sid1);
     _segid2frozen[sid1] |= _segid2frozen.at(sid0);
+}
+
+auto _build_priority_queue (const aff_edge_t& threshold) const {
+    PriorityQueue heap;
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
+        for(const auto& [segid1, edgeIndex] : neighbors0){
+            // the connection is bidirectional, 
+            // so only half of the pairs need to be handled
+            if((segid0 < segid1) && !_is_frozen(segid0) && !_is_frozen(segid1)){
+                const auto& meanAff = _edgeList[edgeIndex].get_mean();
+                if(meanAff > threshold){
+                    // initial version is set to 1
+                    heap.emplace_back(segid0, segid1, meanAff, 1);
+                }
+            }
+        }
+    }
+
+    heap.make_heap();
+
+    std::cout<< "initial heap size: "<< heap.size() << std::endl;
+    return heap;
+}
+
+auto _greedy_merge(const aff_edge_t& threshold){
+    std::cout<< "build heap/priority queue..." << std::endl;
+    auto heap = _build_priority_queue(threshold);
+
+    Dendrogram dend(threshold);
+
+    std::cout<< "iterative greedy merging..." << std::endl; 
+    size_t mergeNum = 0;
+    while(!heap.empty()){
+        const auto& edgeInQueue = heap.pop();
+        
+        auto segid0 = edgeInQueue.segid0;
+        auto segid1 = edgeInQueue.segid1;
+
+        if(!has_connection(segid0, segid1)){
+            continue;
+        }
+        
+        const auto& edgeIndex = _get_edge_index(segid1, segid0);
+        const auto& edge = _edgeList[edgeIndex];
+        if(edge.version > edgeInQueue.version){
+            // found an outdated edge
+            continue;
+        }
+
+        if(_is_frozen(segid0) || _is_frozen(segid1)){
+            // mark both segment as frozen from both chunk faces
+            // these two could be merged in the 
+            _freeze_both(segid0, segid1);
+            continue;
+        } 
+
+        // merge segid1 and segid0
+        mergeNum++;
+        _merge_segments(segid0, segid1, edge, dend, heap, threshold); 
+    }
+    
+    std::cout<< "merged "<< mergeNum << " times." << std::endl;
+
+    // clean up the edge list 
+    auto dsets = dend.to_disjoint_sets(threshold);
+
+    auto residualSegid2Neighbor = Segid2Neighbor({});
+    auto residualEdgeList = RegionEdgeList({});
+    auto residualSegid2Frozen = SegID2Frozen({});
+
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
+        for(const auto& [segid1, edgeIndex] : neighbors0){
+            if(segid0 < segid1){
+                if(_is_frozen(segid0) && _is_frozen(segid1)){
+                    // keep frozen edges to be proccessed in future
+                    auto root0 = dsets.find_set(segid0);
+                    auto root1 = dsets.find_set(segid1);
+                    if(root0 == root1){
+                        std::cout<< "segment "<< segid0 << " and " << segid1 << " has same root " << root0 << std::endl;
+                    }
+
+                    residualSegid2Neighbor[root0][root1] = residualEdgeList.size();
+                    residualEdgeList.push_back(_edgeList[edgeIndex]);
+                    residualSegid2Frozen[root0] = _segid2frozen[segid0] | _segid2frozen[root0];
+                    residualSegid2Frozen[root1] = _segid2frozen[segid1] | _segid2frozen[root1];
+                } 
+            }
+        }
+    }
+
+    // update internally
+    _segid2neighbor = residualSegid2Neighbor;
+    _edgeList = residualEdgeList;
+    _segid2frozen = residualSegid2Frozen;
+    return dend;
 }
 
 public:
@@ -131,95 +227,16 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
             }
         }
     }
-    return;
 }
 
-/** Merge fragments inside a leaf node.
+/**
+ * @brief merge nodes in leaf chunk
  * 
- * @param seg The segmentation volume containing many small fragments.
- * @param threshold The stopping threshold of the agglomeration.
+ * @param threshold 
+ * @return auto 
  */
-auto merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
-
-    std::cout<< "build heap/priority queue..." << std::endl;
-    auto heap = _build_priority_queue(threshold);
-
-    Dendrogram dend(threshold);
-
-    std::cout<< "iterative greedy merging..." << std::endl; 
-    size_t mergeNum = 0;
-    while(!heap.empty()){
-        const auto& edgeInQueue = heap.pop();
-        
-        auto segid0 = edgeInQueue.segid0;
-        auto segid1 = edgeInQueue.segid1;
-
-        if(!has_connection(segid0, segid1)){
-            continue;
-        }
-        
-        const auto& edgeIndex = _get_edge_index(segid1, segid0);
-        const auto& edge = _edgeList[edgeIndex];
-        if(edge.version > edgeInQueue.version){
-            // found an outdated edge
-            continue;
-        }
-
-        if(_is_frozen(segid0) || _is_frozen(segid1)){
-            // mark both segment as frozen from both chunk faces
-            // these two could be merged in the 
-            _freeze_both(segid0, segid1);
-            continue;
-        } 
-
-        // merge segid1 and segid0
-        mergeNum++;
-        _merge_segments(segid0, segid1, edge, dend, heap, threshold); 
-    }
-    
-    std::cout<< "merged "<< mergeNum << " times." << std::endl;
-
-    // clean up the edge list 
-    auto dsets = dend.to_disjoint_sets(threshold);
-    auto residualSegid2Neighbor = Segid2Neighbor({});
-    auto residualEdgeList = RegionEdgeList({});
-    auto residualSegid2frozen = SegID2Frozen({});
-
-    for(const auto& [segid0, neighbors0] : _segid2neighbor){
-        for(const auto& [segid1, edgeIndex] : neighbors0){
-            if(segid0 < segid1){
-                if(_is_frozen(segid0) && _is_frozen(segid1)){
-                    // keep frozen edges to be proccessed in future
-                    auto root0 = dsets.find_set(segid0);
-                    auto root1 = dsets.find_set(segid1);
-                    if(root0 ==0 ){
-                        root0 = segid0;
-                    }
-                    if(root1 == 0){
-                        root1 = segid1;
-                    }
-                    assert(root0 != root1);
-                    if(root0 == root1){
-                        std::cout<< "segment "<< segid0 << " and " << segid1 << " has same root " << root0 << std::endl;
-                    }
-
-                    residualSegid2Neighbor[root0][root1] = residualEdgeList.size();
-                    residualEdgeList.push_back(_edgeList[edgeIndex]);
-                    residualSegid2frozen[root0] = _segid2frozen[segid0] | _segid2frozen[root0];
-                    residualSegid2frozen[root1] = _segid2frozen[segid1] | _segid2frozen[root1];
-                } 
-            }
-        }
-    }
-
-    auto residualRegionGraph = RegionGraph(residualSegid2Neighbor, residualEdgeList);
-    auto residualRegionGraphChunk = RegionGraphChunk(residualRegionGraph, residualSegid2frozen);
-
-    return std::make_pair(dend, residualRegionGraphChunk);
-}
-
-inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshold) {
-    return merge_in_leaf(seg, threshold);
+auto merge_in_leaf_chunk(const aff_edge_t& threshold){
+    return _greedy_merge(threshold);
 }
 
 /** Merge the other node in the binary bounding box tree. 
@@ -228,42 +245,50 @@ inline auto py_merge_in_leaf(const Segmentation& seg, const aff_edge_t& threshol
  * 
  * @param rgc2 The other region graph chunk with some frozen nodes.
  */
-auto merge_upper_region_graph_chunk(const RegionGraphChunk& upperRegionGraphChunk, 
+auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk, 
                                 const std::size_t& dim, const aff_edge_t& threshold){
     assert(dim>=0 && dim<3);
     const auto& LOWER_SURFACE_BIT = SURFACE_BITS[dim];
     const auto& UPPER_SURFACE_BIT = SURFACE_BITS[3+dim];
 
-    // clean up the frozen set
+    // merge the frozen set
+    // the contacting face should be melted
     for(auto& [segid, frozen] : _segid2frozen){
-        
-    }
-
-    SegID2Frozen newSegid2frozen = {};
-    for(const auto& [segid, frozen] : _segid2frozen){
-        const std::uint8_t& newFrozen = (frozen & (~LOWER_SURFACE_BIT));
-        if(newFrozen > 0){
-            newSegid2frozen[segid] = newFrozen;
+        frozen &= (~LOWER_SURFACE_BIT);
+        if(frozen == 0){
+            _segid2frozen.erase(segid);
         }
     }
-    for(const auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
-        const std::uint8_t& newFrozen = (frozen & (~(UPPER_SURFACE_BIT))) | (newSegid2frozen[segid]);
-        if(newFrozen != newSegid2frozen[segid]){
-            newSegid2frozen[segid] = newFrozen;
+    for(auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
+        const auto& newFrozen = frozen & (~UPPER_SURFACE_BIT);
+        if(newFrozen > 0 ){
+            // this segment is still frozen by other faces
+            _segid2frozen[segid] |= newFrozen;
         }
     }
 
-    Segid2Neighbor newSegid2Neighbor = {};
-    RegionEdgeList newEdgeList = {};
-    for(const auto& [segid0, neighbor] : _segid2neighbor){
+    // merge the region graphs
+    for(const auto& [segid0, neighbor] : upperRegionGraphChunk._segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbor){
             if(segid0 < segid1){
-
+                const auto& upperEdge = upperRegionGraphChunk._edgeList[edgeIndex];
+                if(_segid2neighbor[segid0][segid1] == 0){
+                    _segid2neighbor[segid0][segid1] = _edgeList.size();
+                    _segid2neighbor[segid1][segid0] = _edgeList.size();
+                    _edgeList.push_back(upperEdge);
+                } else {
+                    // both have the same edge, merge them
+                    // theoretically, this should not happen?
+                    std::cout<<"both region graph chunk have the same edge: "<<std::endl;
+                    const auto& lowerEdgeIndex = _segid2neighbor.at(segid0).at(segid1);
+                    _edgeList[lowerEdgeIndex].absorb(upperEdge);
+                }
             }
         }
     }
 
-    return;
+    // greedy iterative agglomeration
+    return _greedy_merge(threshold); 
 }
 
 }; // class of RegionGraphChunk

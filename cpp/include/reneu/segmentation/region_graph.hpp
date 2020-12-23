@@ -63,11 +63,11 @@ inline void accumulate(const aff_edge_t& aff){
     sum += aff;
 }
 
-inline void absorb(RegionEdge& re2){
+inline void absorb(const RegionEdge& re2){
     count += re2.count;
     sum += re2.sum;
     version++;
-    re2.cleanup();
+    // re2.cleanup();
 }
 
 inline void cleanup(){
