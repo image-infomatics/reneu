@@ -95,14 +95,21 @@ class BinaryBoundingBoxTree:
     
     @property
     def order2tasks(self):
-        ret = defaultdict(list)
-        ret[self.node_order].append( (self.bbox, self.boundary_flag) )
+        ret = defaultdict(dict)
+        if self.is_leaf:
+            task = (self.boundary_flag, self.split_dim, None, None)
+        else:
+            task = (self.boundary_flag, self.split_dim, self.lower.bbox, self.upper.bbox)
+        ret[self.node_order][self.bbox] = task
+
         if not self.is_leaf:
             lower_tasks = self.lower.order2tasks
             upper_tasks = self.upper.order2tasks
             for order, tasks in lower_tasks.items():
-                ret[order].extend(tasks)
+                # we can use x | y to merge dict in python 3.9
+                ret[order] = {**ret[order], **tasks}
             for order, tasks in upper_tasks.items():
-                ret[order].extend(tasks)
+                ret[order] = {**ret[order], **tasks}
         assert len(ret) == self.order + 1
         return ret
+        
