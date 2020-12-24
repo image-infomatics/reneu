@@ -83,7 +83,8 @@ auto _greedy_merge(const aff_edge_t& threshold){
 
     Dendrogram dend(threshold);
 
-    std::cout<< "iterative greedy merging..." << std::endl; 
+    std::cout<< "iterative greedy merging..." << std::endl;
+    std::cout<< "this region graph chunk: "<< as_string(); 
     size_t mergeNum = 0;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.pop();
@@ -284,10 +285,23 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
             _segid2frozen[segid] |= NEG_X;
+            std::cout<<segid << "--"<< _segid2frozen.at(segid)<< ", ";
         }
+        std::cout<<std::endl;
     }
 
     
+}
+
+std::string as_string() const {
+    std::ostringstream stringStream;
+    stringStream<< "frozen set: ";
+    for(const auto& [segid, frozen] : _segid2frozen){
+        stringStream<< segid << "--" << frozen << ", ";
+    }
+    stringStream<<"\n";
+    stringStream << RegionGraph::as_string();
+    return stringStream.str();
 }
 
 /**
