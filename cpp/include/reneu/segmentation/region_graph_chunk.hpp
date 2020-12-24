@@ -167,9 +167,12 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         RegionGraph(affs, seg), _segid2frozen({}){
     
     std::array<std::size_t, 3> start;
+    std::cout<< "starting offset array: ";
     for(std::size_t i=0; i<3; i++){
         start[i] = !volumeBoundaryFlags[i];
+        std::cout<< start[i] << ", ";
     }
+    std::cout<<std::endl;
     
     std::cout<< "accumulate the affinity edges..." << std::endl;
     // start from 1 since we included the contacting neighbor chunk segmentation
@@ -192,7 +195,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         }
     }
 
-    // deal with boundary faces
+    std::cout<< "deal with boundary faces..." << std::endl;
     // negative z 
     if(!volumeBoundaryFlags[0]){
         // this face is not a volume boundary
@@ -217,6 +220,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     }
 
     // negative y 
+    std::cout<< "negative y..." <<std::endl;
     if(!volumeBoundaryFlags[1]){
         assert(affs.shape(2) == seg.shape(1) + 1);
         const Segmentation& contactingFaces = xt::view(seg, 
@@ -236,6 +240,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     }
 
     // negative x 
+    std::cout<< "negative x..." <<std::endl;
     if(!volumeBoundaryFlags[2]){
         assert(affs.shape(3) == seg.shape(2) + 1);
         const Segmentation& contactingFaces = xt::view(seg, 
@@ -258,6 +263,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     if(!volumeBoundaryFlags[3]){
         const Segmentation& contactingFaces = xt::view(seg, 
             seg.shape(0), xt::range(start[1], _), xt::range(start[2],_));
+        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
             _segid2frozen[segid] |= NEG_Z;
         }
@@ -266,6 +272,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     if(!volumeBoundaryFlags[4]){
         const Segmentation& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), seg.shape(1), xt::range(start[2],_));
+        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
             _segid2frozen[segid] |= NEG_Y;
         }
@@ -274,6 +281,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     if(!volumeBoundaryFlags[5]){
         const Segmentation& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(start[1],_), seg.shape(2));
+        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
             _segid2frozen[segid] |= NEG_X;
         }
@@ -324,7 +332,7 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
     for(const auto& [segid0, neighbor] : upperRegionGraphChunk._segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbor){
             if(segid0 < segid1){
-                const auto& upperEdge = upperRegionGraphChunk._edgeList[edgeIndex];
+                auto upperEdge = upperRegionGraphChunk._edgeList[edgeIndex];
                 if(_segid2neighbor[segid0][segid1] == 0){
                     _segid2neighbor[segid0][segid1] = _edgeList.size();
                     _segid2neighbor[segid1][segid0] = _edgeList.size();

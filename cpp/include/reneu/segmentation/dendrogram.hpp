@@ -71,12 +71,16 @@ Dendrogram(): _edgeList({}), _minThreshold(0){};
 Dendrogram(aff_edge_t minThreshold): _edgeList({}), _minThreshold(minThreshold){}
 
 
-void print() const {
-    std::cout<<"dendrogram minimum threshold: "<< _minThreshold<< std::endl;
+std::string as_string() const {
+    // to-do: use std::format in C++20
+    std::ostringstream stringStream;
+    stringStream<< "minimum threshold: "<< _minThreshold<< "\n";
+    stringStream<< "edges: ";
     for(const auto& edge: _edgeList){
-        std::cout<< edge.segid0 << "--"<< edge.segid1<<":"<<edge.affinity<<", ";
+        stringStream<< edge.segid0 << "--"<< edge.segid1<<":"<<edge.affinity<<", ";
     }
-    std::cout<<std::endl;
+    stringStream<<"\n";
+    return stringStream.str();
 }
 
 auto as_array() const {

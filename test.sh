@@ -1,7 +1,8 @@
 #!/bin/bash
 
 rm -rf ./build
-mv python/reneu/lib/segmentation.so /tmp/
+#mv python/reneu/lib/segmentation.so /tmp/
+rm python/reneu/lib/*.so 
 
 python setup.py develop
 
