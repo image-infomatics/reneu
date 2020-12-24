@@ -267,18 +267,18 @@ auto get_edge_num() const {
     return edgeNum / 2;
 }
 
-void print(){
-    std::cout<<std::endl << "region graph: " <<std::endl;
+std::string as_string(){
+    std::ostringstream stringStream;
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
-        std::cout << segid0 << ": ";
+        stringStream << segid0 << ": ";
         for(const auto& [segid1, edgeIndex] : neighbors0){
             const auto& meanAff = _edgeList[edgeIndex].get_mean();
-            std::cout << segid1 << "--" << meanAff << ", ";
+            stringStream << segid1 << "--" << meanAff << ", ";
         }
-        std::cout << std::endl;
+        stringStream<< "\n";
     }
-    std::cout<< std::endl;
-    return; 
+    stringStream<<"\n";
+    return stringStream.str(); 
 }
 
 auto as_array() const {
