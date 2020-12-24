@@ -5,6 +5,7 @@
 #include <boost/serialization/map.hpp>
 
 #include "region_graph.hpp"
+#include "utils.hpp"
 
 namespace reneu{
 
@@ -164,69 +165,121 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
  */
 RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::array<bool, 6> &volumeBoundaryFlags): 
         RegionGraph(affs, seg), _segid2frozen({}){
-    assert(affs.shape(1) == seg.shape(0) + 1);
-    assert(affs.shape(2) == seg.shape(1) + 1);
-    assert(affs.shape(3) == seg.shape(2) + 1);
-   
-    // freeze the segment ids touching chunk boundary 
-    // the ones touching volume boundary are excluded
-    for(std::size_t z=1; z<seg.shape(0); z++){
-        for(std::size_t y=1; y<seg.shape(1); y++){
-            for(std::size_t x=1; x<seg.shape(2); x++){
-                const auto& segid = seg(z,y,x);
-                if(segid == 0) continue;
-
-                if(z==1 && !volumeBoundaryFlags[0]){
-                    _segid2frozen[segid] |= NEG_Z;
-                    const auto& contactingSegid = seg(z-1, y, x);
-                    if(contactingSegid > 0){
-                        _segid2frozen[contactingSegid] |= NEG_Z;
-                    }
-                }else if(z==seg.shape(0)-1 && !volumeBoundaryFlags[3])
-                    _segid2frozen[segid] |= POS_Z;
-
-                if(y==1 && !volumeBoundaryFlags[1]){
-                    _segid2frozen[segid] |= NEG_Y;
-                    const auto& contactingSegid = seg(z, y-1, x);
-                    if(contactingSegid > 0){
-                        _segid2frozen[contactingSegid] |= NEG_Y;
-                    }
-                }else if(y==seg.shape(1)-1 && !volumeBoundaryFlags[4])
-                    _segid2frozen[segid] |= POS_Y;
-                
-                if(x==1 && !volumeBoundaryFlags[2]){
-                    _segid2frozen[segid] |= NEG_X;
-                    const auto& contactingSegid = seg(z, y, x-1);
-                    if(contactingSegid > 0){
-                        _segid2frozen[contactingSegid] |= NEG_X;
-                    }
-                }else if(x==seg.shape(2)-1 && !volumeBoundaryFlags[5])
-                    _segid2frozen[segid] |= POS_X;
-
-            }
-        }
+    
+    std::array<std::size_t, 3> start;
+    for(std::size_t i=0; i<3; i++){
+        start[i] = !volumeBoundaryFlags[i];
     }
-
+    
     std::cout<< "accumulate the affinity edges..." << std::endl;
     // start from 1 since we included the contacting neighbor chunk segmentation
-    for(std::size_t z=1; z<seg.shape(0); z++){
-        for(std::size_t y=1; y<seg.shape(1); y++){
-            for(std::size_t x=1; x<seg.shape(2); x++){
+    for(std::size_t z=start[0]; z<seg.shape(0); z++){
+        for(std::size_t y=start[1]; y<seg.shape(1); y++){
+            for(std::size_t x=start[2]; x<seg.shape(2); x++){
                 const auto& segid = seg(z,y,x);
                 // skip background voxels
                 if(segid>0){ 
-                    if (z>0)
+                    if (z>start[0])
                         accumulate_edge(segid, seg(z-1,y,x), affs(2,z-1,y,x));
                     
-                    if (y>0)
+                    if (y>start[1])
                         accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y-1,x));
                     
-                    if (x>0)
+                    if (x>start[2])
                         accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x-1));
                 }
             }
         }
     }
+
+    // deal with boundary faces
+    // negative z 
+    if(!volumeBoundaryFlags[0]){
+        // this face is not a volume boundary
+        // it has a contacting chunk face
+        // we have already included the contacting face here
+        // freeze both contacting face
+        assert(affs.shape(1) == seg.shape(0) + 1);
+        const Segmentation& contactingFaces = xt::view(seg, 
+            xt::range(0,2), xt::range(start[1], _), xt::range(start[2], _));
+        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        for(const auto& segid: contactingFaceIDs){
+            _segid2frozen[segid] |= NEG_Z; 
+        }
+        // accumulate edges
+        for(std::size_t y=start[1]; y<seg.shape(1); y++){
+            for(std::size_t x=start[2]; x<seg.shape(2); x++){
+                const auto& segid = seg(1,y,x);
+                if(segid>0)
+                    accumulate_edge(segid, seg(0,y,x), affs(0, 0, y, x));
+            }
+        }
+    }
+
+    // negative y 
+    if(!volumeBoundaryFlags[1]){
+        assert(affs.shape(2) == seg.shape(1) + 1);
+        const Segmentation& contactingFaces = xt::view(seg, 
+            xt::range(start[0], _), xt::range(0,2), xt::range(start[2], _));
+        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        for(const auto& segid: contactingFaceIDs){
+            _segid2frozen[segid] |= NEG_Y;
+        }
+        // accumulate edges
+        for(std::size_t z=start[0]; z<seg.shape(0); z++){
+            for(std::size_t x=start[2]; x<seg.shape(2); x++){
+                const auto& segid = seg(z,1,x);
+                if(segid>0)
+                    accumulate_edge(segid, seg(z, 0, x), affs(1, z, 0, x));
+            }
+        }
+    }
+
+    // negative x 
+    if(!volumeBoundaryFlags[2]){
+        assert(affs.shape(3) == seg.shape(2) + 1);
+        const Segmentation& contactingFaces = xt::view(seg, 
+            xt::range(start[0], _), xt::range(start[1], _), xt::range(0,2));
+        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        for(const auto& segid: contactingFaceIDs){
+            _segid2frozen[segid] |= NEG_X;
+        }
+        // accumulate edges
+        for(std::size_t z=start[0]; z<seg.shape(0); z++){
+            for(std::size_t y=start[1]; y<seg.shape(1); y++){
+                const auto& segid = seg(z, y, 1);
+                if(segid>0)
+                    accumulate_edge(segid, seg(z, y, 0), affs(2, z, y, 0));
+            }
+        }
+    }
+
+    // positive Z
+    if(!volumeBoundaryFlags[3]){
+        const Segmentation& contactingFaces = xt::view(seg, 
+            seg.shape(0), xt::range(start[1], _), xt::range(start[2],_));
+        for(const auto& segid: contactingFaceIDs){
+            _segid2frozen[segid] |= NEG_Z;
+        }
+    }
+    // positive y
+    if(!volumeBoundaryFlags[4]){
+        const Segmentation& contactingFaces = xt::view(seg, 
+            xt::range(start[0], _), seg.shape(1), xt::range(start[2],_));
+        for(const auto& segid: contactingFaceIDs){
+            _segid2frozen[segid] |= NEG_Y;
+        }
+    }
+    // positive x
+    if(!volumeBoundaryFlags[5]){
+        const Segmentation& contactingFaces = xt::view(seg, 
+            xt::range(start[0], _), xt::range(start[1],_), seg.shape(2));
+        for(const auto& segid: contactingFaceIDs){
+            _segid2frozen[segid] |= NEG_X;
+        }
+    }
+
+    
 }
 
 /**

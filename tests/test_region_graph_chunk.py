@@ -2,7 +2,7 @@
 from collections import defaultdict
 import numpy as np
 
-from cloudvolume.lib import Bbox
+from cloudvolume.lib import Bbox, Vec
 import cc3d
 
 from .test_region_graph import agglomerate, get_random_affinity_map
@@ -47,16 +47,20 @@ def test_region_graph_chunk():
         if order == 0:
             for bbox, task in tasks.items():
                 boundary_flags = task[0]
-                
                 leaf_affs = affs[
                     bbox.minpt[0] : bbox.maxpt[0],
                     bbox.minpt[1] : bbox.maxpt[1],
                     bbox.minpt[2] : bbox.maxpt[2],
                 ]
+                
+                # if the face is not a volume boundary 
+                # it has a contacting chunk face
+                # we'll cutout the contacting face as well
+                offset = Vec(*[f-1 for f in boundary_flags[:3]])
                 leaf_fragments = fragments[
-                    bbox.minpt[0] - 1 : bbox.maxpt[0],
-                    bbox.minpt[1] - 1 : bbox.maxpt[1],
-                    bbox.minpt[2] - 1 : bbox.maxpt[2]
+                    bbox.minpt[0] + offset[0] : bbox.maxpt[0],
+                    bbox.minpt[1] + offset[1] : bbox.maxpt[1],
+                    bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
