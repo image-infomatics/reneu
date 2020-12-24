@@ -80,6 +80,7 @@ PYBIND11_MODULE(segmentation, m) {
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
         .def(py::init<const PyAffinityMap&, const PySegmentation&, const std::array<bool, 6>&>())
+        .def("__str__", &RegionGraphChunk::as_string)
         .def(py::pickle(
             [](const RegionGraphChunk& rg){ // __getstate__
                 std::stringstream ss;

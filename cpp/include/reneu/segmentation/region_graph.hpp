@@ -267,7 +267,7 @@ auto get_edge_num() const {
     return edgeNum / 2;
 }
 
-std::string as_string(){
+std::string as_string() const {
     std::ostringstream stringStream;
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
         stringStream << segid0 << ": ";
