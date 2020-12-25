@@ -57,17 +57,17 @@ def test_region_graph_chunk():
                 ]
                 
                 # if the face is not a volume boundary 
-                # it has a contacting chunk face
                 # we'll cutout the contacting face as well
+                # it has a contacting chunk face
                 offset = Vec(*[f-1 for f in boundary_flags[:3]])
                 leaf_fragments = fragments[
                     bbox.minpt[0] + offset[0] : bbox.maxpt[0],
                     bbox.minpt[1] + offset[1] : bbox.maxpt[1],
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
-                breakpoint()
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
+                print('dendrogram in leaf node: ', dend)
                 rgcs[order][bbox] = region_graph_chunk
                 dends[order][bbox] = dend
         else:
@@ -79,14 +79,16 @@ def test_region_graph_chunk():
                 lower_rgc = rgcs[order-1][lower_bbox]
                 upper_rgc = rgcs[order-1][upper_bbox]
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
+                print('dendrogram from inode: ', dend)
                 rgcs[order][bbox] = lower_rgc
                 dends[order][bbox] = dend
 
-    combinedDend = Dendrogram();
+    combined_dend = Dendrogram();
     for order, bbox2dend in dends.items():
         for bbox, dend in bbox2dend.items():
-            combinedDend.merge(dend)
-    seg2 = dend.materialize(fragments, threshold)
+            combined_dend.merge(dend)
+    print('combined dendrogram: ', combined_dend)
+    seg2 = combined_dend.materialize(fragments, threshold)
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
     print('fragments: \n', fragments)
