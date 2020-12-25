@@ -1,6 +1,7 @@
 from typing import Union
 from copy import deepcopy
-import queue
+from math import ceil
+
 from collections import defaultdict
 
 import numpy as np
@@ -42,9 +43,12 @@ class BinaryBoundingBoxTree:
             self.split_dim = None
         else:
             self.split_dim = np.argmax(relative_length)
-            divisor = [1,1,1]
-            divisor[self.split_dim] = 2
-            lower_size = [vs//d for vs, d in zip(volume_size, divisor)]
+            assert volume_size[self.split_dim] > leaf_size[self.split_dim]
+            lower_size = deepcopy(volume_size)
+            # round up to incorporate the case of a little bit larger than leaf size
+            lower_size[self.split_dim] = ceil( \
+                lower_size[self.split_dim]/leaf_size[self.split_dim]) \
+                //2*leaf_size[self.split_dim]
             lower_bbox = Bbox.from_delta(bbox.minpt, lower_size)
             lower_boundary_flag = deepcopy(boundary_flag)
             lower_boundary_flag[self.split_dim + 3] = False 
