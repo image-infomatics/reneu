@@ -204,11 +204,12 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         // we have already included the contacting face here
         // freeze both contacting face
         assert(affs.shape(1) == seg.shape(0) + 1);
-        const Segmentation& contactingFaces = xt::view(seg, 
+        const auto& contactingFaces = xt::view(seg, 
             xt::range(0,2), xt::range(start[1], _), xt::range(start[2], _));
-        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= NEG_Z; 
+            if(segid>0) _segid2frozen[segid] |= NEG_Z; 
         }
         // accumulate edges
         for(std::size_t y=start[1]; y<seg.shape(1); y++){
@@ -244,11 +245,15 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     std::cout<< "negative x..." <<std::endl;
     if(!volumeBoundaryFlags[2]){
         assert(affs.shape(3) == seg.shape(2) + 1);
-        const Segmentation& contactingFaces = xt::view(seg, 
+        const auto& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(start[1], _), xt::range(0,2));
-        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        // for(const auto& segid: contactingFaceIDs){
+        //     _segid2frozen[segid] |= NEG_X;
+        // }
+        const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= NEG_X;
+            if(segid>0) _segid2frozen[segid] |= NEG_X; 
         }
         // accumulate edges
         for(std::size_t z=start[0]; z<seg.shape(0); z++){
@@ -261,43 +266,60 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     }
 
     // positive Z
+    std::cout<< "positive z..." <<std::endl;
     if(!volumeBoundaryFlags[3]){
         const Segmentation& contactingFaces = xt::view(seg, 
-            seg.shape(0), xt::range(start[1], _), xt::range(start[2],_));
+            seg.shape(0)-1, xt::range(start[1], _), xt::range(start[2],_));
         const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= NEG_Z;
+            _segid2frozen[segid] = _segid2frozen[segid] | POS_Z;
         }
     }
     // positive y
+    std::cout<< "positive y..." <<std::endl;
     if(!volumeBoundaryFlags[4]){
         const Segmentation& contactingFaces = xt::view(seg, 
-            xt::range(start[0], _), seg.shape(1), xt::range(start[2],_));
+            xt::range(start[0], _), seg.shape(1)-1, xt::range(start[2],_));
         const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= NEG_Y;
+            _segid2frozen[segid] |= POS_Y;
         }
     }
     // positive x
+    std::cout<< "positive x..." <<std::endl;
+    std::cout<<"start: "<< start[0] <<", "<<start[1]<<", "<<start[2]<<std::endl;
+
     if(!volumeBoundaryFlags[5]){
-        const Segmentation& contactingFaces = xt::view(seg, 
-            xt::range(start[0], _), xt::range(start[1],_), seg.shape(2));
-        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        const auto& contactingFaces = xt::view(seg, 
+            xt::range(start[0], _), xt::range(start[1],_), seg.shape(2)-1);
+
+        // std::cout<< "get nonzero segids..."<<std::endl;
+        // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        const auto& contactingFaceIDs = xt::unique(contactingFaces);
+        // for(const auto& segid: contactingFaceIDs){
+        //     _segid2frozen[segid] |= POS_X;
+        // }
+        
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= NEG_X;
-            std::cout<<segid << "--"<< _segid2frozen.at(segid)<< ", ";
+            // if(!_is_frozen(segid)) _segid2frozen[segid] = 0;
+            // std::cout<<"\nsegid: "<<segid<<": ";
+            // std::cout<<segid << "--"<< unsigned(_segid2frozen[segid]) << ", ";
+            if(segid>0){
+                _segid2frozen[segid] |= POS_X;
+                // std::cout<<segid << "--"<< unsigned(_segid2frozen.at(segid))<< ", ";
+            }
         }
         std::cout<<std::endl;
     }
-
-    
 }
 
 std::string as_string() const {
     std::ostringstream stringStream;
     stringStream<< "frozen set: ";
     for(const auto& [segid, frozen] : _segid2frozen){
-        stringStream<< segid << "--" << frozen << ", ";
+        // directly print out uint8_t could be regarded as ASCII code and be empty!
+        // https://stackoverflow.com/questions/19562103/uint8-t-cant-be-printed-with-cout
+        stringStream<< segid << "--" << unsigned(frozen) << ", ";
     }
     stringStream<<"\n";
     stringStream << RegionGraph::as_string();

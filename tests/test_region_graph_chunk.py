@@ -28,6 +28,7 @@ def test_region_graph_chunk():
     upper_fragments[upper_fragments>0] += np.max(lower_fragments)
     fragments[:, :, :sz//2] = lower_fragments
     fragments[:, :, sz//2:] = upper_fragments
+    print('fragments: \n', fragments)
 
     threshold = 0.3
     rg = RegionGraph(affs, fragments)
@@ -49,7 +50,7 @@ def test_region_graph_chunk():
         if order == 0:
             for bbox, task in tasks.items():
                 boundary_flags = task[0]
-                leaf_affs = affs[
+                leaf_affs = affs[:,
                     bbox.minpt[0] : bbox.maxpt[0],
                     bbox.minpt[1] : bbox.maxpt[1],
                     bbox.minpt[2] : bbox.maxpt[2],
@@ -64,6 +65,7 @@ def test_region_graph_chunk():
                     bbox.minpt[1] + offset[1] : bbox.maxpt[1],
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
+                breakpoint()
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
                 rgcs[order][bbox] = region_graph_chunk
@@ -88,7 +90,6 @@ def test_region_graph_chunk():
     seg2 = dend.materialize(fragments, threshold)
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
-    print('fragments: \n', fragments)
     print('original segmentation: \n', seg)
     print('distributed segmentation: \n', seg2)
     # assert score == 1
