@@ -46,12 +46,14 @@ void serialize(Archive& ar, const unsigned int version) {
 
 
 inline bool _is_frozen(const segid_t& sid) const {
-    const auto& search = _segid2frozen.find(sid);
-    return search != _segid2frozen.end();
+    // const auto& search = _segid2frozen.find(sid);
+    // return search != _segid2frozen.end();
+    // to-do: use contains in C++20
+    return _segid2frozen.count(sid) > 0;
 }
 
 inline auto _freeze_both(const segid_t& sid0, const segid_t& sid1){
-    _segid2frozen[sid0] |= _segid2frozen.at(sid1);
+    _segid2frozen[sid0] |= _segid2frozen[sid1];
     _segid2frozen[sid1] |= _segid2frozen.at(sid0);
 }
 
@@ -255,6 +257,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         for(const auto& segid: contactingFaceIDs){
             if(segid>0) _segid2frozen[segid] |= NEG_X; 
         }
+ 
         // accumulate edges
         for(std::size_t z=start[0]; z<seg.shape(0); z++){
             for(std::size_t y=start[1]; y<seg.shape(1); y++){

@@ -86,13 +86,14 @@ def test_region_graph_chunk():
     for order, bbox2dend in dends.items():
         for bbox, dend in bbox2dend.items():
             combinedDend.merge(dend)
-    breakpoint()
     seg2 = dend.materialize(fragments, threshold)
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
+    print('fragments: \n', fragments)
     print('original segmentation: \n', seg)
     print('distributed segmentation: \n', seg2)
     # assert score == 1
+    breakpoint()
 
 
 # def test_rand_score():
