@@ -52,10 +52,6 @@ inline bool _is_frozen(const segid_t& sid) const {
     return _segid2frozen.count(sid) > 0;
 }
 
-inline auto _freeze_both(const segid_t& sid0, const segid_t& sid1){
-    _segid2frozen[sid0] |= _segid2frozen[sid1];
-    _segid2frozen[sid1] |= _segid2frozen.at(sid0);
-}
 
 auto _build_priority_queue (const aff_edge_t& threshold) const {
     PriorityQueue heap;
@@ -108,7 +104,8 @@ auto _greedy_merge(const aff_edge_t& threshold){
         if(_is_frozen(segid0) || _is_frozen(segid1)){
             // mark both segment as frozen from both chunk faces
             // these two could be merged in the 
-            _freeze_both(segid0, segid1);
+            _segid2frozen[segid0] |= _segid2frozen[segid1];
+            _segid2frozen[segid1] |= _segid2frozen.at(segid0);
             continue;
         } 
 
@@ -354,14 +351,16 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
     // merge the frozen set
     // the contacting face should be melted
     for(auto& [segid, frozen] : _segid2frozen){
-        frozen &= (~LOWER_SURFACE_BIT);
+        // the contacting face of lower chunk is higher!
+        frozen &= (~UPPER_SURFACE_BIT);
         if(frozen == 0){
             _segid2frozen.erase(segid);
         }
     }
     for(auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
-        const auto& newFrozen = frozen & (~UPPER_SURFACE_BIT);
-        if(newFrozen > 0 ){
+        // the contacting face of upper chunk is lower!
+        frozen &= (~LOWER_SURFACE_BIT);
+        if(frozen > 0 ){
             // this segment is still frozen by other faces
             _segid2frozen[segid] |= newFrozen;
         }
