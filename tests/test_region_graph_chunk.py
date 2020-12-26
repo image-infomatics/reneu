@@ -5,7 +5,7 @@ import numpy as np
 from cloudvolume.lib import Bbox, Vec
 import cc3d
 
-from .test_region_graph import agglomerate, get_random_affinity_map
+from .test_region_graph import get_random_affinity_map
 from reneu.lib.binary_bounding_box_tree import BinaryBoundingBoxTree
 from reneu.lib.segmentation import RegionGraph, watershed, RegionGraphChunk, Dendrogram
 

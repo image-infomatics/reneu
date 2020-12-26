@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/cpp/include",
+                "/Users/jwu/opt/anaconda3/envs/cf/include",
+                "/Users/jwu/opt/anaconda3/envs/cf/include/python3.7m",
+                "/Users/jwu/opt/anaconda3/envs/cf/lib/python3.7/site-packages/numpy/core/include"
+            ],
+            "defines": [],
+            "macFrameworkPath": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

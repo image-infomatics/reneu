@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python launch",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": true,
+            "python": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
+            "program": "-m pytest ./tests/test_region_graph_chunk.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "CONDA_PREFIX": "/Users/jwu/opt/anaconda3/envs/cf"
+            },
+            "envFile": "${workspaceRoot}/.env",
+        },
+        {
+            "name": "clang++ - Build and debug active file",
+            "type": "lldb",
+            "request": "attach",
+            // "program": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
+            "pid":"${command:pickProcess}",
+            // "processId": 7758,
+            "stopOnEntry": true,
+            // "targetArchitecture": "x86_64"
+        },
+    ]
+}
