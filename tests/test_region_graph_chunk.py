@@ -44,6 +44,7 @@ def test_region_graph_chunk():
     bbbt = BinaryBoundingBoxTree(bbox, (1, sz, sz//2))
     order2tasks = bbbt.order2tasks
 
+    breakpoint()
     rgcs = defaultdict(dict)
     dends = defaultdict(dict)
     for order in range(len(order2tasks)):
