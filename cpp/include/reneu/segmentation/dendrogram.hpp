@@ -134,7 +134,6 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(mz-1, y, x);
             const segid_t& id1 = seg(mz, y, x);
             if(id0>0 && id1>0){
-                assert(id0 < id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }

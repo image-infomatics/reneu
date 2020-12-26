@@ -205,7 +205,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         // it has a contacting chunk face
         // we have already included the contacting face here
         // freeze both contacting face
-        assert(affs.shape(1) == seg.shape(0) + 1);
+        assert(affs.shape(1) == seg.shape(0) - 1);
         const auto& contactingFaces = xt::view(seg, 
             xt::range(0,2), xt::range(start[1], _), xt::range(start[2], _));
         // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
@@ -226,7 +226,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     // negative y 
     std::cout<< "negative y..." <<std::endl;
     if(!volumeBoundaryFlags[1]){
-        assert(affs.shape(2) == seg.shape(1) + 1);
+        assert(affs.shape(2) == seg.shape(1) - 1);
         const Segmentation& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(0,2), xt::range(start[2], _));
         const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
@@ -246,7 +246,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
     // negative x 
     std::cout<< "negative x..." <<std::endl;
     if(!volumeBoundaryFlags[2]){
-        assert(affs.shape(3) == seg.shape(2) + 1);
+        assert(affs.shape(3) == seg.shape(2) - 1);
         const auto& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(start[1], _), xt::range(0,2));
         // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);

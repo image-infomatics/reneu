@@ -1,0 +1,29 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "env": {
+          "CONDA_PREFIX": "/Users/jwu/opt/anaconda3/envs/reneu"
+        }
+    },
+    "tasks": [
+      {
+        "type": "shell",
+        "label": "build python package",
+        "command": "conda init zsh; conda activate cf; python setup.py build --debug",
+        "args": [
+        ],
+        "options": {
+          "cwd": "${workspaceFolder}"
+        },
+        "problemMatcher": [
+          "$gcc"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }
