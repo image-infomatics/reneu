@@ -4,7 +4,8 @@ project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 # this only works with absolute path!
-set(CONDA_PREFIX /Users/jwu/opt/anaconda3/envs/reneu)
+# set(CONDA_PREFIX ${HOME}/opt/anaconda3/envs/cf)
+set(CONDA_PREFIX /Users/jwu/opt/anaconda3/envs/cf)
 # set(CONDA_PREFIX ${CONDA_PREFIX_1}/envs/reneu)
 set(pybind11_DIR ${CONDA_PREFIX}/share/cmake/pybind11)
 set(xtensor_DIR ${CONDA_PREFIX}/lib/cmake/xtensor)

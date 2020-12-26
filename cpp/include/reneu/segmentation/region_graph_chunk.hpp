@@ -82,7 +82,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
     Dendrogram dend(threshold);
 
     std::cout<< "iterative greedy merging..." << std::endl;
-    std::cout<< "this region graph chunk: "<< as_string(); 
+    // std::cout<< "this region graph chunk: "<< as_string(); 
     size_t mergeNum = 0;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.pop();
@@ -135,7 +135,10 @@ auto _greedy_merge(const aff_edge_t& threshold){
                     }
 
                     residualSegid2Neighbor[root0][root1] = residualEdgeList.size();
-                    residualEdgeList.push_back(_edgeList[edgeIndex]);
+                    auto& edge = _edgeList[edgeIndex];
+                    edge.segid0 = root0;
+                    edge.segid1 = root1;
+                    residualEdgeList.push_back(edge);
                     residualSegid2Frozen[root0] = _segid2frozen[segid0] | _segid2frozen[root0];
                     residualSegid2Frozen[root1] = _segid2frozen[segid1] | _segid2frozen[root1];
                 } 
@@ -357,14 +360,16 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
             _segid2frozen.erase(segid);
         }
     }
-    for(auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
+    for(auto [segid, frozen] : upperRegionGraphChunk._segid2frozen){
         // the contacting face of upper chunk is lower!
         frozen &= (~LOWER_SURFACE_BIT);
         if(frozen > 0 ){
             // this segment is still frozen by other faces
-            _segid2frozen[segid] |= newFrozen;
+            _segid2frozen[segid] |= frozen;
         }
     }
+    std::cout<<"remaining frozen segments: "<< _segid2frozen.size() << std::endl;
+
 
     // merge the region graphs
     for(const auto& [segid0, neighbor] : upperRegionGraphChunk._segid2neighbor){

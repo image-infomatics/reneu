@@ -31,13 +31,15 @@ def test_region_graph_chunk():
     print('fragments: \n', fragments)
 
     threshold = 0.3
+
+    print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
-
     print('\nsegmentation: \n', seg)
 
+    print('\ndistributed agglomeration...')
     bbox = Bbox.from_list([0, 0, 0, 1, sz, sz])
     bbbt = BinaryBoundingBoxTree(bbox, (1, sz, sz//2))
     order2tasks = bbbt.order2tasks
@@ -66,7 +68,9 @@ def test_region_graph_chunk():
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
+                print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
+                print('region graph in leaf chunk after merging: ', region_graph_chunk)
                 print('dendrogram in leaf node: ', dend)
                 rgcs[order][bbox] = region_graph_chunk
                 dends[order][bbox] = dend
@@ -79,6 +83,7 @@ def test_region_graph_chunk():
                 lower_rgc = rgcs[order-1][lower_bbox]
                 upper_rgc = rgcs[order-1][upper_bbox]
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
+                print('region graph chunk after merging another one: ', lower_rgc)
                 print('dendrogram from inode: ', dend)
                 rgcs[order][bbox] = lower_rgc
                 dends[order][bbox] = dend
