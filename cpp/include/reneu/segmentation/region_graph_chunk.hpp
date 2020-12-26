@@ -255,7 +255,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         // }
         const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            if(segid>0) _segid2frozen[segid] |= NEG_X; 
+            if(segid>0) _segid2frozen[segid] = NEG_X; 
         }
  
         // accumulate edges
@@ -266,6 +266,8 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                     accumulate_edge(segid, seg(z, y, 0), affs(2, z, y, 0));
             }
         }
+    } else {
+        assert(affs.shape(3) == seg.shape(2));
     }
 
     // positive Z
@@ -300,7 +302,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         const auto& contactingFaceIDs = xt::unique(contactingFaces);
         // for(const auto& segid: contactingFaceIDs){
-        //     _segid2frozen[segid] |= POS_X;
+        //     _segid2frozen[segid] = POS_X;
         // }
         
         for(const auto& segid: contactingFaceIDs){
@@ -308,7 +310,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
             // std::cout<<"\nsegid: "<<segid<<": ";
             // std::cout<<segid << "--"<< unsigned(_segid2frozen[segid]) << ", ";
             if(segid>0){
-                _segid2frozen[segid] |= POS_X;
+                _segid2frozen[segid] = POS_X;
                 // std::cout<<segid << "--"<< unsigned(_segid2frozen.at(segid))<< ", ";
             }
         }
@@ -348,21 +350,21 @@ auto merge_in_leaf_chunk(const aff_edge_t& threshold){
 auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk, 
                                 const std::size_t& dim, const aff_edge_t& threshold){
     assert(dim>=0 && dim<3);
-    const auto& LOWER_SURFACE_BIT = SURFACE_BITS[dim];
-    const auto& UPPER_SURFACE_BIT = SURFACE_BITS[3+dim];
+    const auto& NEG_SURFACE_BIT = SURFACE_BITS[dim];
+    const auto& POS_SURFACE_BIT = SURFACE_BITS[3+dim];
 
     // merge the frozen set
     // the contacting face should be melted
     for(auto& [segid, frozen] : _segid2frozen){
         // the contacting face of lower chunk is higher!
-        frozen &= (~UPPER_SURFACE_BIT);
+        frozen = (frozen & (~POS_SURFACE_BIT));
         if(frozen == 0){
             _segid2frozen.erase(segid);
         }
     }
     for(auto [segid, frozen] : upperRegionGraphChunk._segid2frozen){
         // the contacting face of upper chunk is lower!
-        frozen &= (~LOWER_SURFACE_BIT);
+        frozen &= (~NEG_SURFACE_BIT);
         if(frozen > 0 ){
             // this segment is still frozen by other faces
             _segid2frozen[segid] |= frozen;
