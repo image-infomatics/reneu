@@ -1,19 +1,13 @@
 {
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Python launch",
-            "type": "lldb",
+            "type": "python",
             "request": "launch",
             "stopOnEntry": true,
-            // "python": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
-            "program": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
-            "args": [
-                "-m",
-                "pytest",
-                "./tests/test_region_graph_chunk.py"
-            ],
+            "python": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
+            "program": "-m pytest ./tests/test_region_graph_chunk.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "env": {

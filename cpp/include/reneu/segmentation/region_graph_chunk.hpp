@@ -103,7 +103,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
 
         if(_is_frozen(segid0) || _is_frozen(segid1)){
             // mark both segment as frozen from both chunk faces
-            // these two could be merged in the 
+            // these two could be merged in the higher order agglomeration
             _segid2frozen[segid0] |= _segid2frozen[segid1];
             _segid2frozen[segid1] |= _segid2frozen.at(segid0);
             continue;
@@ -355,17 +355,17 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
 
     // merge the frozen set
     // the contacting face should be melted
-    for(auto& [segid, frozen] : _segid2frozen){
-        // the contacting face of lower chunk is higher!
-        frozen = (frozen & (~POS_SURFACE_BIT));
-        if(frozen == 0){
-            _segid2frozen.erase(segid);
-        }
+    for(auto it = _segid2frozen.begin(); it != _segid2frozen.end();){
+        const auto& [segid, frozen] = *it;
+        if(!(frozen & (~POS_SURFACE_BIT)))
+            it = _segid2frozen.erase(it); 
+        else
+            ++it;
     }
-    for(auto [segid, frozen] : upperRegionGraphChunk._segid2frozen){
-        // the contacting face of upper chunk is lower!
-        frozen &= (~NEG_SURFACE_BIT);
-        if(frozen > 0 ){
+    
+    for(const auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
+        // the contacting face of upper chunk is in negative direction!
+        if(frozen & (~NEG_SURFACE_BIT)){
             // this segment is still frozen by other faces
             _segid2frozen[segid] |= frozen;
         }
