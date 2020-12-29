@@ -115,16 +115,16 @@ inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
     return _segid2neighbor.at(sid0).at(sid1);
 }
 
-inline bool has_connection (const segid_t& sid0, const segid_t& sid1) const {
+inline bool _has_connection (const segid_t& sid0, const segid_t& sid1) const {
     // return _segid2neighbor[sid0].count(sid1);
-    return (_segid2neighbor.count(sid0)) && (_segid2neighbor.at(sid0).count(sid1));
     // return (_segid2neighbor.find(sid0) != _segid2neighbor.end()) && (_segid2neighbor[sid0].find(sid1)!= _segid2neighbor[sid0].end());
+    return (_segid2neighbor.count(sid0)) && (_segid2neighbor.at(sid0).count(sid1));
 }
 
-inline void accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
+inline void _accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
     // we assume that segid0 is greater than 0 !
     if( (segid1>0) && (segid0 != segid1)){
-        if(has_connection(segid0, segid1)){
+        if(_has_connection(segid0, segid1)){
             const auto& edgeIndex = _segid2neighbor.at(segid0).at(segid1);
             _edgeList[edgeIndex].accumulate(aff);
         } else {
@@ -245,13 +245,13 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
                 // skip background voxels
                 if(segid>0){ 
                     if (z>0)
-                        accumulate_edge(segid, fragments(z-1,y,x), affs(2,z,y,x));
+                        _accumulate_edge(segid, fragments(z-1,y,x), affs(2,z,y,x));
                     
                     if (y>0)
-                        accumulate_edge(segid, fragments(z,y-1,x), affs(1,z,y,x));
+                        _accumulate_edge(segid, fragments(z,y-1,x), affs(1,z,y,x));
                     
                     if (x>0)
-                        accumulate_edge(segid, fragments(z,y,x-1), affs(0,z,y,x));
+                        _accumulate_edge(segid, fragments(z,y,x-1), affs(0,z,y,x));
                 }
             }
         }
@@ -318,7 +318,7 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
 
-        if(!has_connection(segid0, segid1)){
+        if(!_has_connection(segid0, segid1)){
             continue;
         }
         

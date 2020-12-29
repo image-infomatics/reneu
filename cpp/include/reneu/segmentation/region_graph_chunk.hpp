@@ -167,7 +167,7 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
  * @param volumeBoundaryFlags 
  */
 RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::array<bool, 6> &volumeBoundaryFlags): 
-        RegionGraph(affs, seg), _segid2frozen({}){
+        _segid2frozen({}){
     
     std::array<std::size_t, 3> start;
     std::cout<< "starting offset array: ";
@@ -186,13 +186,13 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 // skip background voxels
                 if(segid>0){ 
                     if (z>start[0])
-                        accumulate_edge(segid, seg(z-1,y,x), affs(2,z-1,y,x));
+                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z-1,y,x));
                     
                     if (y>start[1])
-                        accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y-1,x));
+                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y-1,x));
                     
                     if (x>start[2])
-                        accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x-1));
+                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x-1));
                 }
             }
         }
@@ -218,7 +218,8 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
             for(std::size_t x=start[2]; x<seg.shape(2); x++){
                 const auto& segid = seg(1,y,x);
                 if(segid>0)
-                    accumulate_edge(segid, seg(0,y,x), affs(0, 0, y, x));
+                    // the three affinity channels are ordered as xyz!
+                    _accumulate_edge(segid, seg(0,y,x), affs(2, 1, y, x));
             }
         }
     }
@@ -238,7 +239,8 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
             for(std::size_t x=start[2]; x<seg.shape(2); x++){
                 const auto& segid = seg(z,1,x);
                 if(segid>0)
-                    accumulate_edge(segid, seg(z, 0, x), affs(1, z, 0, x));
+                    // the three affinity channels are ordered as xyz!
+                    _accumulate_edge(segid, seg(z, 0, x), affs(1, z, 1, x));
             }
         }
     }
@@ -263,7 +265,8 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
             for(std::size_t y=start[1]; y<seg.shape(1); y++){
                 const auto& segid = seg(z, y, 1);
                 if(segid>0)
-                    accumulate_edge(segid, seg(z, y, 0), affs(2, z, y, 0));
+                    // the three affinity channels are ordered as xyz!
+                    _accumulate_edge(segid, seg(z, y, 0), affs(0, z, y, 1));
             }
         }
     } else {
@@ -377,18 +380,10 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
     for(const auto& [segid0, neighbor] : upperRegionGraphChunk._segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbor){
             if(segid0 < segid1){
-                auto upperEdge = upperRegionGraphChunk._edgeList[edgeIndex];
-                if(_segid2neighbor[segid0][segid1] == 0){
-                    _segid2neighbor[segid0][segid1] = _edgeList.size();
-                    _segid2neighbor[segid1][segid0] = _edgeList.size();
-                    _edgeList.push_back(upperEdge);
-                } else {
-                    // both have the same edge, merge them
-                    // theoretically, this should not happen?
-                    std::cout<<"both region graph chunk have the same edge: "<<std::endl;
-                    const auto& lowerEdgeIndex = _segid2neighbor.at(segid0).at(segid1);
-                    _edgeList[lowerEdgeIndex].absorb(upperEdge);
-                }
+                const auto& upperEdge = upperRegionGraphChunk._edgeList[edgeIndex];
+                _segid2neighbor[segid0][segid1] = _edgeList.size();
+                _segid2neighbor[segid1][segid0] = _edgeList.size();
+                _edgeList.push_back(upperEdge);
             }
         }
     }
