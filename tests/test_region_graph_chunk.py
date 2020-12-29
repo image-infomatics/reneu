@@ -100,8 +100,7 @@ def test_region_graph_chunk():
     print('fragments: \n', fragments)
     print('original segmentation: \n', seg)
     print('distributed segmentation: \n', seg2)
-    # assert score == 1
-    breakpoint()
+    assert score == 1
 
 
 # def test_rand_score():

@@ -90,7 +90,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
 
-        if(!has_connection(segid0, segid1)){
+        if(!_has_connection(segid0, segid1)){
             continue;
         }
         
@@ -135,6 +135,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
                     }
 
                     residualSegid2Neighbor[root0][root1] = residualEdgeList.size();
+                    residualSegid2Neighbor[root1][root0] = residualEdgeList.size();
                     auto& edge = _edgeList[edgeIndex];
                     edge.segid0 = root0;
                     edge.segid1 = root1;
