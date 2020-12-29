@@ -94,7 +94,8 @@
         "cinttypes": "cpp",
         "any": "cpp",
         "csignal": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "semaphore": "cpp"
     },
     "C_Cpp.errorSquiggles": "Enabled",
     "python.testing.pytestArgs": [

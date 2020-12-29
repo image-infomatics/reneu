@@ -67,6 +67,7 @@ def test_region_graph_chunk():
                     bbox.minpt[1] + offset[1] : bbox.maxpt[1],
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
+                breakpoint()
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
                 print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
