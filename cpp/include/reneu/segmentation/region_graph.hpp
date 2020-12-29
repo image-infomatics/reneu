@@ -182,7 +182,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
         
         auto& neighborEdge = _edgeList[neighborEdgeIndex];
 
-        if (has_connection(segid1, nid0)){
+        if (_has_connection(segid1, nid0)){
             // combine two region edges
             const auto& newEdgeIndex = neighbors1[nid0];
             auto& newEdge = _edgeList[newEdgeIndex];
