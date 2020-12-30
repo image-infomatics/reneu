@@ -59,7 +59,7 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
             // so only half of the pairs need to be handled
-            if((segid0 < segid1) && !_is_frozen(segid0) && !_is_frozen(segid1)){
+            if(segid0 < segid1){
                 const auto& meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
                     // initial version is set to 1
@@ -169,7 +169,7 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
  * @param volumeBoundaryFlags 
  */
 RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::array<bool, 6> &volumeBoundaryFlags): 
-        _segid2frozen({}){
+        RegionGraph(), _segid2frozen({}){
     
     std::array<std::size_t, 3> start;
     std::cout<< "starting offset array: ";
@@ -188,13 +188,13 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 // skip background voxels
                 if(segid>0){ 
                     if (z>start[0])
-                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z-1,y,x));
+                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z,y,x));
                     
                     if (y>start[1])
-                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y-1,x));
+                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y,x));
                     
                     if (x>start[2])
-                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x-1));
+                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x));
                 }
             }
         }
@@ -390,6 +390,7 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
         }
     }
 
+    std::cout<< "region graph after merging: "<< as_string() << std::endl;
     // greedy iterative agglomeration
     return _greedy_merge(threshold); 
 }

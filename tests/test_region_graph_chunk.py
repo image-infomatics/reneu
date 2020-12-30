@@ -13,7 +13,7 @@ from sklearn.metrics import rand_score
 
 
 def test_region_graph_chunk():
-    sz = 8
+    sz = 4
     affs = get_random_affinity_map(sz)
     fragments = watershed(affs, 0, 0.9)
 
@@ -34,6 +34,7 @@ def test_region_graph_chunk():
 
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
+    print('region graph: ', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
@@ -84,7 +85,7 @@ def test_region_graph_chunk():
                 lower_rgc = rgcs[order-1][lower_bbox]
                 upper_rgc = rgcs[order-1][upper_bbox]
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
-                print('region graph chunk after merging another one: ', lower_rgc)
+                # print('region graph chunk after merging another one: ', lower_rgc)
                 print('dendrogram from inode: ', dend)
                 rgcs[order][bbox] = lower_rgc
                 dends[order][bbox] = dend
