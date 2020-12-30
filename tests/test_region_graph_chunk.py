@@ -14,6 +14,9 @@ from sklearn.metrics import rand_score
 
 def test_region_graph_chunk():
     sz = 40
+    # use smaller size in debuging mode
+    # so we can really check individual voxel and edges
+    # sz = 4
     threshold = 0.5
     
     affs = get_random_affinity_map(sz)
