@@ -37,7 +37,7 @@ def test_region_graph_chunk():
 
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
-    print('region graph: ', rg)
+    # print('region graph: ', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
@@ -71,12 +71,11 @@ def test_region_graph_chunk():
                     bbox.minpt[1] + offset[1] : bbox.maxpt[1],
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
-                breakpoint()
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
-                print('region graph in leaf chunk before merging: ', region_graph_chunk)
+                # print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
-                print('region graph in leaf chunk after merging: ', region_graph_chunk)
-                print('dendrogram in leaf node: ', dend)
+                # print('region graph in leaf chunk after merging: ', region_graph_chunk)
+                # print('dendrogram in leaf node: ', dend)
                 rgcs[order][bbox] = region_graph_chunk
                 dends[order][bbox] = dend
         else:
@@ -89,7 +88,7 @@ def test_region_graph_chunk():
                 upper_rgc = rgcs[order-1][upper_bbox]
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
                 # print('region graph chunk after merging another one: ', lower_rgc)
-                print('dendrogram from inode: ', dend)
+                # print('dendrogram from inode: ', dend)
                 rgcs[order][bbox] = lower_rgc
                 dends[order][bbox] = dend
 
@@ -97,7 +96,7 @@ def test_region_graph_chunk():
     for order, bbox2dend in dends.items():
         for bbox, dend in bbox2dend.items():
             combined_dend.merge(dend)
-    print('combined dendrogram: ', combined_dend)
+    # print('combined dendrogram: ', combined_dend)
     seg2 = combined_dend.materialize(fragments, threshold)
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
