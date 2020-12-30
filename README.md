@@ -29,6 +29,18 @@ export conda environment
 
     conda env export > environment.yml
 
+## Debug
+build with debug mode:
+    python setup.py build --debug
+
+insert a breakpoint in python code before using the c++ module
+
+run the test script
+
+launch the debuger in VSCode and find the python process. 
+
+continue the debugging python process, now we can use the debuger in VSCode.
+
 ## Release
 
 ```
