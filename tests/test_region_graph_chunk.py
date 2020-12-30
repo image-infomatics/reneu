@@ -11,41 +11,10 @@ from reneu.lib.segmentation import RegionGraph, watershed, RegionGraphChunk, Den
 
 from sklearn.metrics import rand_score
 
-
-def test_region_graph_chunk():
-    sz = 40
-    # use smaller size in debuging mode
-    # so we can really check individual voxel and edges
-    # sz = 4
-    threshold = 0.5
-    
-    affs = get_random_affinity_map(sz)
-    fragments = watershed(affs, 0, 0.9)
-    # split the chunks, so the contacting surface 
-    # do not have continuous segmentation id
-    lower_fragments = fragments[:, :, :sz//2]
-    lower_fragments = cc3d.connected_components(
-        lower_fragments, connectivity=6)
-    upper_fragments = fragments[:, :, sz//2:]
-    upper_fragments = cc3d.connected_components(
-        upper_fragments, connectivity=6)
-    upper_fragments[upper_fragments>0] += np.max(lower_fragments)
-    fragments[:, :, :sz//2] = lower_fragments
-    fragments[:, :, sz//2:] = upper_fragments
-    print('fragments: \n', fragments)
-
-
-    print('\nsingle machine agglomeration...')
-    rg = RegionGraph(affs, fragments)
-    # print('region graph: ', rg)
-    print('gready mean agglomeration...')
-    dend = rg.greedy_merge(fragments, threshold)
-    seg = dend.materialize(fragments, threshold)
-    print('\nsegmentation: \n', seg)
-
+def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold: float, block_size: tuple):
     print('\ndistributed agglomeration...')
-    bbox = Bbox.from_list([0, 0, 0, 1, sz, sz])
-    bbbt = BinaryBoundingBoxTree(bbox, (1, sz, sz//2))
+    bbox = Bbox.from_list([0, 0, 0, *fragments.shape])
+    bbbt = BinaryBoundingBoxTree(bbox, block_size)
     order2tasks = bbbt.order2tasks
 
     rgcs = defaultdict(dict)
@@ -98,21 +67,45 @@ def test_region_graph_chunk():
             combined_dend.merge(dend)
     # print('combined dendrogram: ', combined_dend)
     seg2 = combined_dend.materialize(fragments, threshold)
+    return seg2
+
+def test_region_graph_chunk():
+    sz = 40
+    # use smaller size in debuging mode
+    # so we can really check individual voxel and edges
+    # sz = 4
+    threshold = 0.5
+    
+    affs = get_random_affinity_map(sz)
+    fragments = watershed(affs, 0, 0.9)
+    # split the chunks, so the contacting surface 
+    # do not have continuous segmentation id
+    lower_fragments = fragments[:, :, :sz//2]
+    lower_fragments = cc3d.connected_components(
+        lower_fragments, connectivity=6)
+    upper_fragments = fragments[:, :, sz//2:]
+    upper_fragments = cc3d.connected_components(
+        upper_fragments, connectivity=6)
+    upper_fragments[upper_fragments>0] += np.max(lower_fragments)
+    fragments[:, :, :sz//2] = lower_fragments
+    fragments[:, :, sz//2:] = upper_fragments
+    print('fragments: \n', fragments)
+
+
+    print('\nsingle machine agglomeration...')
+    rg = RegionGraph(affs, fragments)
+    # print('region graph: ', rg)
+    print('gready mean agglomeration...')
+    dend = rg.greedy_merge(fragments, threshold)
+    seg = dend.materialize(fragments, threshold)
+    print('\nsegmentation: \n', seg)
+
+    seg2 = distributed_agglomeration(fragments, affs, threshold, (1, sz, sz//2))
+
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
     print('fragments: \n', fragments)
     print('original segmentation: \n', seg)
     print('distributed segmentation: \n', seg2)
     assert score == 1
-
-
-# def test_rand_score():
-#     sz = 64
-#     seg = np.arange(sz*sz*sz, dtype=np.uint64).reshape((sz,sz,sz))
-
-    # print('rand score: ', rand_score(seg.flatten(), seg.flatten()))
-
-
-
-        
 
