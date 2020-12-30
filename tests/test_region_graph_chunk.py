@@ -13,10 +13,11 @@ from sklearn.metrics import rand_score
 
 
 def test_region_graph_chunk():
-    sz = 4
+    sz = 40
+    threshold = 0.5
+    
     affs = get_random_affinity_map(sz)
     fragments = watershed(affs, 0, 0.9)
-
     # split the chunks, so the contacting surface 
     # do not have continuous segmentation id
     lower_fragments = fragments[:, :, :sz//2]
@@ -30,7 +31,6 @@ def test_region_graph_chunk():
     fragments[:, :, sz//2:] = upper_fragments
     print('fragments: \n', fragments)
 
-    threshold = 0.3
 
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)

@@ -59,6 +59,8 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
             // so only half of the pairs need to be handled
+            // TO-DO: exclude frozen segmentations with same flag
+            // !(_is_frozen(segid0) && _is_frozen(segid1) && _segid2frozen.at(segid0) == _segid2frozen.at(segid1))
             if(segid0 < segid1){
                 const auto& meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
@@ -188,13 +190,13 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 // skip background voxels
                 if(segid>0){ 
                     if (z>start[0])
-                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z,y,x));
+                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z-start[0],y-start[1],x-start[2]));
                     
                     if (y>start[1])
-                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y,x));
+                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z-start[0],y-start[1],x-start[2]));
                     
                     if (x>start[2])
-                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x));
+                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z-start[0],y-start[1],x-start[2]));
                 }
             }
         }
@@ -221,7 +223,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 const auto& segid = seg(1,y,x);
                 if(segid>0)
                     // the three affinity channels are ordered as xyz!
-                    _accumulate_edge(segid, seg(0,y,x), affs(2, 1, y, x));
+                    _accumulate_edge(segid, seg(0,y,x), affs(2, 0, y-start[1], x-start[2]));
             }
         }
     }
@@ -242,7 +244,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 const auto& segid = seg(z,1,x);
                 if(segid>0)
                     // the three affinity channels are ordered as xyz!
-                    _accumulate_edge(segid, seg(z, 0, x), affs(1, z, 1, x));
+                    _accumulate_edge(segid, seg(z, 0, x), affs(1, z-start[0], 0, x-start[2]));
             }
         }
     }
@@ -268,7 +270,7 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
                 const auto& segid = seg(z, y, 1);
                 if(segid>0)
                     // the three affinity channels are ordered as xyz!
-                    _accumulate_edge(segid, seg(z, y, 0), affs(0, z, y, 1));
+                    _accumulate_edge(segid, seg(z, y, 0), affs(0, z-start[0], y-start[1], 0));
             }
         }
     } else {
