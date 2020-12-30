@@ -111,7 +111,8 @@ auto _greedy_merge(const aff_edge_t& threshold){
 
         // merge segid1 and segid0
         mergeNum++;
-        _merge_segments(segid0, segid1, edge, dend, heap, threshold); 
+        dend.push_edge(segid0, segid1, edge.get_mean());
+        _merge_segments(segid0, segid1, edge, heap, threshold); 
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
