@@ -162,11 +162,9 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
 }
 
 auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
-            Dendrogram& dend, PriorityQueue& heap, 
+            PriorityQueue& heap, 
             const aff_edge_t& threshold){
     
-    dend.push_edge(segid0, segid1, edge.get_mean());
-
     // always merge object with less neighbors to more neighbors
     if(_segid2neighbor.at(segid0).size() > _segid2neighbor.at(segid1).size()){
         std::swap(segid0, segid1);
@@ -331,7 +329,8 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
         
         // merge segid1 and segid0
         mergeNum++;
-        _merge_segments(segid0, segid1, edge, dend, heap, threshold);
+        dend.push_edge(segid0, segid1, edge.get_mean());
+        _merge_segments(segid0, segid1, edge, heap, threshold);
         
     }
     
