@@ -59,9 +59,11 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
             // so only half of the pairs need to be handled
-            // TO-DO: exclude frozen segmentations with same flag
-            // !(_is_frozen(segid0) && _is_frozen(segid1) && _segid2frozen.at(segid0) == _segid2frozen.at(segid1))
-            if(segid0 < segid1){
+            // exclude frozen segmentations with same flag
+            if((segid0 < segid1) && 
+                    !(_is_frozen(segid0) && _is_frozen(segid1) && 
+                    _segid2frozen.at(segid0) == _segid2frozen.at(segid1))){
+
                 const auto& meanAff = _edgeList[edgeIndex].get_mean();
                 if(meanAff > threshold){
                     // initial version is set to 1
