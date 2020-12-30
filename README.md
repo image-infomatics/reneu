@@ -31,6 +31,7 @@ export conda environment
 
 ## Debug
 build with debug mode:
+
     python setup.py build --debug
 
 insert a breakpoint in python code before using the c++ module
