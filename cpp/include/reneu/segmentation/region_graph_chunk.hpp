@@ -211,36 +211,35 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         assert(affs.shape(1) == seg.shape(0) - 1);
         const auto& contactingFaces = xt::view(seg, 
             xt::range(0,2), xt::range(start[1], _), xt::range(start[2], _));
-        // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            if(segid>0) _segid2frozen[segid] |= NEG_Z; 
+            if(segid) _segid2frozen[segid] |= NEG_Z; 
         }
         // accumulate edges
         for(std::size_t y=start[1]; y<seg.shape(1); y++){
             for(std::size_t x=start[2]; x<seg.shape(2); x++){
                 const auto& segid = seg(1,y,x);
-                if(segid>0)
+                if(segid)
                     // the three affinity channels are ordered as xyz!
                     _accumulate_edge(segid, seg(0,y,x), affs(2, 0, y-start[1], x-start[2]));
             }
         }
     }
 
-    // negative y 
+    // negative y
     if(!volumeBoundaryFlags[1]){
         assert(affs.shape(2) == seg.shape(1) - 1);
-        const Segmentation& contactingFaces = xt::view(seg, 
+        const auto& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(0,2), xt::range(start[2], _));
-        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= NEG_Y;
+            if(segid) _segid2frozen[segid] |= NEG_Y;
         }
         // accumulate edges
         for(std::size_t z=start[0]; z<seg.shape(0); z++){
             for(std::size_t x=start[2]; x<seg.shape(2); x++){
                 const auto& segid = seg(z,1,x);
-                if(segid>0)
+                if(segid)
                     // the three affinity channels are ordered as xyz!
                     _accumulate_edge(segid, seg(z, 0, x), affs(1, z-start[0], 0, x-start[2]));
             }
@@ -252,20 +251,16 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
         assert(affs.shape(3) == seg.shape(2) - 1);
         const auto& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(start[1], _), xt::range(0,2));
-        // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
-        // for(const auto& segid: contactingFaceIDs){
-        //     _segid2frozen[segid] |= NEG_X;
-        // }
         const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            if(segid>0) _segid2frozen[segid] = NEG_X; 
+            if(segid) _segid2frozen[segid] = NEG_X; 
         }
  
         // accumulate edges
         for(std::size_t z=start[0]; z<seg.shape(0); z++){
             for(std::size_t y=start[1]; y<seg.shape(1); y++){
                 const auto& segid = seg(z, y, 1);
-                if(segid>0)
+                if(segid)
                     // the three affinity channels are ordered as xyz!
                     _accumulate_edge(segid, seg(z, y, 0), affs(0, z-start[0], y-start[1], 0));
             }
@@ -276,42 +271,29 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
 
     // positive Z
     if(!volumeBoundaryFlags[3]){
-        const Segmentation& contactingFaces = xt::view(seg, 
+        const auto& contactingFaces = xt::view(seg, 
             seg.shape(0)-1, xt::range(start[1], _), xt::range(start[2],_));
-        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] = _segid2frozen[segid] | POS_Z;
+            if(segid) _segid2frozen[segid] |= POS_Z;
         }
     }
     // positive y
     if(!volumeBoundaryFlags[4]){
-        const Segmentation& contactingFaces = xt::view(seg, 
+        const auto& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), seg.shape(1)-1, xt::range(start[2],_));
-        const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
+        const auto& contactingFaceIDs = xt::unique(contactingFaces);
         for(const auto& segid: contactingFaceIDs){
-            _segid2frozen[segid] |= POS_Y;
+            if(segid) _segid2frozen[segid] |= POS_Y;
         }
     }
     // positive x
     if(!volumeBoundaryFlags[5]){
         const auto& contactingFaces = xt::view(seg, 
             xt::range(start[0], _), xt::range(start[1],_), seg.shape(2)-1);
-
-        // std::cout<< "get nonzero segids..."<<std::endl;
-        // const auto& contactingFaceIDs = get_nonzero_segids(contactingFaces);
         const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        // for(const auto& segid: contactingFaceIDs){
-        //     _segid2frozen[segid] = POS_X;
-        // }
-        
         for(const auto& segid: contactingFaceIDs){
-            // if(!_is_frozen(segid)) _segid2frozen[segid] = 0;
-            // std::cout<<"\nsegid: "<<segid<<": ";
-            // std::cout<<segid << "--"<< unsigned(_segid2frozen[segid]) << ", ";
-            if(segid>0){
-                _segid2frozen[segid] = POS_X;
-                // std::cout<<segid << "--"<< unsigned(_segid2frozen.at(segid))<< ", ";
-            }
+            if(segid) _segid2frozen[segid] |= POS_X;
         }
     }
 }
@@ -354,8 +336,9 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
     // merge the frozen set
     // the contacting face should be melted
     for(auto it = _segid2frozen.begin(); it != _segid2frozen.end();){
-        const auto& [segid, frozen] = *it;
-        if(!(frozen & (~POS_SURFACE_BIT)))
+        auto& frozen = it->second;
+        frozen &= (~POS_SURFACE_BIT);
+        if(frozen == 0)
             it = _segid2frozen.erase(it); 
         else
             ++it;
@@ -363,9 +346,10 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
     
     for(const auto& [segid, frozen] : upperRegionGraphChunk._segid2frozen){
         // the contacting face of upper chunk is in negative direction!
-        if(frozen & (~NEG_SURFACE_BIT)){
+        const auto& meltedFlag = frozen & (~NEG_SURFACE_BIT);
+        if(meltedFlag){
             // this segment is still frozen by other faces
-            _segid2frozen[segid] |= frozen;
+            _segid2frozen[segid] |= meltedFlag;
         }
     }
     std::cout<<"number of remaining frozen segments: "<< _segid2frozen.size() << std::endl;
