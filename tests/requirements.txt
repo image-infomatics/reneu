@@ -5,4 +5,4 @@ matplotlib
 scikit-learn
 h5py
 tifffile
-connected-components-3d
+connected-components-3d>=2.2.0
