@@ -1,7 +1,8 @@
-
-from collections import defaultdict
+import os
+from tempfile import mkdtemp
+import pickle
+from shutil import rmtree
 import numpy as np
-from numpy.core.defchararray import upper
 np.random.seed(3817)
 
 from cloudvolume.lib import Bbox, Vec
@@ -13,19 +14,23 @@ from reneu.lib.segmentation import RegionGraph, watershed, RegionGraphChunk, Den
 from sklearn.metrics import rand_score
 
 
+
 def get_random_affinity_map(sz: tuple):
     affs = np.random.rand(3,*sz).astype(np.float32)
     print('random affinity map \n: ', affs)
     return affs
 
 def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold: float, chunk_size: tuple):
+    rgc_dir = mkdtemp()
+    dend_dir = mkdtemp()
+
     print('\ndistributed agglomeration...')
     bbox = Bbox.from_list([0, 0, 0, *fragments.shape])
     bbbt = BinaryBoundingBoxTree(bbox, chunk_size)
     order2tasks = bbbt.order2tasks
 
-    bbox2rgc = dict()
-    bbox2dend = dict()
+    # bbox2rgc = dict()
+    # bbox2dend = dict()
     for order in range(len(order2tasks)):
         tasks = order2tasks[order]
         # bbox to task
@@ -55,24 +60,60 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
                 # print('region graph in leaf chunk after merging: ', region_graph_chunk)
                 # print('dendrogram in leaf node: ', dend)
-                bbox2rgc[bbox] = region_graph_chunk
-                bbox2dend[bbox] = dend
+                # bbox2rgc[bbox] = region_graph_chunk
+                # bbox2dend[bbox] = dend
+                with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
+                    pickle.dump(region_graph_chunk, f)
+                with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
+                    rgc2 = pickle.load(f)
+                assert pickle.dumps(region_graph_chunk) == pickle.dumps(rgc2)
+
+                with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
+                    pickle.dump(dend, f)
+                with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
+                    dend2 = pickle.load(f)
+                assert pickle.dumps(dend) == pickle.dumps(dend2)
         else:
             for bbox, task in tasks.items():
                 boundary_flags, split_dim, lower_bbox, upper_bbox = task
-                lower_rgc = bbox2rgc[lower_bbox]
-                upper_rgc = bbox2rgc[upper_bbox]
+                # lower_rgc = bbox2rgc[lower_bbox]
+                # upper_rgc = bbox2rgc[upper_bbox]
+                with open(os.path.join(rgc_dir, f'{lower_bbox.to_filename()}.pickle'), 'rb') as f:
+                    lower_rgc = pickle.load(f)
+                with open(os.path.join(rgc_dir, f'{upper_bbox.to_filename()}.pickle'), 'rb') as f:
+                    upper_rgc = pickle.load(f)
+
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
                 # print('region graph chunk after merging another one: ', lower_rgc)
                 # print('dendrogram from inode: ', dend)
-                bbox2rgc[bbox] = lower_rgc
-                bbox2dend[bbox] = dend
+                # bbox2rgc[bbox] = lower_rgc
+                # bbox2dend[bbox] = dend
+                with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
+                    pickle.dump(lower_rgc, f)
+                with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
+                    lower_rgc2 = pickle.load(f)
+                assert pickle.dumps(lower_rgc) == pickle.dumps(lower_rgc2)
+                
+                with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
+                    pickle.dump(dend, f)
+                with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
+                    dend2 = pickle.load(f)
+                assert pickle.dumps(dend) == pickle.dumps(dend2)
+                
 
     combined_dend = Dendrogram();
-    for _, dend in bbox2dend.items():
+    # for _, dend in bbox2dend.items():
+    #     combined_dend.merge(dend)
+    for file_name in os.listdir(dend_dir):
+        with open(os.path.join(dend_dir, file_name), 'rb') as f:
+            dend = pickle.load(f)
         combined_dend.merge(dend)
     # print('combined dendrogram: ', combined_dend)
     seg2 = combined_dend.materialize(fragments, threshold)
+
+    rmtree(rgc_dir)
+    rmtree(dend_dir)
+
     return seg2
 
 def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
@@ -110,7 +151,7 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
     
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
-    print('region graph: ', rg)
+    # print('region graph: ', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
@@ -138,13 +179,8 @@ def test_region_graph_chunk():
     chunk_size = (1, 6, 3)
     evaluate_parameter_set(sz, chunk_size, threshold)
 
-    # sz = (1,4,1024)
     # threshold = 0.5
-    # chunk_size = (1, 4, 4)
+    # sz = (64,50, 40)
+    # chunk_size = (50, 40, 35)
     # evaluate_parameter_set(sz, chunk_size, threshold)
-
-    threshold = 0.5
-    sz = (64,50, 40)
-    chunk_size = (50, 40, 35)
-    evaluate_parameter_set(sz, chunk_size, threshold)
 
