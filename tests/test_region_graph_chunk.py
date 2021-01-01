@@ -1,7 +1,8 @@
 
 from collections import defaultdict
 import numpy as np
-np.random.seed(0)
+from numpy.core.defchararray import upper
+np.random.seed(2326)
 
 from cloudvolume.lib import Bbox, Vec
 import cc3d
@@ -23,14 +24,16 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
     bbbt = BinaryBoundingBoxTree(bbox, chunk_size)
     order2tasks = bbbt.order2tasks
 
-    rgcs = defaultdict(dict)
-    dends = defaultdict(dict)
+    bbox2rgc = dict()
+    bbox2dend = dict()
     for order in range(len(order2tasks)):
         tasks = order2tasks[order]
         # bbox to task
         if order == 0:
             for bbox, task in tasks.items():
-                boundary_flags = task[0]
+                boundary_flags, _, lower_bbox, upper_bbox = task
+                assert lower_bbox is None
+                assert upper_bbox is None
                 leaf_affs = affs[:,
                     bbox.minpt[0] : bbox.maxpt[0],
                     bbox.minpt[1] : bbox.maxpt[1],
@@ -47,30 +50,26 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
-                # print('region graph in leaf chunk before merging: ', region_graph_chunk)
+                print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
-                # print('region graph in leaf chunk after merging: ', region_graph_chunk)
+                print('region graph in leaf chunk after merging: ', region_graph_chunk)
                 # print('dendrogram in leaf node: ', dend)
-                rgcs[order][bbox] = region_graph_chunk
-                dends[order][bbox] = dend
+                bbox2rgc[bbox] = region_graph_chunk
+                bbox2dend[bbox] = dend
         else:
             for bbox, task in tasks.items():
-                boundary_flags = task[0]
-                split_dim = task[1]
-                lower_bbox = task[2]
-                upper_bbox = task[3]
-                lower_rgc = rgcs[order-1][lower_bbox]
-                upper_rgc = rgcs[order-1][upper_bbox]
+                boundary_flags, split_dim, lower_bbox, upper_bbox = task
+                lower_rgc = bbox2rgc[lower_bbox]
+                upper_rgc = bbox2rgc[upper_bbox]
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
                 # print('region graph chunk after merging another one: ', lower_rgc)
                 # print('dendrogram from inode: ', dend)
-                rgcs[order][bbox] = lower_rgc
-                dends[order][bbox] = dend
+                bbox2rgc[bbox] = lower_rgc
+                bbox2dend[bbox] = dend
 
     combined_dend = Dendrogram();
-    for order, bbox2dend in dends.items():
-        for bbox, dend in bbox2dend.items():
-            combined_dend.merge(dend)
+    for _, dend in bbox2dend.items():
+        combined_dend.merge(dend)
     # print('combined dendrogram: ', combined_dend)
     seg2 = combined_dend.materialize(fragments, threshold)
     return seg2
@@ -112,7 +111,7 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
     
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
-    # print('region graph: ', rg)
+    print('region graph: ', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
@@ -131,13 +130,22 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
 def test_region_graph_chunk():
     # use smaller size in debuging mode
     # so we can really check individual voxel and edges
+    
+    # for seed in range(10000):
+    #     print(f'\nseed is {seed} \n')
+    #     np.random.seed(seed)
     sz = (1,4,4)
     threshold = 0.5
-    chunk_size = (1, 2, 2)
+    chunk_size = (1, 4, 2)
     evaluate_parameter_set(sz, chunk_size, threshold)
 
-    sz = (40,40,40)
-    threshold = 0.5
-    chunk_size = (20, 20, 20)
-    evaluate_parameter_set(sz, chunk_size, threshold)
+    # sz = (1,4,1024)
+    # threshold = 0.5
+    # chunk_size = (1, 4, 4)
+    # evaluate_parameter_set(sz, chunk_size, threshold)
+
+    # threshold = 0.5
+    # sz = (40,40, 1)
+    # chunk_size = (40, 20, 1)
+    # evaluate_parameter_set(sz, chunk_size, threshold)
 

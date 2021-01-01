@@ -367,7 +367,7 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
         }
     }
 
-    // std::cout<< "region graph after merging: "<< as_string() << std::endl;
+    std::cout<< "region graph after merging: "<< as_string() << std::endl;
     // greedy iterative agglomeration
     return _greedy_merge(threshold); 
 }
