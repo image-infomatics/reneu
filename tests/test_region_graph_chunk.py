@@ -2,7 +2,7 @@
 from collections import defaultdict
 import numpy as np
 from numpy.core.defchararray import upper
-np.random.seed(2326)
+np.random.seed(3817)
 
 from cloudvolume.lib import Bbox, Vec
 import cc3d
@@ -50,9 +50,9 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
-                print('region graph in leaf chunk before merging: ', region_graph_chunk)
+                # print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
-                print('region graph in leaf chunk after merging: ', region_graph_chunk)
+                # print('region graph in leaf chunk after merging: ', region_graph_chunk)
                 # print('dendrogram in leaf node: ', dend)
                 bbox2rgc[bbox] = region_graph_chunk
                 bbox2dend[bbox] = dend
@@ -111,7 +111,7 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
     
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
-    print('region graph: ', rg)
+    # print('region graph: ', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
@@ -134,9 +134,9 @@ def test_region_graph_chunk():
     # for seed in range(10000):
     #     print(f'\nseed is {seed} \n')
     #     np.random.seed(seed)
-    sz = (1,4,4)
+    sz = (1,6,6)
     threshold = 0.5
-    chunk_size = (1, 4, 2)
+    chunk_size = (1, 6, 3)
     evaluate_parameter_set(sz, chunk_size, threshold)
 
     # sz = (1,4,1024)
@@ -144,8 +144,8 @@ def test_region_graph_chunk():
     # chunk_size = (1, 4, 4)
     # evaluate_parameter_set(sz, chunk_size, threshold)
 
-    threshold = 0.5
-    sz = (40,40, 40)
-    chunk_size = (30, 20, 10)
-    evaluate_parameter_set(sz, chunk_size, threshold)
+    # threshold = 0.5
+    # sz = (64,50, 40)
+    # chunk_size = (50, 40, 35)
+    # evaluate_parameter_set(sz, chunk_size, threshold)
 
