@@ -144,8 +144,8 @@ def test_region_graph_chunk():
     # chunk_size = (1, 4, 4)
     # evaluate_parameter_set(sz, chunk_size, threshold)
 
-    # threshold = 0.5
-    # sz = (40,40, 1)
-    # chunk_size = (40, 20, 1)
-    # evaluate_parameter_set(sz, chunk_size, threshold)
+    threshold = 0.5
+    sz = (40,40, 40)
+    chunk_size = (30, 20, 10)
+    evaluate_parameter_set(sz, chunk_size, threshold)
 
