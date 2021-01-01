@@ -95,7 +95,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
     Dendrogram dend(threshold);
 
     std::cout<< "iterative greedy merging..." << std::endl;
-    std::cout<< "this region graph chunk: "<< as_string(); 
+    // std::cout<< "this region graph chunk: "<< as_string(); 
     size_t mergeNum = 0;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.pop();
@@ -165,6 +165,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
                     auto root1 = dsets.find_set(segid1);
                     if(root0 == root1){
                         std::cout<< "segment "<< segid0 << " and " << segid1 << " has same root " << root0 << std::endl;
+                        continue;
                     }
 
                     residualSegid2Neighbor[root0][root1] = residualEdgeList.size();
@@ -396,7 +397,7 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
         }
     }
 
-    std::cout<< "region graph after merging: "<< as_string() << std::endl;
+    // std::cout<< "region graph after merging: "<< as_string() << std::endl;
     // greedy iterative agglomeration
     return _greedy_merge(threshold); 
 }
