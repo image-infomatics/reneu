@@ -95,13 +95,23 @@ auto _greedy_merge(const aff_edge_t& threshold){
     Dendrogram dend(threshold);
 
     std::cout<< "iterative greedy merging..." << std::endl;
-    // std::cout<< "this region graph chunk: "<< as_string(); 
+    std::cout<< "this region graph chunk: "<< as_string(); 
     size_t mergeNum = 0;
     while(!heap.empty()){
         const auto& edgeInQueue = heap.pop();
         
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
+
+        if(segid0==1 && segid1==6){
+            // when we merge 1 and 6, it will delete 4--6 connection!
+            std::cout<<segid0<<std::endl;
+        }
+        if(segid0==4 && segid1==6){
+            std::cout<<segid0<<std::endl;
+        }
+        if(segid0==4 && segid1==1){
+        }
 
         if(!_has_connection(segid0, segid1)){
             continue;
@@ -162,6 +172,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
                     auto& edge = _edgeList[edgeIndex];
                     edge.segid0 = root0;
                     edge.segid1 = root1;
+                    edge.version = 1;
                     residualEdgeList.push_back(edge);
                     residualSegid2Frozen[root0] = _segid2frozen[segid0] | _segid2frozen[root0];
                     residualSegid2Frozen[root1] = _segid2frozen[segid1] | _segid2frozen[root1];
@@ -385,7 +396,7 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
         }
     }
 
-    // std::cout<< "region graph after merging: "<< as_string() << std::endl;
+    std::cout<< "region graph after merging: "<< as_string() << std::endl;
     // greedy iterative agglomeration
     return _greedy_merge(threshold); 
 }

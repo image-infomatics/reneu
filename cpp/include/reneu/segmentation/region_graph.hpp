@@ -270,8 +270,10 @@ std::string as_string() const {
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
         stringStream << segid0 << ": ";
         for(const auto& [segid1, edgeIndex] : neighbors0){
-            const auto& meanAff = _edgeList[edgeIndex].get_mean();
-            stringStream << segid1 << "--" << meanAff << ", ";
+            if(segid0 < segid1){
+                const auto& meanAff = _edgeList[edgeIndex].get_mean();
+                stringStream << segid1 << "--" << meanAff << ", ";
+            }
         }
         stringStream<< "\n";
     }
