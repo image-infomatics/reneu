@@ -257,7 +257,7 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
     std::cout<<"total edge number: "<< _edgeList.size() <<std::endl;
 }
 
-auto get_edge_num() const {
+std::size_t get_edge_num() const {
     std::size_t edgeNum = 0;
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
         edgeNum += neighbors0.size();
