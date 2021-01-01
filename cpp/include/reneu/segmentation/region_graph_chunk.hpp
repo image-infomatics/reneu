@@ -103,16 +103,6 @@ auto _greedy_merge(const aff_edge_t& threshold){
         auto segid0 = edgeInQueue.segid0;
         auto segid1 = edgeInQueue.segid1;
 
-        if(segid0==1 && segid1==6){
-            // when we merge 1 and 6, it will delete 4--6 connection!
-            std::cout<<segid0<<std::endl;
-        }
-        if(segid0==4 && segid1==6){
-            std::cout<<segid0<<std::endl;
-        }
-        if(segid0==4 && segid1==1){
-        }
-
         if(!_has_connection(segid0, segid1)){
             continue;
         }
