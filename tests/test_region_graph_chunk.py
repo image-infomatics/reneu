@@ -49,6 +49,7 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                     bbox.minpt[1] + offset[1] : bbox.maxpt[1],
                     bbox.minpt[2] + offset[2] : bbox.maxpt[2]
                 ]
+                # breakpoint()
                 region_graph_chunk = RegionGraphChunk(leaf_affs, leaf_fragments, boundary_flags)
                 # print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
@@ -88,8 +89,6 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
                     ystart:ystart+chunk_size[1],
                     xstart:xstart+chunk_size[2]]
                 
-                if len(fragments_chunk) == 0:
-                    breakpoint()
                 # print('fragments chunk: \n', fragments_chunk)
                 fragments_chunk, seg_num = cc3d.connected_components(
                     fragments_chunk, connectivity=6, return_N=True
@@ -111,7 +110,7 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
     
     print('\nsingle machine agglomeration...')
     rg = RegionGraph(affs, fragments)
-    # print('region graph: ', rg)
+    print('region graph: ', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
@@ -144,8 +143,8 @@ def test_region_graph_chunk():
     # chunk_size = (1, 4, 4)
     # evaluate_parameter_set(sz, chunk_size, threshold)
 
-    # threshold = 0.5
-    # sz = (64,50, 40)
-    # chunk_size = (50, 40, 35)
-    # evaluate_parameter_set(sz, chunk_size, threshold)
+    threshold = 0.5
+    sz = (64,50, 40)
+    chunk_size = (50, 40, 35)
+    evaluate_parameter_set(sz, chunk_size, threshold)
 
