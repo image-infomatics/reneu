@@ -33,7 +33,6 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
     # bbox2dend = dict()
     for order in range(len(order2tasks)):
         tasks = order2tasks[order]
-        # bbox to task
         if order == 0:
             for bbox, task in tasks.items():
                 boundary_flags, _, lower_bbox, upper_bbox = task
@@ -59,57 +58,76 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                 # print('region graph in leaf chunk before merging: ', region_graph_chunk)
                 dend = region_graph_chunk.merge_in_leaf_chunk(threshold)
                 # print('region graph in leaf chunk after merging: ', region_graph_chunk)
-                # print('dendrogram in leaf node: ', dend)
+                
                 # bbox2rgc[bbox] = region_graph_chunk
                 # bbox2dend[bbox] = dend
+                
                 with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
                     pickle.dump(region_graph_chunk, f)
                 with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
-                    rgc2 = pickle.load(f)
-                assert pickle.dumps(region_graph_chunk) == pickle.dumps(rgc2)
+                    region_graph_chunk2 = pickle.load(f)
+                assert pickle.dumps(region_graph_chunk) == pickle.dumps(region_graph_chunk2)
+                # print(region_graph_chunk2)
 
+                # print('dendrogram in leaf node: ', dend)
                 with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
                     pickle.dump(dend, f)
                 with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
                     dend2 = pickle.load(f)
                 assert pickle.dumps(dend) == pickle.dumps(dend2)
+                # print(dend2)
         else:
             for bbox, task in tasks.items():
                 boundary_flags, split_dim, lower_bbox, upper_bbox = task
+                
                 # lower_rgc = bbox2rgc[lower_bbox]
                 # upper_rgc = bbox2rgc[upper_bbox]
+                
                 with open(os.path.join(rgc_dir, f'{lower_bbox.to_filename()}.pickle'), 'rb') as f:
                     lower_rgc = pickle.load(f)
                 with open(os.path.join(rgc_dir, f'{upper_bbox.to_filename()}.pickle'), 'rb') as f:
                     upper_rgc = pickle.load(f)
 
+                # print('lower region graph chunk: ', lower_rgc)
+                # print('upper region graph chunk: ', upper_rgc)
                 dend = lower_rgc.merge_upper_chunk(upper_rgc, split_dim, threshold)
                 # print('region graph chunk after merging another one: ', lower_rgc)
-                # print('dendrogram from inode: ', dend)
+                
                 # bbox2rgc[bbox] = lower_rgc
                 # bbox2dend[bbox] = dend
+                
                 with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
                     pickle.dump(lower_rgc, f)
                 with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
                     lower_rgc2 = pickle.load(f)
                 assert pickle.dumps(lower_rgc) == pickle.dumps(lower_rgc2)
+                # print(lower_rgc2)
                 
+                # print('dendrogram from inode: ', dend)
                 with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'wb') as f:
                     pickle.dump(dend, f)
                 with open(os.path.join(dend_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
                     dend2 = pickle.load(f)
                 assert pickle.dumps(dend) == pickle.dumps(dend2)
-                
+                # print(dend2)
 
-    combined_dend = Dendrogram();
+    # combined_dend = Dendrogram();
     # for _, dend in bbox2dend.items():
+    #     print(dend)
     #     combined_dend.merge(dend)
+    # print('combined dendrogram: ', combined_dend)
+    
+    print('loaded dendrogram:')
+    combined_dend2 = Dendrogram()
     for file_name in os.listdir(dend_dir):
         with open(os.path.join(dend_dir, file_name), 'rb') as f:
             dend = pickle.load(f)
-        combined_dend.merge(dend)
-    # print('combined dendrogram: ', combined_dend)
-    seg2 = combined_dend.materialize(fragments, threshold)
+        # print(dend)
+        combined_dend2.merge(dend)
+    print('loaded combined dendrogram: ', combined_dend2)
+
+    # seg = combined_dend.materialize(fragments, threshold)
+    seg2 = combined_dend2.materialize(fragments, threshold)
 
     rmtree(rgc_dir)
     rmtree(dend_dir)
@@ -179,8 +197,8 @@ def test_region_graph_chunk():
     chunk_size = (1, 6, 3)
     evaluate_parameter_set(sz, chunk_size, threshold)
 
-    # threshold = 0.5
-    # sz = (64,50, 40)
-    # chunk_size = (50, 40, 35)
-    # evaluate_parameter_set(sz, chunk_size, threshold)
+    threshold = 0.5
+    sz = (64,50, 40)
+    chunk_size = (50, 40, 35)
+    evaluate_parameter_set(sz, chunk_size, threshold)
 
