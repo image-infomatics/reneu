@@ -42,7 +42,7 @@ class BinaryBoundingBoxTree:
             self.upper = None
             self.split_dim = None
         else:
-            self.split_dim = np.argmax(relative_length)
+            self.split_dim = int(np.argmax(relative_length))
             assert volume_size[self.split_dim] > leaf_size[self.split_dim]
             lower_size = deepcopy(volume_size)
             # round up to incorporate the case of a little bit larger than leaf size
