@@ -151,8 +151,8 @@ auto _greedy_merge(const aff_edge_t& threshold){
             if(segid0 < segid1){
                 if(_is_frozen(segid0) && _is_frozen(segid1)){
                     // keep frozen edges to be proccessed in future
-                    auto root0 = dsets.find_set(segid0);
-                    auto root1 = dsets.find_set(segid1);
+                    const auto& root0 = dsets.find_set(segid0);
+                    const auto& root1 = dsets.find_set(segid1);
                     if(root0 == root1){
                         std::cout<< "segment "<< segid0 << " and " << segid1 << " has same root " << root0 << std::endl;
                         continue;
