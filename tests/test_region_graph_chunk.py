@@ -20,7 +20,13 @@ def get_random_affinity_map(sz: tuple):
     print('random affinity map \n: ', affs)
     return affs
 
-def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold: float, chunk_size: tuple):
+def distributed_agglomeration(
+        fragments: np.ndarray, 
+        affs: np.ndarray, 
+        threshold: float, 
+        chunk_size: tuple,
+        verbose: bool = True):
+
     rgc_dir = mkdtemp()
     dend_dir = mkdtemp()
 
@@ -124,7 +130,8 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
             dend = pickle.load(f)
         # print(dend)
         combined_dend2.merge(dend)
-    print('loaded combined dendrogram: ', combined_dend2)
+    if verbose:
+        print('loaded combined dendrogram: ', combined_dend2)
 
     # seg = combined_dend.materialize(fragments, threshold)
     seg2 = combined_dend2.materialize(fragments, threshold)
@@ -159,10 +166,9 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
                     ystart : ystart + chunk_size[1],
                     xstart : xstart + chunk_size[2]
                 ] = fragments_chunk
-    print('fragments: \n', fragments)
     return fragments
 
-def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
+def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, verbose: bool=True):
     
     affs = get_random_affinity_map(sz)
     fragments = build_fragments(affs, chunk_size)
@@ -173,15 +179,17 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
-    print('\nsegmentation: \n', seg)
+    if verbose:
+        print('\nsegmentation: \n', seg)
 
-    seg2 = distributed_agglomeration(fragments, affs, threshold, chunk_size)
+    seg2 = distributed_agglomeration(fragments, affs, threshold, chunk_size, verbose=verbose)
 
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
-    print('fragments: \n', fragments)
-    print('original segmentation: \n', seg)
-    print('distributed segmentation: \n', seg2)
+    if verbose:
+        print('fragments: \n', fragments)
+        print('original segmentation: \n', seg)
+        print('distributed segmentation: \n', seg2)
     assert score == 1
 
 
@@ -192,13 +200,19 @@ def test_region_graph_chunk():
     # for seed in range(10000):
     #     print(f'\nseed is {seed} \n')
     #     np.random.seed(seed)
-    sz = (1,6,6)
-    threshold = 0.5
-    chunk_size = (1, 6, 3)
-    evaluate_parameter_set(sz, chunk_size, threshold)
+    
+    # sz = (1,6,6)
+    # threshold = 0.5
+    # chunk_size = (1, 6, 3)
+    # evaluate_parameter_set(sz, chunk_size, threshold)
+
+    # threshold = 0.5
+    # sz = (64,50, 40)
+    # chunk_size = (50, 40, 35)
+    # evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
 
     threshold = 0.5
-    sz = (64,50, 40)
-    chunk_size = (50, 40, 35)
-    evaluate_parameter_set(sz, chunk_size, threshold)
+    sz = (128, 50, 40)
+    chunk_size = (70, 43, 29)
+    evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
 

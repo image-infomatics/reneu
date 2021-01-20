@@ -52,10 +52,11 @@ inline bool _is_frozen(const segid_t& sid) const {
     return _segid2frozen.count(sid) > 0;
 }
 
-inline auto _frozen_neighbor_flag(const segid_t& segid0) const {
+inline auto _frozen_neighbor_flag(const segid_t& segid0, const aff_edge_t& threshold) const {
     std::uint8_t flag = 0;
     for(const auto& [segid1, edgeIndex]: _segid2neighbor.at(segid0)){
-        if( _is_frozen(segid1) ) 
+        const auto& edge = _edgeList[edgeIndex];
+        if( _is_frozen(segid1) && edge.get_mean()> threshold) 
             flag |= _segid2frozen.at(segid1);
     }
     return flag;
@@ -123,8 +124,8 @@ auto _greedy_merge(const aff_edge_t& threshold){
         } 
 
         // if there is any segment has frozen neighbor, they should also be frozen.
-        const auto& frozen_neighbor_flag0 = _frozen_neighbor_flag(segid0);
-        const auto& frozen_neighbor_flag1 = _frozen_neighbor_flag(segid1);
+        const auto& frozen_neighbor_flag0 = _frozen_neighbor_flag(segid0, threshold);
+        const auto& frozen_neighbor_flag1 = _frozen_neighbor_flag(segid1, threshold);
         if(frozen_neighbor_flag0 || frozen_neighbor_flag1){
             _segid2frozen[segid0] = frozen_neighbor_flag0 | frozen_neighbor_flag1; 
             _segid2frozen[segid1] = frozen_neighbor_flag0 | frozen_neighbor_flag1; 
