@@ -3,7 +3,7 @@ from tempfile import mkdtemp
 import pickle
 from shutil import rmtree
 import numpy as np
-np.random.seed(3817)
+# np.random.seed(3817)
 
 from cloudvolume.lib import Bbox, Vec
 import cc3d
@@ -145,6 +145,7 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
     fragments = watershed(affs, 0, 0.9)
     # split the chunks, so the contacting surface 
     # do not have continuous segmentation id
+    print('initial fragments after watershed: \n', fragments)
 
     start_segid = 0
     for zstart in range(0, fragments.shape[0], chunk_size[0]):
@@ -156,9 +157,13 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
                     xstart:xstart+chunk_size[2]]
                 
                 # print('fragments chunk: \n', fragments_chunk)
-                fragments_chunk, seg_num = cc3d.connected_components(
-                    fragments_chunk, connectivity=6, return_N=True
+                # we should not use the return_N option since it has a bug
+                # the segmentation number is 0 if the fragments_chunk only have 1 object
+                fragments_chunk = cc3d.connected_components(
+                    fragments_chunk, connectivity=6
                 )
+                seg_num = np.max(fragments_chunk)
+                
                 fragments_chunk[fragments_chunk>0] += start_segid
                 start_segid += seg_num 
                 fragments[
@@ -200,19 +205,24 @@ def test_region_graph_chunk():
     # for seed in range(10000):
     #     print(f'\nseed is {seed} \n')
     #     np.random.seed(seed)
-    
-    # sz = (1,6,6)
-    # threshold = 0.5
-    # chunk_size = (1, 6, 3)
-    # evaluate_parameter_set(sz, chunk_size, threshold)
+    #     sz = (1,6,6)
+    #     threshold = 0.5
+    #     chunk_size = (1, 3, 6)
+    #     evaluate_parameter_set(sz, chunk_size, threshold)
+
+    np.random.seed(44408)
+    sz = (1,6,6)
+    threshold = 0.5
+    chunk_size = (1, 3, 3)
+    evaluate_parameter_set(sz, chunk_size, threshold)
 
     # threshold = 0.5
     # sz = (64,50, 40)
     # chunk_size = (50, 40, 35)
     # evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
 
-    threshold = 0.5
-    sz = (128, 50, 40)
-    chunk_size = (70, 43, 29)
-    evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
+    # threshold = 0.5
+    # sz = (128, 50, 40)
+    # chunk_size = (70, 43, 29)
+    # evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
 

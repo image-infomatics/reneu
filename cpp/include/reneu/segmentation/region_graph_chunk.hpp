@@ -56,7 +56,7 @@ inline auto _frozen_neighbor_flag(const segid_t& segid0, const aff_edge_t& thres
     std::uint8_t flag = 0;
     for(const auto& [segid1, edgeIndex]: _segid2neighbor.at(segid0)){
         const auto& edge = _edgeList[edgeIndex];
-        if( _is_frozen(segid1) && edge.get_mean()> threshold) 
+        if( _is_frozen(segid1) && edge.get_mean()> threshold ) 
             flag |= _segid2frozen.at(segid1);
     }
     return flag;
