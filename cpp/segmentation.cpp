@@ -88,7 +88,7 @@ PYBIND11_MODULE(segmentation, m) {
                 oa << rg;
                 return ss.str();
             },
-            [](const std::string str){
+            [](const std::string str){ // __setstate__
                 std::stringstream ss(str);
                 boost::archive::text_iarchive ia(ss);
                 RegionGraphChunk rg;
@@ -98,6 +98,26 @@ PYBIND11_MODULE(segmentation, m) {
         ))
         .def("merge_in_leaf_chunk", &RegionGraphChunk::merge_in_leaf_chunk)
         .def("merge_upper_chunk", &RegionGraphChunk::merge_upper_chunk);
+
+    py::class_<DisjointSets>(m, "DisjointSets")
+        .def(py::init())
+        .def(py::init<const Segmentation&>())
+        .def(py::pickle(
+            [](const DisjointSets& djs){ // __getstate__
+                std::string ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << djs;
+                return ss.str();
+            },
+            [](const std::string str){ // __setstate__
+                std::stringstream ss(str);
+                boost::archive::text_iarchive ia(ss);
+                DisjointSets djs;
+                ia >> (djs);
+                return djs;
+            }
+        ))
+        .def("relabel", &DisjointSets::relabel);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
