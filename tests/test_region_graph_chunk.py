@@ -207,10 +207,10 @@ def test_region_graph_chunk():
     #     np.random.seed(seed)
     #     sz = (1,6,6)
     #     threshold = 0.5
-    #     chunk_size = (1, 3, 6)
+    #     chunk_size = (1, 3, 3)
     #     evaluate_parameter_set(sz, chunk_size, threshold)
 
-    np.random.seed(44408)
+    np.random.seed(241)
     sz = (1,6,6)
     threshold = 0.5
     chunk_size = (1, 3, 3)
