@@ -207,8 +207,8 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
     auto dsets = to_disjoint_sets(threshold);
     
-    dsets.relabel(seg);
-    return seg;
+    auto seg2 = dsets.relabel(std::move(seg));
+    return seg2;
 }
 
 inline auto py_materialize(PySegmentation& pySeg, const aff_edge_t& threshold) const {
