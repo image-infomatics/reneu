@@ -101,23 +101,23 @@ PYBIND11_MODULE(segmentation, m) {
 
     py::class_<DisjointSets>(m, "DisjointSets")
         .def(py::init())
-        .def(py::init<const Segmentation&>())
-        .def(py::pickle(
-            [](const DisjointSets& djs){ // __getstate__
-                std::string ss;
-                boost::archive::text_oarchive oa(ss);
-                oa << djs;
-                return ss.str();
-            },
-            [](const std::string str){ // __setstate__
-                std::stringstream ss(str);
-                boost::archive::text_iarchive ia(ss);
-                DisjointSets djs;
-                ia >> (djs);
-                return djs;
-            }
-        ))
-        .def("relabel", &DisjointSets::relabel);
+        .def(py::init<const PySegmentation&>())
+        // .def(py::pickle(
+        //     [](const DisjointSets& djs){ // __getstate__
+        //         std::string ss;
+        //         boost::archive::text_oarchive oa(ss);
+        //         oa << djs;
+        //         return ss.str();
+        //     },
+        //     [](const std::string str){ // __setstate__
+        //         std::stringstream ss(str);
+        //         boost::archive::text_iarchive ia(ss);
+        //         DisjointSets djs;
+        //         ia >> (djs);
+        //         return djs;
+        //     }
+        // ))
+        .def("relabel", &DisjointSets::py_relabel);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

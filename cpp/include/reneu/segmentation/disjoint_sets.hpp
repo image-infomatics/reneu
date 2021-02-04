@@ -4,8 +4,8 @@
 #include "../type_aliase.hpp"
 #include "./utils.hpp"
 
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/>
+// #include <boost/serialization/serialization.hpp>
+// #include <boost/serialization/map.hpp>
 
 
 namespace reneu{
@@ -41,15 +41,15 @@ DisjointSets(const Segmentation& seg):
     }
 }
 
-friend class boost::serialization::access;
-template<class Archive>
-void serialize(Archive ar, const unsigned int version){
-    ar & _mapRank;
-    ar & _mapParent;
-    ar & _propMapRank;
-    ar & _propMapParent;
-    ar & _dsets;
-}
+// friend class boost::serialization::access;
+// template<class Archive>
+// void serialize(Archive ar, const unsigned int version){
+//     ar & _mapRank;
+//     ar & _mapParent;
+//     ar & _propMapRank;
+//     ar & _propMapParent;
+//     ar & _dsets;
+// }
 
 void make_set(const segid_t& segid ){
     _dsets.make_set(segid);
@@ -67,7 +67,7 @@ inline auto find_set(segid_t sid){
         return root;
 }
 
-void relabel(Segmentation& seg){
+auto relabel(Segmentation&& seg){
     auto segids = get_nonzero_segids(seg);
     // Flatten the parents tree so that the parent of every element is its representative.
     _dsets.compress_sets(segids.begin(), segids.end());
@@ -98,7 +98,11 @@ void relabel(Segmentation& seg){
     // std::transform(seg.begin(), seg.end(), seg.begin(), 
     //    [this](segid_t segid)->segid_t{return this->find_set(segid);}
     // );
-    return;
+    return seg;
+}
+
+inline auto py_relabel(PySegmentation& pyseg){
+    return relabel(std::move(pyseg));
 }
 
 };
