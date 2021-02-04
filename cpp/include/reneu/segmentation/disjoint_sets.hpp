@@ -4,6 +4,9 @@
 #include "../type_aliase.hpp"
 #include "./utils.hpp"
 
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/>
+
 
 namespace reneu{
 
@@ -36,6 +39,16 @@ DisjointSets(const Segmentation& seg):
     for(const auto& segid : segids){
         _dsets.make_set(segid);
     }
+}
+
+friend class boost::serialization::access;
+template<class Archive>
+void serialize(Archive ar, const unsigned int version){
+    ar & _mapRank;
+    ar & _mapParent;
+    ar & _propMapRank;
+    ar & _propMapParent;
+    ar & _dsets;
 }
 
 void make_set(const segid_t& segid ){
