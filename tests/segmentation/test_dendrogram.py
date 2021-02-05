@@ -4,7 +4,7 @@ np.random.seed(0)
 
 from reneu.lib.segmentation import Dendrogram
 
-
+du
 def test_dendrogram():
     dend1 = Dendrogram(0.01)
     dend1.push_edge(1,2,0.1)
@@ -19,7 +19,7 @@ def test_dendrogram():
     breakpoint()
     dsets = dend1.to_disjoint_sets(0.2)
     # root = dsets.find_set(2)
-    dend1.split_objects(dsets, set({2}), 0.3)
+    dend1.split_objects(0.1, set({2}), 0.3)
 
     print('test serialization...')
     data = pickle.dumps(dend1)
