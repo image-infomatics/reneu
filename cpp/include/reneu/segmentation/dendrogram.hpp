@@ -197,19 +197,30 @@ auto to_disjoint_sets(const aff_edge_t& threshold) const {
     return dsets;
 }
 
-auto split_objects(DisjointSets& dsets, const std::set<segid_t>& segids, const aff_edge_t& threshold){
+/* 
+There are some big mergers after agglomeration.
+We would like to split them up using a higher threshold.
+We first get the disjoint sets and find out all the connecting edges.
+The we can delete the edges.
+*/
+auto split_objects(
+            const aff_edge_t& agglomerationThreshold, 
+            const std::set<segid_t>& segids, 
+            const aff_edge_t& splitThreshold) {
+    assert(agglomerationThreshold < splitThreshold);
+    auto dsets = to_disjoint_sets(agglomerationThreshold);
+
     for(auto it = _edgeList.begin(); it != _edgeList.end(); ){
         const auto& edge = *it;
-        if (edge.affinity < threshold){
+        if (edge.affinity < splitThreshold){
             const auto& root0 = dsets.find_set(edge.segid0);
             const auto& root1 = dsets.find_set(edge.segid1);
-            if( segids.count(root0) ){
+            if( segids.count(root0) )
                 _edgeList.erase(it);
-            } else if ( segids.count(root1) ){
+            else if ( segids.count(root1) )
                 _edgeList.erase(it);
-            } else {
-                ++it;
-            }
+        } else {
+            ++it;
         }
     }
 }
