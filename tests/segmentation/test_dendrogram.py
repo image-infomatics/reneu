@@ -4,7 +4,7 @@ np.random.seed(0)
 
 from reneu.lib.segmentation import Dendrogram
 
-du
+
 def test_dendrogram():
     dend1 = Dendrogram(0.01)
     dend1.push_edge(1,2,0.1)

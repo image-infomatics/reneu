@@ -219,6 +219,8 @@ auto split_objects(
                 _edgeList.erase(it);
             else if ( segids.count(root1) )
                 _edgeList.erase(it);
+            else 
+                ++it;
         } else {
             ++it;
         }
