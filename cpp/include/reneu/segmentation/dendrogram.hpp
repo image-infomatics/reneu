@@ -121,6 +121,9 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
     assert( mx > 0 );
 
     const auto& [sz, sy, sx] = seg.shape();
+    assert(sz>mz);
+    assert(sy>my);
+    assert(sx>mx);
     
     // the edges across internal chunk boundary
     // only lower part edges are included
@@ -134,6 +137,7 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(mz-1, y, x);
             const segid_t& id1 = seg(mz, y, x);
             if(id0>0 && id1>0){
+                assert(id0!=id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }
@@ -144,6 +148,7 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(z, my-1, x);
             const segid_t& id1 = seg(z, my, x);
             if(id0>0 && id1>0){
+                assert(id0!=id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }
@@ -154,6 +159,7 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(z, y, mx-1);
             const segid_t& id1 = seg(z, y, mx);
             if(id0>0 && id1>0){
+                assert(id0!=id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }
