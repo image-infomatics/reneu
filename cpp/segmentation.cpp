@@ -55,6 +55,8 @@ PYBIND11_MODULE(segmentation, m) {
                 return dend;
             }
         ))
+        .def("to_disjoint_sets", &Dendrogram::to_disjoint_sets)
+        .def("split_objects", &Dendrogram::split_objects)
         .def("materialize", &Dendrogram::py_materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")
@@ -102,6 +104,9 @@ PYBIND11_MODULE(segmentation, m) {
     py::class_<DisjointSets>(m, "DisjointSets")
         .def(py::init())
         .def(py::init<const PySegmentation&>())
+        .def("make_set", &DisjointSets::make_set)
+        .def("union_set", &DisjointSets::union_set)
+        .def("find_set", &DisjointSets::find_set)
         // .def(py::pickle(
         //     [](const DisjointSets& djs){ // __getstate__
         //         std::string ss;

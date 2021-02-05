@@ -197,6 +197,23 @@ auto to_disjoint_sets(const aff_edge_t& threshold) const {
     return dsets;
 }
 
+auto split_objects(DisjointSets& dsets, const std::set<segid_t>& segids, const aff_edge_t& threshold){
+    for(auto it = _edgeList.begin(); it != _edgeList.end(); ){
+        const auto& edge = *it;
+        if (edge.affinity < threshold){
+            const auto& root0 = dsets.find_set(edge.segid0);
+            const auto& root1 = dsets.find_set(edge.segid1);
+            if( segids.count(root0) ){
+                _edgeList.erase(it);
+            } else if ( segids.count(root1) ){
+                _edgeList.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+}
+
 auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
     auto dsets = to_disjoint_sets(threshold);

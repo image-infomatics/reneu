@@ -12,10 +12,14 @@ def test_dendrogram():
     dend2 = Dendrogram(0.3)
     dend2.push_edge(2,3,0.4)
 
-
     dend1.merge(dend2)
     print('dendrogram after merging:', dend1)
     print('as array: \n', dend1.array)
+
+    breakpoint()
+    dsets = dend1.to_disjoint_sets(0.2)
+    # root = dsets.find_set(2)
+    dend1.split_objects(dsets, set({2}), 0.3)
 
     print('test serialization...')
     data = pickle.dumps(dend1)

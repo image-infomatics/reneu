@@ -55,11 +55,11 @@ void make_set(const segid_t& segid ){
     _dsets.make_set(segid);
 }
 
-inline void union_set(segid_t s0, segid_t s1){
+void union_set(segid_t s0, segid_t s1){
     _dsets.union_set(s0, s1);
 }
 
-inline auto find_set(segid_t sid){
+segid_t find_set(segid_t sid){
     const auto& root = _dsets.find_set(sid);
     if(root == 0)
         return sid;
