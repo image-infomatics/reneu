@@ -216,9 +216,9 @@ auto split_objects(
             const auto& root0 = dsets.find_set(edge.segid0);
             const auto& root1 = dsets.find_set(edge.segid1);
             if( segids.count(root0) )
-                _edgeList.erase(it);
+                it = _edgeList.erase(it);
             else if ( segids.count(root1) )
-                _edgeList.erase(it);
+                it = _edgeList.erase(it);
             else 
                 ++it;
         } else {
