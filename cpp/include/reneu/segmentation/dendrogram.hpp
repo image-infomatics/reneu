@@ -211,13 +211,10 @@ auto split_objects(
     auto dsets = to_disjoint_sets(agglomerationThreshold);
 
     for(auto it = _edgeList.begin(); it != _edgeList.end(); ){
-        const auto& edge = *it;
-        if (edge.affinity < splitThreshold){
-            const auto& root0 = dsets.find_set(edge.segid0);
-            const auto& root1 = dsets.find_set(edge.segid1);
-            if( segids.count(root0) )
+        if (it->affinity < splitThreshold){
+            if( segids.count( dsets.find_set(it->segid0) ) )
                 it = _edgeList.erase(it);
-            else if ( segids.count(root1) )
+            else if ( segids.count( dsets.find_set(it->segid1) ) )
                 it = _edgeList.erase(it);
             else 
                 ++it;
