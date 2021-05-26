@@ -49,6 +49,8 @@ def test_agglomeration():
 
 
 def get_random_affinity_map(sz: int):
+    # make sure that the random array is consistent
+    np.random.seed(23)
     affs = np.random.rand(3,1,sz,sz).astype(np.float32)
     affs[2,...] = 0
     print('random affinity map \n: ', affs)
@@ -59,7 +61,7 @@ def get_random_affinity_map(sz: int):
 def test_watershed_and_fill_background():
     affs = get_random_affinity_map(3)
     seg = watershed(affs, 0, 0.9)
-    np.testing.assert_array_equal(seg, np.array([[[1,1,1], [1,1,2], [2,2,2]]]))
+    np.testing.assert_array_equal(seg, np.array([[[1,1,1], [2,3,3], [2,3,3]]]))
 
     ws_seg = np.copy(seg)
     fill_background_with_affinity_guidance(seg, affs)
@@ -73,10 +75,10 @@ def test_random_agglomeration():
 
     seg = agglomerate(affs, seg, 0.3)
     np.testing.assert_array_equal(seg,
-            np.array([[[0,  11, 11,  7], 
-                       [11, 11, 11,  7],
-                       [11, 11, 11, 11],
-                       [12, 11, 11, 11]]])
+            np.array([[[0, 2, 2,  3], 
+                       [2, 2, 11, 11],
+                       [2, 9, 11, 11],
+                       [2, 11,11, 11]]])
     )
 
 # def test_segment_large_affinity_map():
