@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <unordered_map>
 #include <algorithm>
 #include <initializer_list>
 
@@ -93,7 +94,7 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 }
 
 using RegionEdgeList = std::vector<RegionEdge>;
-using Neighbors = std::map<segid_t, size_t>;
+using Neighbors = std::unordered_map<segid_t, size_t>;
 using Segid2Neighbor = std::map<segid_t, Neighbors>;
 
 class RegionGraph{

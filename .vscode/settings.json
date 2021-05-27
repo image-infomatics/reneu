@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/mnt/home/jwu/anaconda3/envs/cf/bin/python",
+    "python.pythonPath": "/Users/jwu/opt/anaconda3/envs/reneu/bin/python",
     "cmake.sourceDirectory": "${workspaceFolder}/cpp",
     "files.associations": {
         "utility": "cpp",
