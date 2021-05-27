@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <initializer_list>
 
+#include <absl/container/node_hash_map.h>
+
 #include <xtensor/xsort.hpp>
 #include <xtensor/xview.hpp>
 
@@ -95,7 +97,7 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 
 using RegionEdgeList = std::vector<RegionEdge>;
 using Neighbors = std::unordered_map<segid_t, size_t>;
-using Segid2Neighbor = std::map<segid_t, Neighbors>;
+using Segid2Neighbor = absl::node_hash_map<segid_t, Neighbors>;
 
 class RegionGraph{
 protected:
@@ -109,8 +111,12 @@ protected:
 friend class boost::serialization::access;
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version){
-    ar & _segid2neighbor;
     ar & _edgeList;
+    //ar & _segid2neighbor;
+    for( auto& [segid, neighbor] : _segid2neighbor){
+        ar & segid;
+        ar & neighbor;
+    }
 }
 
 inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
