@@ -7,12 +7,14 @@
 #include <algorithm>
 #include <initializer_list>
 
-#include <absl/container/node_hash_map.h>
+// #include <absl/container/node_hash_map.h>
+#include <tsl/robin_map.h>
 
 #include <xtensor/xsort.hpp>
 #include <xtensor/xview.hpp>
 
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/split_member.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>
 
@@ -22,6 +24,7 @@
 #include "dendrogram.hpp"
 #include "priority_queue.hpp"
 
+BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 namespace reneu{
 
@@ -97,7 +100,8 @@ std::ostream& operator<<(std::ostream& os, const RegionEdge& re){
 
 using RegionEdgeList = std::vector<RegionEdge>;
 using Neighbors = std::unordered_map<segid_t, size_t>;
-using Segid2Neighbor = absl::node_hash_map<segid_t, Neighbors>;
+// using Segid2Neighbor = absl::node_hash_map<segid_t, Neighbors>;
+using Segid2Neighbor = tsl::robin_map<segid_t, Neighbors>;
 
 class RegionGraph{
 protected:
@@ -109,15 +113,49 @@ protected:
 
     
 friend class boost::serialization::access;
+
 template<class Archive>
-void serialize(Archive& ar, const unsigned int version){
-    ar & _edgeList;
+void save(Archive& ar, const unsigned int version){
+    // invoke serialization of the base class 
+    // ar << boost::serialization::base_object<const base_class_of_T>(*this);
+    ar << _edgeList;
     //ar & _segid2neighbor;
+    std::vector<segid_t> segids = {};
+    std::vector<Neighbors> neighbors = {};
     for( auto& [segid, neighbor] : _segid2neighbor){
-        ar & segid;
-        ar & neighbor;
+        segids.push_back(segid);
+        neighbors.push_back(neighbor);
+    }
+    ar << segids;
+    ar << neighbors;
+}
+
+template<class Archive>
+void load(Archive& ar, const unsigned int version){
+    // invoke serialization of the base class 
+    // ar >> boost::serialization::base_object<base_class_of_T>(*this);
+    ar >> _edgeList;
+    std::vector<segid_t> segids;
+    std::vector<Neighbors> neighbors;
+    ar >> segids;
+    ar >> neighbors;
+    Segid2Neighbor _segid2neighbor = {};
+    for(std::size_t i=0; i<segids.size(); i++){
+        const auto& segid = segids[i];
+        const auto& neighbor = neighbors[i]; 
+        _segid2neighbor[segid] = neighbor;
     }
 }
+
+
+// BOOST_SERIALIZATION_SPLIT_MEMBER()
+// template<class Archive>
+// void serialize(
+//     Archive & ar,
+//     const unsigned int file_version 
+// ){
+//     boost::serialization::split_member(ar, *this, file_version);
+// }
 
 inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
     return _segid2neighbor.at(sid0).at(sid1);
