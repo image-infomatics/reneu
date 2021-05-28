@@ -12,6 +12,8 @@ set(xtensor_DIR ${CONDA_PREFIX}/lib/cmake/xtensor)
 set(xtensor-python_DIR ${CONDA_PREFIX}/lib/cmake/xtensor-python)
 set(xtl_DIR ${CONDA_PREFIX}/lib/cmake/xtl)
 
+add_subdirectory(third-party/robin-map)
+
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED OFF)  
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -49,6 +51,7 @@ find_package(pybind11 REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
 find_package(xtensor-blas REQUIRED)
+# find_package(tsl REQUIRED)
 # find_package(TBB REQUIRED)
 
 pybind11_add_module(skeleton ${CMAKE_CURRENT_SOURCE_DIR}/skeleton.cpp)
@@ -57,11 +60,12 @@ pybind11_add_module(segmentation ${CMAKE_CURRENT_SOURCE_DIR}/segmentation.cpp)
 # pybind11 do not recognize our NUMPY_INCLUDE_DIR variable
 # we need to add it explicitly
 target_include_directories(skeleton PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
-target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
 target_link_libraries(skeleton)
 
 message("boost libarries: ${Boost_LIBRARIES}")
-target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES})
+target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
+target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES} tsl::robin_map)
+
 # target_link_libraries(segmentation ${Boost_LIBRARIES} )
 # target_link_libraries(segmentation "${Boost_LIBRARIES}/libboost_serialization.dylib" )
 

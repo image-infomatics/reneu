@@ -114,6 +114,15 @@ void py_keep_only_contacting_edges(PySegmentation& seg, std::tuple<std::size_t, 
     keep_only_contacting_edges(std::move(seg), margin_sizes);
 }
 
+/*  
+This function was used for global agglomeration in distributed computation.
+For contacting segmentation chunks with unique object IDs, it extract the edges
+connecting the neighboring segmentation chunk. The extracted dendrogram could be 
+aggregated as a glocal one and used for global agglomeration of objects.
+
+This implementation might not be correct, we might need to extract the contacting edges
+by comparing the segmentation. This is a future plan to improve it.
+*/
 void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std::size_t, std::size_t> margin_sizes){
     const auto& [mz, my, mx] = margin_sizes;
     assert( mz > 0 );
@@ -121,6 +130,9 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
     assert( mx > 0 );
 
     const auto& [sz, sy, sx] = seg.shape();
+    assert(sz>mz);
+    assert(sy>my);
+    assert(sx>mx);
     
     // the edges across internal chunk boundary
     // only lower part edges are included
@@ -134,6 +146,7 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(mz-1, y, x);
             const segid_t& id1 = seg(mz, y, x);
             if(id0>0 && id1>0){
+                assert(id0!=id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }
@@ -144,6 +157,7 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(z, my-1, x);
             const segid_t& id1 = seg(z, my, x);
             if(id0>0 && id1>0){
+                assert(id0!=id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }
@@ -154,6 +168,7 @@ void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std:
             const segid_t& id0 = seg(z, y, mx-1);
             const segid_t& id1 = seg(z, y, mx);
             if(id0>0 && id1>0){
+                assert(id0!=id1);
                 edgeSet.emplace(std::minmax(id0, id1));
             }
         }
@@ -197,12 +212,39 @@ auto to_disjoint_sets(const aff_edge_t& threshold) const {
     return dsets;
 }
 
+/* 
+There are some big mergers after agglomeration.
+We would like to split them up using a higher threshold.
+We first get the disjoint sets and find out all the connecting edges.
+The we can delete the edges.
+*/
+auto split_objects(
+            const aff_edge_t& agglomerationThreshold, 
+            const std::set<segid_t>& segids, 
+            const aff_edge_t& splitThreshold) {
+    assert(agglomerationThreshold < splitThreshold);
+    auto dsets = to_disjoint_sets(agglomerationThreshold);
+
+    for(auto it = _edgeList.begin(); it != _edgeList.end(); ){
+        if (it->affinity < splitThreshold){
+            if( segids.count( dsets.find_set(it->segid0) ) )
+                it = _edgeList.erase(it);
+            else if ( segids.count( dsets.find_set(it->segid1) ) )
+                it = _edgeList.erase(it);
+            else 
+                ++it;
+        } else {
+            ++it;
+        }
+    }
+}
+
 auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
     auto dsets = to_disjoint_sets(threshold);
     
-    dsets.relabel(seg);
-    return seg;
+    auto seg2 = dsets.relabel(std::move(seg));
+    return seg2;
 }
 
 inline auto py_materialize(PySegmentation& pySeg, const aff_edge_t& threshold) const {

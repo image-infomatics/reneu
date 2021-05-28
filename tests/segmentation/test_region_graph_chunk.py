@@ -15,7 +15,8 @@ from sklearn.metrics import rand_score
 
 
 
-def get_random_affinity_map(sz: tuple):
+def get_random_affinity_map(sz: tuple, seed: int=1):
+    np.random.seed(seed)
     affs = np.random.rand(3,*sz).astype(np.float32)
     print('random affinity map \n: ', affs)
     return affs
@@ -162,9 +163,9 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
     print('fragments: \n', fragments)
     return fragments
 
-def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float):
+def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, seed: int=1):
     
-    affs = get_random_affinity_map(sz)
+    affs = get_random_affinity_map(sz, seed=seed)
     fragments = build_fragments(affs, chunk_size)
     
     print('\nsingle machine agglomeration...')
@@ -189,16 +190,17 @@ def test_region_graph_chunk():
     # use smaller size in debuging mode
     # so we can really check individual voxel and edges
     
-    # for seed in range(10000):
-    #     print(f'\nseed is {seed} \n')
-    #     np.random.seed(seed)
-    sz = (1,6,6)
-    threshold = 0.5
-    chunk_size = (1, 6, 3)
-    evaluate_parameter_set(sz, chunk_size, threshold)
+    #for seed in range(10000, 900000):
+    for seed in range(1):
+        print(f'\nseed is {seed} \n')
+        sz = (2, 6,6)
+        threshold = 0.5
+        chunk_size = (1, 3, 6)
+        #chunk_size = (6, 3, 1)
+        evaluate_parameter_set(sz, chunk_size, threshold, seed=seed)
 
-    threshold = 0.5
-    sz = (64,50, 40)
-    chunk_size = (50, 40, 35)
-    evaluate_parameter_set(sz, chunk_size, threshold)
+    #threshold = 0.5
+    #sz = (128,500, 40)
+    #chunk_size = (50, 40, 35)
+    #evaluate_parameter_set(sz, chunk_size, threshold)
 
