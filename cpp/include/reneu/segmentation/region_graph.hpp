@@ -42,12 +42,12 @@ size_t version;
 
 friend class boost::serialization::access;
 template<class Archive>
-void serialize(Archive& ar, const unsigned int serialization_version){
+void serialize(Archive& ar, const unsigned int version){
     ar & segid0;
     ar & segid1;
     ar & count;
     ar & sum;
-    ar & version;
+    ar & this->version;
 }
 
 

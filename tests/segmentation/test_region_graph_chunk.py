@@ -67,7 +67,7 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                     pickle.dump(region_graph_chunk, f)
                 with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
                     region_graph_chunk2 = pickle.load(f)
-                assert pickle.dumps(region_graph_chunk) == pickle.dumps(region_graph_chunk2)
+                # assert pickle.dumps(region_graph_chunk) == pickle.dumps(region_graph_chunk2)
                 # print(region_graph_chunk2)
 
                 # print('dendrogram in leaf node: ', dend)
@@ -101,7 +101,7 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
                     pickle.dump(lower_rgc, f)
                 with open(os.path.join(rgc_dir, f'{bbox.to_filename()}.pickle'), 'rb') as f:
                     lower_rgc2 = pickle.load(f)
-                assert pickle.dumps(lower_rgc) == pickle.dumps(lower_rgc2)
+                # assert pickle.dumps(lower_rgc) == pickle.dumps(lower_rgc2)
                 # print(lower_rgc2)
                 
                 # print('dendrogram from inode: ', dend)
