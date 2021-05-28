@@ -51,6 +51,7 @@ find_package(pybind11 REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
 find_package(xtensor-blas REQUIRED)
+# find_package(tsl REQUIRED)
 # find_package(TBB REQUIRED)
 
 pybind11_add_module(skeleton ${CMAKE_CURRENT_SOURCE_DIR}/skeleton.cpp)

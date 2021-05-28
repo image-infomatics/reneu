@@ -59,8 +59,11 @@ class CMakeBuild(build_ext):
         if not extdir.endswith(os.path.sep):
             extdir += os.path.sep
 
-        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-                      '-DPYTHON_EXECUTABLE=' + sys.executable]
+        cmake_args = [
+            '-DCMAKE_PREFIX_PATH=' + os.environ['CONDA_PREFIX'],
+            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+            '-DPYTHON_EXECUTABLE=' + sys.executable
+        ]
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
 
@@ -71,7 +74,7 @@ class CMakeBuild(build_ext):
             build_args += ['--', '/m']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', '-j4']
+            build_args += ['--', f'-j{os.cpu_count()}']
 
         env = os.environ.copy()
         env['LIBRARY_OUTPUT_DIRECTORY'] = self.build_temp
@@ -94,7 +97,7 @@ setup(
     version=version,
     author='Jingpeng Wu',
     author_email='jingpeng.wu@gmail.com',
-    packages=find_packages(exclude=['tests', 'bin', 'docker', 'kubernetes']),
+    packages=find_packages(exclude=['tests', 'build', 'reneu.egg-info', 'data']),
     url='https://github.com/jingpengw/reneu',
     install_requires=requirements,
     tests_require=[

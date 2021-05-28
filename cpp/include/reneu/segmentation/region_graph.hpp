@@ -16,7 +16,7 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/vector.hpp>
-#include <boost/serialization/map.hpp>
+#include <boost/serialization/unordered_map.hpp>
 
 #include "../type_aliase.hpp"
 #include "utils.hpp"
@@ -24,7 +24,7 @@
 #include "dendrogram.hpp"
 #include "priority_queue.hpp"
 
-BOOST_SERIALIZATION_SPLIT_MEMBER()
+// BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 namespace reneu{
 
@@ -115,31 +115,31 @@ protected:
 friend class boost::serialization::access;
 
 template<class Archive>
-void save(Archive& ar, const unsigned int version){
+void save(Archive& ar, const unsigned int version) const {
     // invoke serialization of the base class 
     // ar << boost::serialization::base_object<const base_class_of_T>(*this);
-    ar << _edgeList;
+    ar & _edgeList;
     //ar & _segid2neighbor;
     std::vector<segid_t> segids = {};
     std::vector<Neighbors> neighbors = {};
-    for( auto& [segid, neighbor] : _segid2neighbor){
+    for( const auto& [segid, neighbor] : _segid2neighbor){
         segids.push_back(segid);
         neighbors.push_back(neighbor);
     }
-    ar << segids;
-    ar << neighbors;
+    ar & segids;
+    ar & neighbors;
 }
 
 template<class Archive>
 void load(Archive& ar, const unsigned int version){
     // invoke serialization of the base class 
     // ar >> boost::serialization::base_object<base_class_of_T>(*this);
-    ar >> _edgeList;
+    ar & _edgeList;
     std::vector<segid_t> segids;
     std::vector<Neighbors> neighbors;
-    ar >> segids;
-    ar >> neighbors;
-    Segid2Neighbor _segid2neighbor = {};
+    ar & segids;
+    ar & neighbors;
+    
     for(std::size_t i=0; i<segids.size(); i++){
         const auto& segid = segids[i];
         const auto& neighbor = neighbors[i]; 
@@ -147,8 +147,7 @@ void load(Archive& ar, const unsigned int version){
     }
 }
 
-
-// BOOST_SERIALIZATION_SPLIT_MEMBER()
+BOOST_SERIALIZATION_SPLIT_MEMBER()
 // template<class Archive>
 // void serialize(
 //     Archive & ar,
