@@ -114,6 +114,15 @@ void py_keep_only_contacting_edges(PySegmentation& seg, std::tuple<std::size_t, 
     keep_only_contacting_edges(std::move(seg), margin_sizes);
 }
 
+/*  
+This function was used for global agglomeration in distributed computation.
+For contacting segmentation chunks with unique object IDs, it extract the edges
+connecting the neighboring segmentation chunk. The extracted dendrogram could be 
+aggregated as a glocal one and used for global agglomeration of objects.
+
+This implementation might not be correct, we might need to extract the contacting edges
+by comparing the segmentation. This is a future plan to improve it.
+*/
 void keep_only_contacting_edges(Segmentation&& seg, std::tuple<std::size_t, std::size_t, std::size_t> margin_sizes){
     const auto& [mz, my, mx] = margin_sizes;
     assert( mz > 0 );

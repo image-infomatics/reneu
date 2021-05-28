@@ -451,7 +451,7 @@ public:
         points = newPoints;
         attributes = newAtt;
         update_first_child_and_sibling();
-        assert( any(xt::view(newAtt, xt::all(), 2) >= 0 ) );
+        // assert( any(xt::view(newAtt, xt::all(), 2) >= 0 ) );
         return 0;
     }
     
