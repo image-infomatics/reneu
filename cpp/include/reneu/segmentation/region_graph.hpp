@@ -119,7 +119,10 @@ void save(Archive& ar, const unsigned int version) const {
     // invoke serialization of the base class 
     // ar << boost::serialization::base_object<const base_class_of_T>(*this);
     ar & _edgeList;
-    //ar & _segid2neighbor;
+    
+    // _segid2neighbor.serialize(ar);
+    // ar & _segid2neighbor;
+
     std::vector<segid_t> segids = {};
     std::vector<Neighbors> neighbors = {};
     for( const auto& [segid, neighbor] : _segid2neighbor){
@@ -135,6 +138,8 @@ void load(Archive& ar, const unsigned int version){
     // invoke serialization of the base class 
     // ar >> boost::serialization::base_object<base_class_of_T>(*this);
     ar & _edgeList;
+    // _segid2neighbor.deserialize(ar);
+
     std::vector<segid_t> segids;
     std::vector<Neighbors> neighbors;
     ar & segids;
