@@ -71,8 +71,9 @@ void fill_background_with_affinity_guidance(E1& seg, const E2& affs){
     }
 }
 
-void py_fill_background_with_affinity_guidance(PySegmentation& pySeg, const PyAffinityMap& pyAffs){
+auto py_fill_background_with_affinity_guidance(PySegmentation& pySeg, const PyAffinityMap& pyAffs){
     fill_background_with_affinity_guidance(pySeg, pyAffs);
+    return pySeg;
 }
 
 } // namespace reneu

@@ -55,12 +55,14 @@ PYBIND11_MODULE(segmentation, m) {
                 return dend;
             }
         ))
+        .def("to_disjoint_sets", &Dendrogram::to_disjoint_sets)
+        .def("split_objects", &Dendrogram::split_objects)
         .def("materialize", &Dendrogram::py_materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
         .def_property_readonly("array", &RegionGraph::as_array)
-        .def("__str__", &RegionGraph::as_string)
+        .def("__repr__", &RegionGraph::as_string)
         .def(py::pickle(
             [](const RegionGraph& rg){ // __getstate__
                 std::stringstream ss;
@@ -88,7 +90,7 @@ PYBIND11_MODULE(segmentation, m) {
                 oa << rg;
                 return ss.str();
             },
-            [](const std::string str){
+            [](const std::string str){ // __setstate__
                 std::stringstream ss(str);
                 boost::archive::text_iarchive ia(ss);
                 RegionGraphChunk rg;
@@ -98,6 +100,29 @@ PYBIND11_MODULE(segmentation, m) {
         ))
         .def("merge_in_leaf_chunk", &RegionGraphChunk::merge_in_leaf_chunk)
         .def("merge_upper_chunk", &RegionGraphChunk::merge_upper_chunk);
+
+    py::class_<DisjointSets>(m, "DisjointSets")
+        .def(py::init())
+        .def(py::init<const PySegmentation&>())
+        .def("make_set", &DisjointSets::make_set)
+        .def("union_set", &DisjointSets::union_set)
+        .def("find_set", &DisjointSets::find_set)
+        // .def(py::pickle(
+        //     [](const DisjointSets& djs){ // __getstate__
+        //         std::string ss;
+        //         boost::archive::text_oarchive oa(ss);
+        //         oa << djs;
+        //         return ss.str();
+        //     },
+        //     [](const std::string str){ // __setstate__
+        //         std::stringstream ss(str);
+        //         boost::archive::text_iarchive ia(ss);
+        //         DisjointSets djs;
+        //         ia >> (djs);
+        //         return djs;
+        //     }
+        // ))
+        .def("relabel", &DisjointSets::py_relabel);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
