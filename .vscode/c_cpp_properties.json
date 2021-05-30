@@ -5,8 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/cpp/include",
                 "/Users/jwu/opt/anaconda3/envs/reneu/include",
-                "/Users/jwu/opt/anaconda3/envs/reneu/include/python3.7m",
-                "/Users/jwu/opt/anaconda3/envs/reneu/lib/python3.7/site-packages/numpy/core/include"
+                "/Users/jwu/opt/anaconda3/envs/reneu/include/python3.8",
+                "/Users/jwu/opt/anaconda3/envs/reneu/lib/python3.8/site-packages/numpy/core/include"
             ],
             "defines": [],
             "macFrameworkPath": [],

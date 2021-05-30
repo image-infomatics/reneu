@@ -1,9 +1,9 @@
 #pragma once
-#include <map>
 
+#include <map>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/map.hpp>
-
+#include "reneu/type_aliase.hpp"
 #include "region_graph.hpp"
 #include "utils.hpp"
 
@@ -36,6 +36,7 @@ static const std::uint8_t POS_X = 0x02;
 static const std::array<std::uint8_t, 6> constexpr SURFACE_BITS = {NEG_Z, NEG_Y, NEG_X, POS_Z, POS_Y, POS_X};
 
 friend class boost::serialization::access;
+
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version) {
     // To-Do: clean up merged segments?
