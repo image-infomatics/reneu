@@ -120,17 +120,10 @@ void save(Archive& ar, const unsigned int version) const {
     // ar << boost::serialization::base_object<const base_class_of_T>(*this);
     ar & _edgeList;
     
-    // _segid2neighbor.serialize(ar);
     // ar & _segid2neighbor;
+    auto serializer = [&ar](const auto& v) { ar & v; };
+    _segid2neighbor.serialize(serializer);
 
-    std::vector<segid_t> segids = {};
-    std::vector<Neighbors> neighbors = {};
-    for( const auto& [segid, neighbor] : _segid2neighbor){
-        segids.push_back(segid);
-        neighbors.push_back(neighbor);
-    }
-    ar & segids;
-    ar & neighbors;
 }
 
 template<class Archive>
@@ -140,16 +133,9 @@ void load(Archive& ar, const unsigned int version){
     ar & _edgeList;
     // _segid2neighbor.deserialize(ar);
 
-    std::vector<segid_t> segids;
-    std::vector<Neighbors> neighbors;
-    ar & segids;
-    ar & neighbors;
-    
-    for(std::size_t i=0; i<segids.size(); i++){
-        const auto& segid = segids[i];
-        const auto& neighbor = neighbors[i]; 
-        _segid2neighbor[segid] = neighbor;
-    }
+    auto deserializer = [&ar]<typename U>() { U u; ar & u; return u; };
+    _segid2neighbor = Segid2Neighbor::deserialize(deserializer);
+
 }
 
 BOOST_SERIALIZATION_SPLIT_MEMBER()
