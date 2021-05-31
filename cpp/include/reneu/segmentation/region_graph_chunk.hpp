@@ -337,17 +337,23 @@ std::string as_string() const {
  * @brief merge nodes in leaf chunk
  * 
  * @param threshold 
- * @return auto 
+ * 
+ * @return reneu::Dendrogram
  */
 auto merge_in_leaf_chunk(const aff_edge_t& threshold){
     return _greedy_merge(threshold);
 }
 
-/** Merge the other node in the binary bounding box tree. 
+/** 
+ * @brief the other node in the binary bounding box tree. 
  * 
  * The nodes freezed by the contacting face should be melted.
  * 
- * @param rgc2 The other region graph chunk with some frozen nodes.
+ * @param upperRegionGraghChunk The other region graph chunk with some frozen nodes.
+ * @param dim dimension or axis to merge across.
+ * @param threshold affinity threshold during agglomeration.
+ * 
+ * @return reneu::Dendrogram
  */
 auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk, 
                                 const std::size_t& dim, const aff_edge_t& threshold){
