@@ -48,18 +48,24 @@ def test_agglomeration():
     np.testing.assert_array_equal(seg, np.array([[[2,2],[4,4]]]))
 
 
-def get_random_affinity_map(sz: int):
+
+def random_2d_affinity_map(sz: int):
     # make sure that the random array is consistent
     np.random.seed(23)
-    affs = np.random.rand(3,1,sz,sz).astype(np.float32)
+    affs = np.random.rand(3, 1, sz, sz).astype(np.float32)
     affs[2,...] = 0
     print('random affinity map \n: ', affs)
     return affs
 
-
+def random_3d_affinity_map(sz: tuple):
+    # make sure that the random array is consistent
+    np.random.seed(23)
+    affs = np.random.rand(3, *sz).astype(np.float32)
+    # print('random affinity map \n: ', affs)
+    return affs 
 
 def test_watershed_and_fill_background():
-    affs = get_random_affinity_map(3)
+    affs = random_2d_affinity_map(3)
     seg = watershed(affs, 0, 0.9)
     np.testing.assert_array_equal(seg, np.array([[[1,1,1], [2,3,3], [2,3,3]]]))
 
@@ -70,7 +76,7 @@ def test_watershed_and_fill_background():
 
 def test_random_agglomeration():
     sz = 4
-    affs = get_random_affinity_map(sz)
+    affs = random_2d_affinity_map(sz)
     seg = np.arange(sz*sz, dtype=np.uint64).reshape((1,sz,sz))
 
     seg = agglomerate(affs, seg, 0.3)
@@ -80,6 +86,18 @@ def test_random_agglomeration():
                        [2, 9, 11, 11],
                        [2, 11,11, 11]]])
     )
+
+def test_merge_small_fragments():
+    sz = (32, 32, 32)
+    affs = random_3d_affinity_map(sz)
+    seg = np.arange(np.product(sz), dtype=np.uint64).reshape((sz))
+    seg = agglomerate(affs, seg, 0.3)
+    rg = RegionGraph(affs, seg)
+    dend = rg.merge_small_fragments(seg, 4)
+    seg2 = dend.materialize(seg, 0.)
+    segids1 = np.unique(seg)
+    segids2 = np.unique(seg2)
+    assert len(segids2) < len(segids1)
 
 # def test_segment_large_affinity_map():
 #     DIR = os.path.join(os.path.dirname(__file__), '../data/')
@@ -101,7 +119,7 @@ def test_random_agglomeration():
 #         f['main'] = seg
 
 def test_pickle():
-    affs = get_random_affinity_map(8)
+    affs = random_2d_affinity_map(8)
     seg = watershed(affs, 0, 0.9)
     rg = RegionGraph(affs, seg)
     data = pickle.dumps(rg)

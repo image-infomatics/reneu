@@ -139,8 +139,9 @@ void load(Archive& ar, const unsigned int version){
 }
 
 
-inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
-    return _segid2neighbor.at(sid0).at(sid1);
+inline auto _get_edge(const segid_t& sid0, const segid_t& sid1) const {
+    const auto& edgeIndex = _segid2neighbor.at(sid0).at(sid1);
+    return _edgeList[edgeIndex];
 }
 
 inline bool _has_connection (const segid_t& sid0, const segid_t& sid1) const {
@@ -350,8 +351,7 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
             continue;
         }
         
-        const auto& edgeIndex = _get_edge_index(segid1, segid0);
-        const auto& edge = _edgeList[edgeIndex];
+        const auto& edge = _get_edge(segid1, segid0);
         if(edge.version > edgeInQueue.version){
             // found an outdated edge
             continue;
@@ -368,8 +368,40 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
     return dend;
 }
 
+
 inline auto py_greedy_merge(const PySegmentation& pyseg, const aff_edge_t& threshold){
     return greedy_merge(pyseg, threshold);
+}
+
+auto merge_small_fragments(const Segmentation& seg, const size_t& voxelNumThreshold){
+
+    Dendrogram dend(0.);
+
+    const auto& segid2voxelNum = get_nonzero_segids(seg);
+
+    for(const auto& [segid0, neighbors0] : _segid2neighbor){
+        const auto& voxelNum = segid2voxelNum[segid0];
+        if(voxelNum <= voxelNumThreshold){
+            // find a maximum edge to merge
+            aff_edge_t maxWeight = 0.;
+            segid_t maxWeightSegid;
+            
+            for(const auto& [segid1, edgeIndex]: neighbors0){
+                const auto& edge = _get_edge(segid1, segid0);
+                const auto& edgeMean = edge.get_mean();
+                if(edgeMean > maxWeight){
+                    maxWeight = edgeMean;
+                    maxWeightSegid = segid1;
+                }
+            }
+            dend.push_edge(segid0, maxWeightSegid, maxWeight);
+        }
+    }
+    return dend;
+}
+
+inline auto py_merge_small_fragments(const PySegmentation& pyseg, const size_t& voxelNumThreshold){
+    return merge_small_fragments(pyseg, voxelNumThreshold);
 }
 
 }; // class of RegionGraph
