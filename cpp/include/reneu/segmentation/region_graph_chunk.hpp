@@ -109,8 +109,7 @@ auto _greedy_merge(const aff_edge_t& threshold){
             continue;
         }
         
-        const auto& edgeIndex = _get_edge_index(segid1, segid0);
-        const auto& edge = _edgeList[edgeIndex];
+        const auto& edge = _get_edge(segid1, segid0);
         if(edge.version > edgeInQueue.version){
             // found an outdated edge
             continue;
