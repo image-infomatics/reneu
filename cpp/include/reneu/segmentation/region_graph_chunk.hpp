@@ -1,9 +1,9 @@
 #pragma once
-#include <map>
 
+#include <map>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/map.hpp>
-
+#include "reneu/type_aliase.hpp"
 #include "region_graph.hpp"
 #include "utils.hpp"
 
@@ -36,6 +36,7 @@ static const std::uint8_t POS_X = 0x02;
 static const std::array<std::uint8_t, 6> constexpr SURFACE_BITS = {NEG_Z, NEG_Y, NEG_X, POS_Z, POS_Y, POS_X};
 
 friend class boost::serialization::access;
+
 template<class Archive>
 void serialize(Archive& ar, const unsigned int version) {
     // To-Do: clean up merged segments?
@@ -52,10 +53,11 @@ inline bool _is_frozen(const segid_t& sid) const {
     return _segid2frozen.count(sid) > 0;
 }
 
-inline auto _frozen_neighbor_flag(const segid_t& segid0) const {
+inline auto _frozen_neighbor_flag(const segid_t& segid0, const aff_edge_t& threshold) const {
     std::uint8_t flag = 0;
     for(const auto& [segid1, edgeIndex]: _segid2neighbor.at(segid0)){
-        if( _is_frozen(segid1) ) 
+        const auto& edge = _edgeList[edgeIndex];
+        if( _is_frozen(segid1) /* && edge.get_mean()> threshold */) 
             flag |= _segid2frozen.at(segid1);
     }
     return flag;
@@ -123,8 +125,8 @@ auto _greedy_merge(const aff_edge_t& threshold){
         } 
 
         // if there is any segment has frozen neighbor, they should also be frozen.
-        const auto& frozen_neighbor_flag0 = _frozen_neighbor_flag(segid0);
-        const auto& frozen_neighbor_flag1 = _frozen_neighbor_flag(segid1);
+        const auto& frozen_neighbor_flag0 = _frozen_neighbor_flag(segid0, threshold);
+        const auto& frozen_neighbor_flag1 = _frozen_neighbor_flag(segid1, threshold);
         if(frozen_neighbor_flag0 || frozen_neighbor_flag1){
             _segid2frozen[segid0] = frozen_neighbor_flag0 | frozen_neighbor_flag1; 
             _segid2frozen[segid1] = frozen_neighbor_flag0 | frozen_neighbor_flag1; 
@@ -335,17 +337,23 @@ std::string as_string() const {
  * @brief merge nodes in leaf chunk
  * 
  * @param threshold 
- * @return auto 
+ * 
+ * @return reneu::Dendrogram
  */
 auto merge_in_leaf_chunk(const aff_edge_t& threshold){
     return _greedy_merge(threshold);
 }
 
-/** Merge the other node in the binary bounding box tree. 
+/** 
+ * @brief the other node in the binary bounding box tree. 
  * 
  * The nodes freezed by the contacting face should be melted.
  * 
- * @param rgc2 The other region graph chunk with some frozen nodes.
+ * @param upperRegionGraghChunk The other region graph chunk with some frozen nodes.
+ * @param dim dimension or axis to merge across.
+ * @param threshold affinity threshold during agglomeration.
+ * 
+ * @return reneu::Dendrogram
  */
 auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk, 
                                 const std::size_t& dim, const aff_edge_t& threshold){

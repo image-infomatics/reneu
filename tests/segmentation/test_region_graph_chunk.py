@@ -3,7 +3,7 @@ from tempfile import mkdtemp
 import pickle
 from shutil import rmtree
 import numpy as np
-np.random.seed(3817)
+# np.random.seed(3817)
 
 from cloudvolume.lib import Bbox, Vec
 import cc3d
@@ -21,7 +21,13 @@ def get_random_affinity_map(sz: tuple, seed: int=1):
     print('random affinity map \n: ', affs)
     return affs
 
-def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold: float, chunk_size: tuple):
+def distributed_agglomeration(
+        fragments: np.ndarray, 
+        affs: np.ndarray, 
+        threshold: float, 
+        chunk_size: tuple,
+        verbose: bool = True):
+
     rgc_dir = mkdtemp()
     dend_dir = mkdtemp()
 
@@ -125,7 +131,8 @@ def distributed_agglomeration(fragments: np.ndarray, affs: np.ndarray, threshold
             dend = pickle.load(f)
         # print(dend)
         combined_dend2.merge(dend)
-    print('loaded combined dendrogram: ', combined_dend2)
+    if verbose:
+        print('loaded combined dendrogram: ', combined_dend2)
 
     # seg = combined_dend.materialize(fragments, threshold)
     seg2 = combined_dend2.materialize(fragments, threshold)
@@ -139,6 +146,7 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
     fragments = watershed(affs, 0, 0.9)
     # split the chunks, so the contacting surface 
     # do not have continuous segmentation id
+    print('initial fragments after watershed: \n', fragments)
 
     start_segid = 0
     for zstart in range(0, fragments.shape[0], chunk_size[0]):
@@ -150,9 +158,13 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
                     xstart:xstart+chunk_size[2]]
                 
                 # print('fragments chunk: \n', fragments_chunk)
-                fragments_chunk, seg_num = cc3d.connected_components(
-                    fragments_chunk, connectivity=6, return_N=True
+                # we should not use the return_N option since it has a bug
+                # the segmentation number is 0 if the fragments_chunk only have 1 object
+                fragments_chunk = cc3d.connected_components(
+                    fragments_chunk, connectivity=6
                 )
+                seg_num = np.max(fragments_chunk)
+                
                 fragments_chunk[fragments_chunk>0] += start_segid
                 start_segid += seg_num 
                 fragments[
@@ -160,10 +172,9 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
                     ystart : ystart + chunk_size[1],
                     xstart : xstart + chunk_size[2]
                 ] = fragments_chunk
-    print('fragments: \n', fragments)
     return fragments
 
-def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, seed: int=1):
+def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, verbose: bool=True, seed: int=1):
     
     affs = get_random_affinity_map(sz, seed=seed)
     fragments = build_fragments(affs, chunk_size)
@@ -174,15 +185,17 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, seed:
     print('gready mean agglomeration...')
     dend = rg.greedy_merge(fragments, threshold)
     seg = dend.materialize(fragments, threshold)
-    print('\nsegmentation: \n', seg)
+    if verbose:
+        print('\nsegmentation: \n', seg)
 
-    seg2 = distributed_agglomeration(fragments, affs, threshold, chunk_size)
+    seg2 = distributed_agglomeration(fragments, affs, threshold, chunk_size, verbose=verbose)
 
     score = rand_score(seg.flatten(), seg2.flatten())
     print('rand score: ', score)
-    print('fragments: \n', fragments)
-    print('original segmentation: \n', seg)
-    print('distributed segmentation: \n', seg2)
+    if verbose:
+        print('fragments: \n', fragments)
+        print('original segmentation: \n', seg)
+        print('distributed segmentation: \n', seg2)
     assert score == 1
 
 
@@ -190,17 +203,26 @@ def test_region_graph_chunk():
     # use smaller size in debuging mode
     # so we can really check individual voxel and edges
     
-    #for seed in range(10000, 900000):
-    for seed in range(1):
-        print(f'\nseed is {seed} \n')
-        sz = (2, 6,6)
-        threshold = 0.5
-        chunk_size = (1, 3, 6)
-        #chunk_size = (6, 3, 1)
-        evaluate_parameter_set(sz, chunk_size, threshold, seed=seed)
+    # for seed in range(10000):
+    #     print(f'\nseed is {seed} \n')
+    #     np.random.seed(seed)
+    #     sz = (1,6,6)
+    #     threshold = 0.5
+    #     chunk_size = (1, 3, 3)
+    #     evaluate_parameter_set(sz, chunk_size, threshold)
 
-    #threshold = 0.5
-    #sz = (128,500, 40)
-    #chunk_size = (50, 40, 35)
-    #evaluate_parameter_set(sz, chunk_size, threshold)
+    sz = (1,6,6)
+    threshold = 0.5
+    chunk_size = (1, 3, 3)
+    evaluate_parameter_set(sz, chunk_size, threshold, seed=241)
+
+    # threshold = 0.5
+    # sz = (64,50, 40)
+    # chunk_size = (50, 40, 35)
+    # evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
+
+    # threshold = 0.5
+    # sz = (128, 50, 40)
+    # chunk_size = (70, 43, 29)
+    # evaluate_parameter_set(sz, chunk_size, threshold, verbose=False)
 

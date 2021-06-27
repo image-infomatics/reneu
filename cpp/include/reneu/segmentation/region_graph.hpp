@@ -113,7 +113,7 @@ protected:
 
     
 friend class boost::serialization::access;
-
+BOOST_SERIALIZATION_SPLIT_MEMBER()
 template<class Archive>
 void save(Archive& ar, const unsigned int version) const {
     // invoke serialization of the base class 
@@ -138,14 +138,6 @@ void load(Archive& ar, const unsigned int version){
 
 }
 
-BOOST_SERIALIZATION_SPLIT_MEMBER()
-// template<class Archive>
-// void serialize(
-//     Archive & ar,
-//     const unsigned int file_version 
-// ){
-//     boost::serialization::split_member(ar, *this, file_version);
-// }
 
 inline auto _get_edge_index(const segid_t& sid0, const segid_t& sid1) const {
     return _segid2neighbor.at(sid0).at(sid1);

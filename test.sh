@@ -1,5 +1,7 @@
 #!/bin/bash
 
+module load gcc/10.3.0
+
 rm -rf ./build
 #mv python/reneu/lib/segmentation.so /tmp/
 rm python/reneu/lib/*.so 

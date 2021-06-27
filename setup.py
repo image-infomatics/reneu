@@ -74,7 +74,7 @@ class CMakeBuild(build_ext):
             build_args += ['--', '/m']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', f'-j{os.cpu_count()}']
+            build_args += ['--', f'-j{os.cpu_count()//2}']
 
         env = os.environ.copy()
         env['LIBRARY_OUTPUT_DIRECTORY'] = self.build_temp
