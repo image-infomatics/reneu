@@ -103,21 +103,21 @@ def test_merge_small_fragments():
     segids0, counts0 = np.unique(seg0[seg0>0], return_counts=True)
     # merge small fragments
     seg1 = agglomerate(affs, seg0, 
-        affinity_threshold=affinity_threshold, 
-        voxel_num_threshold=voxel_num_threshold)
-        
+        affinity_threshold=affinity_threshold)
+
     segids1, counts1 = np.unique(seg1[seg1>0], return_counts=True)
     assert len(segids1) < len(segids0)
-    assert np.min(counts1) > voxel_num_threshold
+    # assert np.min(counts1) > voxel_num_threshold
 
     # rg = RegionGraph(affs, seg)
     # dend = rg.merge_small_fragments(seg, 4)
     # seg2 = dend.materialize(seg, 0.)
-    seg2 = agglomerate(affs, seg1, affinity_threshold = 0.3)
+    seg2 = agglomerate(affs, seg1, voxel_num_threshold=voxel_num_threshold)
     segids2, counts2 = np.unique(seg2[seg2>0], return_counts=True)
     assert np.min(counts2) > voxel_num_threshold
     assert len(segids2) < len(segids1)
-    breakpoint()
+    # the agglomeration should not be too aggressive
+    assert len(segids2) > 4
 
 # def test_segment_large_affinity_map():
 #     DIR = os.path.join(os.path.dirname(__file__), '../data/')

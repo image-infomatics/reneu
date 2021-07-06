@@ -108,6 +108,7 @@ protected:
     // flat_map is much slower than std::map 
     // using RegionMap = boost::container::flat_map<segid_t, Neighbors>;
 
+    Segid2VoxelNum _segid2voxelNum;
     Segid2Neighbor _segid2neighbor;
     RegionEdgeList _edgeList;
 
@@ -195,9 +196,14 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             const aff_edge_t& affinityThreshold){
     
     // always merge object with less neighbors to more neighbors
+    // after swaping, we'll merge segid0 to segid1
     if(_segid2neighbor.at(segid0).size() > _segid2neighbor.at(segid1).size()){
         std::swap(segid0, segid1);
     }
+
+    _segid2voxelNum[segid1] += _segid2voxelNum[segid0];
+    _segid2voxelNum.erase(segid0);
+
     auto& neighbors0 = _segid2neighbor.at(segid0);
     auto& neighbors1 = _segid2neighbor.at(segid1);
     neighbors0.erase(segid1);
@@ -243,9 +249,9 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
 }
 public:
 
-RegionGraph(): _segid2neighbor({}), _edgeList({}){}
-RegionGraph(const Segid2Neighbor& segid2neighbor, const RegionEdgeList& edgeList): 
-    _segid2neighbor(segid2neighbor), _edgeList(edgeList) {}
+RegionGraph(): _segid2neighbor({}), _edgeList({}), _segid2voxelNum({}){}
+RegionGraph(const Segid2VoxelNum& segid2voxelNum, const Segid2Neighbor& segid2neighbor, const RegionEdgeList& edgeList): 
+    _segid2voxelNum(segid2voxelNum), _segid2neighbor(segid2neighbor), _edgeList(edgeList) {}
 
 /**
  * @brief Construct a new Region Graph object
@@ -263,6 +269,8 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
     assert(affs.shape(1) == fragments.shape(0));
     assert(affs.shape(1) == fragments.shape(0));
     assert(affs.shape(1) == fragments.shape(0));
+
+    _segid2voxelNum = get_segid_to_voxel_num(fragments);
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
     for(std::size_t z=0; z<fragments.shape(0); z++){
@@ -339,8 +347,6 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& affinityThreshold=0
 
     Dendrogram dend(affinityThreshold);
 
-    const auto& segid2voxelNum = get_nonzero_segids(seg);
-
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
     while(!heap.empty()){
@@ -359,8 +365,8 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& affinityThreshold=0
             continue;
         }
 
-        const auto& voxelNum0 = segid2voxelNum[segid0];
-        const auto& voxelNum1 = segid2voxelNum[segid1];
+        const auto& voxelNum0 = _segid2voxelNum[segid0];
+        const auto& voxelNum1 = _segid2voxelNum[segid1];
         if(voxelNum0 > voxelNumThreshold && voxelNum1 > voxelNumThreshold){
             // both objects are too big
             continue;
