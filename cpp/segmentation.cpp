@@ -78,7 +78,6 @@ PYBIND11_MODULE(segmentation, m) {
                 return rg;
             }
         ))
-        .def("merge_small_fragments", &RegionGraph::py_merge_small_fragments)
         .def("greedy_merge", &RegionGraph::py_greedy_merge);
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
