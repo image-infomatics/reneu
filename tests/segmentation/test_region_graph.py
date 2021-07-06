@@ -10,7 +10,12 @@ import numpy as np
 np.random.seed(0)
 
 
-def agglomerate(affs: np.ndarray, seg: np.ndarray, threshold: float):
+def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0., 
+        voxel_num_threshold: int=18446744073709551615):
+    """
+    Parameters:
+    voxel_num_threshold [int]: the default value is the maximum limit of C++ size_t
+    """
     print('construct region graph...')
     rg = RegionGraph(affs, seg)
 
@@ -18,8 +23,8 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, threshold: float):
 
     print('region graph before segmentation:', rg)
     print('gready mean agglomeration...')
-    dend = rg.greedy_merge(seg, threshold)
-    seg = dend.materialize(seg, threshold)
+    dend = rg.greedy_merge(seg, affinity_threshold, voxel_num_threshold)
+    seg = dend.materialize(seg, affinity_threshold)
     print('region graph after segmentation: ', rg)
 
     print("shape of segmentation: ", seg.shape)
@@ -41,7 +46,7 @@ def test_agglomeration():
     affs[1, 0, 1, 1] = 0.5
 
     print('affinity map: \n', affs)
-    seg = agglomerate(affs, seg, 0.7)
+    seg = agglomerate(affs, seg, affinity_threshold = 0.7)
 
     print('segmentation after agglomeration: ', seg)
     
@@ -79,7 +84,7 @@ def test_random_agglomeration():
     affs = random_2d_affinity_map(sz)
     seg = np.arange(sz*sz, dtype=np.uint64).reshape((1,sz,sz))
 
-    seg = agglomerate(affs, seg, 0.3)
+    seg = agglomerate(affs, seg, affinity_threshold = 0.3)
     np.testing.assert_array_equal(seg,
             np.array([[[0, 2, 2,  3], 
                        [2, 2, 11, 11],
@@ -89,15 +94,30 @@ def test_random_agglomeration():
 
 def test_merge_small_fragments():
     sz = (32, 32, 32)
+    voxel_num_threshold = 4
+    affinity_threshold = 0.3
+
     affs = random_3d_affinity_map(sz)
-    seg = np.arange(np.product(sz), dtype=np.uint64).reshape((sz))
-    seg = agglomerate(affs, seg, 0.3)
-    rg = RegionGraph(affs, seg)
-    dend = rg.merge_small_fragments(seg, 4)
-    seg2 = dend.materialize(seg, 0.)
-    segids1 = np.unique(seg)
-    segids2 = np.unique(seg2)
+    # seg = np.arange(np.product(sz), dtype=np.uint64).reshape((sz))
+    seg0 = watershed(affs, 0., 0.9999)
+    segids0, counts0 = np.unique(seg0[seg0>0], return_counts=True)
+    # merge small fragments
+    seg1 = agglomerate(affs, seg0, 
+        affinity_threshold=affinity_threshold, 
+        voxel_num_threshold=voxel_num_threshold)
+        
+    segids1, counts1 = np.unique(seg1[seg1>0], return_counts=True)
+    assert len(segids1) < len(segids0)
+    assert np.min(counts1) > voxel_num_threshold
+
+    # rg = RegionGraph(affs, seg)
+    # dend = rg.merge_small_fragments(seg, 4)
+    # seg2 = dend.materialize(seg, 0.)
+    seg2 = agglomerate(affs, seg1, affinity_threshold = 0.3)
+    segids2, counts2 = np.unique(seg2[seg2>0], return_counts=True)
+    assert np.min(counts2) > voxel_num_threshold
     assert len(segids2) < len(segids1)
+    breakpoint()
 
 # def test_segment_large_affinity_map():
 #     DIR = os.path.join(os.path.dirname(__file__), '../data/')

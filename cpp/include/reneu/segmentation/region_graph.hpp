@@ -192,7 +192,7 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
 
 auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             PriorityQueue& heap, 
-            const aff_edge_t& threshold){
+            const aff_edge_t& affinityThreshold){
     
     // always merge object with less neighbors to more neighbors
     if(_segid2neighbor.at(segid0).size() > _segid2neighbor.at(segid1).size()){
@@ -219,7 +219,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             newEdge.absorb(neighborEdge);
             const auto& meanAff = newEdge.get_mean();
             
-            if(meanAff > threshold){
+            if(meanAff > affinityThreshold){
                 heap.emplace_push(nid0, segid1, meanAff, newEdge.version);
             }
         } else {
@@ -233,7 +233,7 @@ auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
             neighborEdge.segid1 = segid1;
 
             const auto& meanAff = neighborEdge.get_mean();
-            if(meanAff > threshold){
+            if(meanAff > affinityThreshold){
                 heap.emplace_push(nid0, segid1, meanAff, neighborEdge.version);
             }
         }
@@ -331,13 +331,15 @@ auto as_array() const {
 }
 
 
-
-auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
+auto greedy_merge(const Segmentation& seg, const aff_edge_t& affinityThreshold=0., 
+        const size_t& voxelNumThreshold=std::numeric_limits<size_t>::max()){
 
     std::cout<< "build priority queue..." << std::endl;
-    auto heap = _build_priority_queue(threshold);
+    auto heap = _build_priority_queue(affinityThreshold);
 
-    Dendrogram dend(threshold);
+    Dendrogram dend(affinityThreshold);
+
+    const auto& segid2voxelNum = get_nonzero_segids(seg);
 
     std::cout<< "iterative greedy merging..." << std::endl; 
     size_t mergeNum = 0;
@@ -356,11 +358,18 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
             // found an outdated edge
             continue;
         }
+
+        const auto& voxelNum0 = segid2voxelNum[segid0];
+        const auto& voxelNum1 = segid2voxelNum[segid1];
+        if(voxelNum0 > voxelNumThreshold && voxelNum1 > voxelNumThreshold){
+            // both objects are too big
+            continue;
+        }
         
         // merge segid1 and segid0
         mergeNum++;
         dend.push_edge(segid0, segid1, edge.get_mean());
-        _merge_segments(segid0, segid1, edge, heap, threshold);
+        _merge_segments(segid0, segid1, edge, heap, affinityThreshold);
         
     }
     
@@ -369,40 +378,11 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& threshold){
 }
 
 
-inline auto py_greedy_merge(const PySegmentation& pyseg, const aff_edge_t& threshold){
-    return greedy_merge(pyseg, threshold);
+inline auto py_greedy_merge(const PySegmentation& pyseg, const aff_edge_t& affinityThreshold=0., 
+        const size_t& voxelNumThreshold=std::numeric_limits<size_t>::max()){
+    return greedy_merge(pyseg, affinityThreshold, voxelNumThreshold);
 }
 
-auto merge_small_fragments(const Segmentation& seg, const size_t& voxelNumThreshold){
-
-    Dendrogram dend(0.);
-
-    const auto& segid2voxelNum = get_nonzero_segids(seg);
-
-    for(const auto& [segid0, neighbors0] : _segid2neighbor){
-        const auto& voxelNum = segid2voxelNum[segid0];
-        if(voxelNum <= voxelNumThreshold){
-            // find a maximum edge to merge
-            aff_edge_t maxWeight = 0.;
-            segid_t maxWeightSegid;
-            
-            for(const auto& [segid1, edgeIndex]: neighbors0){
-                const auto& edge = _get_edge(segid1, segid0);
-                const auto& edgeMean = edge.get_mean();
-                if(edgeMean > maxWeight){
-                    maxWeight = edgeMean;
-                    maxWeightSegid = segid1;
-                }
-            }
-            dend.push_edge(segid0, maxWeightSegid, maxWeight);
-        }
-    }
-    return dend;
-}
-
-inline auto py_merge_small_fragments(const PySegmentation& pyseg, const size_t& voxelNumThreshold){
-    return merge_small_fragments(pyseg, voxelNumThreshold);
-}
 
 }; // class of RegionGraph
 } // namespace reneu
