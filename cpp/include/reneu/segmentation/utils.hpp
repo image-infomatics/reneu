@@ -1,30 +1,32 @@
 #pragma once
 #include <initializer_list>
-#include <map>
-
-#include <boost/pending/disjoint_sets.hpp>
+#include <set>
+#include <tsl/robin_map.h>
 
 #include "../type_aliase.hpp"
 
 namespace reneu{
 
-inline auto get_nonzero_segids(const Segmentation& seg){
+using Segid2VoxelNum = tsl::robin_map<segid_t, size_t>;
 
-    std::map<segid_t, std::size_t> id2count;
+inline auto get_segid_to_voxel_num(const Segmentation& seg){
+    Segid2VoxelNum id2count;
 
-    // std::cout<< "accumulate segment ids..." << std::endl;
     for(const auto& segid : seg){
-        // std::cout<< segid << ", ";
         if(segid>0)
             ++id2count[segid];
     }
+    return id2count;
+}
 
-    // std::cout<< "size of map: "<< id2count.size() << std::endl;
-    std::vector<segid_t> segids = {};
-    segids.reserve(id2count.size());
-    for(const auto& [segid, count] : id2count){
-        segids.push_back(segid);
+inline auto get_nonzero_segids(const Segmentation& seg){
+    
+    std::set<segid_t> segids = {};
+    for(const auto& segid : seg){
+        if(segid>0)
+            segids.insert(segid);
     }
+
     return segids;
 }
 } // namespace reneu
