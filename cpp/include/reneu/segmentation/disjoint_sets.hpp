@@ -94,6 +94,25 @@ inline auto py_merge_array(xt::pytensor<segid_t, 2>& pyarr){
     return merge_array(std::move(pyarr));
 }
 
+auto to_array(){
+    std::vector<std::pair<segid_t, segid_t>> pairs = {};
+    for(const auto& [segid0, parent]: _mapParent){
+        const auto& root = find_set(segid0);
+        if(root != segid0)
+            pairs.emplace_back(segid0, root);
+    }
+
+    const auto& pairNum = pairs.size();
+    xt::xtensor<segid_t, 2>::shape_type sh = {2, pairNum};
+    auto arr = xt::empty<segid_t>(sh);
+    for(std::size_t idx=0; idx<pairNum; idx++){
+        const auto& [segid0, root] = pairs[idx];
+        arr(0, idx) = segid0;
+        arr(1, idx) = root;
+    }
+    return arr;
+}
+
 auto relabel(Segmentation&& seg){
     auto segids = get_nonzero_segids(seg);
     // Flatten the parents tree so that the parent of every element is its representative.
@@ -118,7 +137,6 @@ auto relabel(Segmentation&& seg){
             }
         }
     }
-
 
     // this implementation will mask out all the objects that is not in the set!
     // We should not do it in the global materialization stage.
