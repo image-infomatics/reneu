@@ -72,13 +72,13 @@ segid_t find_set(segid_t sid){
 
 auto merge_array(const xt::xtensor<segid_t, 2>& arr){
     std::set<std::pair<segid_t, segid_t>> pairs = {};
-    assert(arr.shape(0) == 2);
+    assert(arr.shape(1) == 2);
 
     // in case there exist a lot of duplicates in this array
     // we make a small set first to make it more efficient
-    for(std::size_t idx=0; idx<arr.shape(1); idx++){
-        const auto& segid0 = arr(0, idx);
-        const auto& segid1 = arr(1, idx);
+    for(std::size_t idx=0; idx<arr.shape(0); idx++){
+        const auto& segid0 = arr(idx, 0);
+        const auto& segid1 = arr(idx, 1);
         // const auto& pair = std::make_tuple(segid0, segid1);
         pairs.emplace(segid0, segid1);
     }
@@ -103,12 +103,12 @@ auto to_array(){
     }
 
     const auto& pairNum = pairs.size();
-    xt::xtensor<segid_t, 2>::shape_type sh = {2, pairNum};
+    xt::xtensor<segid_t, 2>::shape_type sh = {pairNum, 2};
     auto arr = xt::empty<segid_t>(sh);
     for(std::size_t idx=0; idx<pairNum; idx++){
         const auto& [segid0, root] = pairs[idx];
-        arr(0, idx) = segid0;
-        arr(1, idx) = root;
+        arr(idx, 0) = segid0;
+        arr(idx, 1) = root;
     }
     return arr;
 }

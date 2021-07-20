@@ -15,7 +15,7 @@ def test_disjoint_sets():
 
     print('test to_array...')
     arr = dsets.to_array()
-    np.testing.assert_array_equal(arr, np.array([[1],[2]]))
+    np.testing.assert_array_equal(arr, np.array([[1,2]]))
 
     print('test relabel...')
     seg = np.arange(0, 27).reshape(3,3,3)
@@ -24,14 +24,13 @@ def test_disjoint_sets():
     seg3[0, 0, 1] = 2
     np.testing.assert_array_equal(seg2, seg3)
 
-    
-
     print('test merge seg pairs in an array...')
-    arr = np.arange(1,7, dtype=np.uint64).reshape(2, 3)
+    arr = np.arange(1,7, dtype=np.uint64).reshape(3, 2)
+    dsets = DisjointSets()
     dsets.merge_array(arr)
-    assert dsets.find_set(1) == 4
-    assert dsets.find_set(2) == 5
-    assert dsets.find_set(3) == 6
+    assert dsets.find_set(1) == 2
+    assert dsets.find_set(3) == 4
+    assert dsets.find_set(5) == 6
 
     
 
