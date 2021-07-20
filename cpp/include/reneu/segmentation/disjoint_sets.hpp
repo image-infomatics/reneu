@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <boost/pending/disjoint_sets.hpp>
 #include "../type_aliase.hpp"
 #include "./utils.hpp"
@@ -41,6 +42,8 @@ DisjointSets(const Segmentation& seg):
     }
 }
 
+
+
 // friend class boost::serialization::access;
 // template<class Archive>
 // void serialize(Archive ar, const unsigned int version){
@@ -65,6 +68,30 @@ segid_t find_set(segid_t sid){
         return sid;
     else
         return root;
+}
+
+auto merge_array(const xt::xtensor<segid_t, 2>& arr){
+    std::set<std::pair<segid_t, segid_t>> pairs = {};
+    assert(arr.shape(0) == 2);
+
+    // in case there exist a lot of duplicates in this array
+    // we make a small set first to make it more efficient
+    for(std::size_t idx=0; idx<arr.shape(1); idx++){
+        const auto& segid0 = arr(0, idx);
+        const auto& segid1 = arr(1, idx);
+        // const auto& pair = std::make_tuple(segid0, segid1);
+        pairs.emplace(segid0, segid1);
+    }
+
+    for(const auto& [segid0, segid1] : pairs){
+        make_set(segid0);
+        make_set(segid1);
+        union_set(segid0, segid1);
+    }
+}
+
+inline auto py_merge_array(xt::pytensor<segid_t, 2>& pyarr){
+    return merge_array(std::move(pyarr));
 }
 
 auto relabel(Segmentation&& seg){
