@@ -2,9 +2,9 @@ import pickle
 from reneu.lib.segmentation import RegionGraph 
 from reneu.lib.segmentation import watershed, fill_background_with_affinity_guidance 
 
-import h5py
-import os
-import tifffile
+# import h5py
+# import os
+# import tifffile
 import numpy as np
 
 np.random.seed(0)
@@ -51,8 +51,6 @@ def test_agglomeration():
     print('segmentation after agglomeration: ', seg)
     
     np.testing.assert_array_equal(seg, np.array([[[2,2],[4,4]]]))
-
-
 
 def random_2d_affinity_map(sz: int):
     # make sure that the random array is consistent

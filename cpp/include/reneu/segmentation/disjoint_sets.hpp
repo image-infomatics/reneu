@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <boost/pending/disjoint_sets.hpp>
 #include "../type_aliase.hpp"
 #include "./utils.hpp"
@@ -41,6 +42,8 @@ DisjointSets(const Segmentation& seg):
     }
 }
 
+
+
 // friend class boost::serialization::access;
 // template<class Archive>
 // void serialize(Archive ar, const unsigned int version){
@@ -67,6 +70,49 @@ segid_t find_set(segid_t sid){
         return root;
 }
 
+auto merge_array(const xt::xtensor<segid_t, 2>& arr){
+    std::set<std::pair<segid_t, segid_t>> pairs = {};
+    assert(arr.shape(1) == 2);
+
+    // in case there exist a lot of duplicates in this array
+    // we make a small set first to make it more efficient
+    for(std::size_t idx=0; idx<arr.shape(0); idx++){
+        const auto& segid0 = arr(idx, 0);
+        const auto& segid1 = arr(idx, 1);
+        // const auto& pair = std::make_tuple(segid0, segid1);
+        pairs.emplace(segid0, segid1);
+    }
+
+    for(const auto& [segid0, segid1] : pairs){
+        make_set(segid0);
+        make_set(segid1);
+        union_set(segid0, segid1);
+    }
+}
+
+inline auto py_merge_array(xt::pytensor<segid_t, 2>& pyarr){
+    return merge_array(std::move(pyarr));
+}
+
+auto to_array(){
+    std::vector<std::pair<segid_t, segid_t>> pairs = {};
+    for(const auto& [segid0, parent]: _mapParent){
+        const auto& root = find_set(segid0);
+        if(root != segid0)
+            pairs.emplace_back(segid0, root);
+    }
+
+    const auto& pairNum = pairs.size();
+    xt::xtensor<segid_t, 2>::shape_type sh = {pairNum, 2};
+    auto arr = xt::empty<segid_t>(sh);
+    for(std::size_t idx=0; idx<pairNum; idx++){
+        const auto& [segid0, root] = pairs[idx];
+        arr(idx, 0) = segid0;
+        arr(idx, 1) = root;
+    }
+    return arr;
+}
+
 auto relabel(Segmentation&& seg){
     auto segids = get_nonzero_segids(seg);
     // Flatten the parents tree so that the parent of every element is its representative.
@@ -91,7 +137,6 @@ auto relabel(Segmentation&& seg){
             }
         }
     }
-
 
     // this implementation will mask out all the objects that is not in the set!
     // We should not do it in the global materialization stage.

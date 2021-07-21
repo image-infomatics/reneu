@@ -122,6 +122,8 @@ PYBIND11_MODULE(segmentation, m) {
         //         return djs;
         //     }
         // ))
+        .def("merge_array", &DisjointSets::py_merge_array)
+        .def("to_array", &DisjointSets::to_array)
         .def("relabel", &DisjointSets::py_relabel);
 
 #ifdef VERSION_INFO
