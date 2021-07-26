@@ -55,7 +55,10 @@ DisjointSets(const Segmentation& seg):
 // }
 
 void make_set(const segid_t& segid ){
-    _dsets.make_set(segid);
+    // To-Do: use contain function in C++20
+    const auto& search = _mapRank.find(segid);
+    if(search == _mapRank.end())
+        _dsets.make_set(segid);
 }
 
 void union_set(segid_t s0, segid_t s1){
