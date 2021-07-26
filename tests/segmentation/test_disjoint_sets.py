@@ -13,6 +13,10 @@ def test_disjoint_sets():
     root = dsets.find_set(1)
     assert root == 2
 
+    # dsets.make_set(3)
+    # dsets.union_set(2, 3)
+    # assert dsets.find_set(1) == dsets.find_set(2) == dsets.find_set(3)
+
     print('test to_array...')
     arr = dsets.to_array()
     np.testing.assert_array_equal(arr, np.array([[1,2]]))
@@ -31,6 +35,24 @@ def test_disjoint_sets():
     assert dsets.find_set(1) == 2
     assert dsets.find_set(3) == 4
     assert dsets.find_set(5) == 6
-
     
+    arr2 = dsets.to_array()
+    assert arr2.shape == arr.shape
+    assert np.all(arr == arr2)
+
+    arr3 = np.arange(7,13, dtype=np.uint64).reshape(3, 2)
+    dsets.merge_array(arr3)
+    arr4 = np.arange(1,13, dtype=np.uint64).reshape(6, 2)
+    np.testing.assert_equal(dsets.to_array(), arr4)
+
+    arr5 = np.array([[1, 1], [2, 2], [1,2], [1, 2]])
+    dsets.merge_array(arr5)
+    np.testing.assert_equal(arr4, dsets.to_array())
+
+    assert dsets.find_set(3) == 4
+    arr5 = np.array([[1, 3]])
+    dsets.merge_array(arr5)
+    # arr = dsets.to_array()
+    # the original connection should not be broken!
+    assert dsets.find_set(3) == 4
 
