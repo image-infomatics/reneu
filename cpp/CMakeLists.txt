@@ -5,7 +5,7 @@ project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 set(CMAKE_VERBOSE_MAKEFILE on)
 # this only works with absolute path!
 # set(CONDA_PREFIX ${HOME}/opt/anaconda3/envs/cf)
-set(CONDA_PREFIX /Users/jwu/opt/anaconda3/envs/cf)
+set(CONDA_PREFIX /Users/jwu/opt/anaconda3/envs/reneu)
 # set(CONDA_PREFIX ${CONDA_PREFIX_1}/envs/reneu)
 set(pybind11_DIR ${CONDA_PREFIX}/share/cmake/pybind11)
 set(xtensor_DIR ${CONDA_PREFIX}/lib/cmake/xtensor)
@@ -56,6 +56,7 @@ find_package(xtensor-blas REQUIRED)
 
 pybind11_add_module(skeleton ${CMAKE_CURRENT_SOURCE_DIR}/skeleton.cpp)
 pybind11_add_module(segmentation ${CMAKE_CURRENT_SOURCE_DIR}/segmentation.cpp)
+pybind11_add_module(synapse ${CMAKE_CURRENT_SOURCE_DIR}/synapse.cpp)
 
 # pybind11 do not recognize our NUMPY_INCLUDE_DIR variable
 # we need to add it explicitly

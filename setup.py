@@ -3,12 +3,14 @@ import re
 import sys
 import platform
 import subprocess
-from shutil import move 
-from pathlib import Path
+
+import numpy as np
 
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
+
+os.environ['NUMPY_INCLUDE_DIR'] = np.get_include()
 
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
