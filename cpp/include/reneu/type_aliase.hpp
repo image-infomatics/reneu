@@ -17,6 +17,9 @@ using PyAffinityMap = xt::pytensor<aff_edge_t, 4>;
 using Segmentation = xt::xtensor<segid_t, 3>;
 using PySegmentation = xt::pytensor<segid_t, 3>;
 
+using ProbabilityMap = xt::xtensor<float, 3>;
+using PyProbabilityMap = xt::pytensor<float, 3>;
+
 using Index = std::uint32_t;
 using Point = xt::xtensor_fixed<float, xt::xshape<3>>;
 using PyPoint = xt::pytensor<float, 1>;
