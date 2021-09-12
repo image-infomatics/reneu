@@ -10,7 +10,7 @@
 namespace py = pybind11;
 using namespace reneu;
 
-PYBIND11_MODULE(skeleton, m) {
+PYBIND11_MODULE(synapse, m) {
     xt::import_numpy();
 
     m.doc() = R"pbdoc(
