@@ -1,7 +1,7 @@
 import numpy as np
 import fill_voids
 from edt import edt
-from reneu.lib.synapse import detect_points
+from reneu.lib.synapse import detect_points, get_object_average_intensity
 
 def test_detect_tbars():
     seg = np.zeros((7, 7, 7), dtype=bool)
@@ -12,6 +12,13 @@ def test_detect_tbars():
     points = detect_points(seg, df)
     # print('points: ', points)
     np.testing.assert_array_equal(points, np.asarray([[3,3,3]], dtype=np.uint64))
+
+    average_intensity = get_object_average_intensity(seg, df)
+    # print('average intensity: ', average_intensity)
+
+    avg = np.sum(df[seg>0]) / np.count_nonzero(seg)
+    np.testing.assert_array_almost_equal(average_intensity, np.asarray([avg], dtype=np.float32))
+
 
 
 # def test_fill_voids():
@@ -33,4 +40,9 @@ def test_detect_tbars_non_symmetric():
     points = detect_points(seg, df)
     # print('points: ', points)
     np.testing.assert_array_equal(points, np.asarray([[2,3,4]], dtype=np.uint64))
+
+    average_intensity = get_object_average_intensity(seg, df)
+    avg = np.sum(df[seg>0]) / np.count_nonzero(seg)
+    np.testing.assert_array_almost_equal(average_intensity, np.asarray([avg], dtype=np.float32))
+
 

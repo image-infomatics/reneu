@@ -21,7 +21,8 @@ PYBIND11_MODULE(synapse, m) {
            :toctree: _generate
     )pbdoc";
 
-    m.def("detect_points", &py_detect_points); 
+    m.def("detect_points", &py_detect_points);
+    m.def("get_object_average_intensity", &py_get_object_average_intensity); 
 
 
 #ifdef VERSION_INFO
