@@ -4,16 +4,17 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/cpp/include",
-                "/Users/jwu/opt/anaconda3/envs/reneu/include",
-                "/Users/jwu/opt/anaconda3/envs/reneu/include/python3.8",
-                "/Users/jwu/opt/anaconda3/envs/reneu/lib/python3.8/site-packages/numpy/core/include"
+                "~/opt/anaconda3/envs/reneu/include",
+                "~/opt/anaconda3/envs/reneu/include/python3.8",
+                "~/opt/anaconda3/envs/reneu/lib/python3.8/site-packages/numpy/core/include"
             ],
             "defines": [],
             "macFrameworkPath": [],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "clang-x64"
+            "intelliSenseMode": "clang-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4
