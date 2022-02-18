@@ -3,7 +3,7 @@
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceFolder}/cpp/include",
+                "~/code/reneu/cpp/include",
                 "~/opt/anaconda3/envs/reneu/include",
                 "~/opt/anaconda3/envs/reneu/include/python3.8",
                 "~/opt/anaconda3/envs/reneu/lib/python3.8/site-packages/numpy/core/include"

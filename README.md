@@ -15,6 +15,8 @@ Computation for REal NEUral networks
 
 # Development
 
+GCC version: 11.2.0
+
 install dependencies
 
     conda env create -f environment.yml

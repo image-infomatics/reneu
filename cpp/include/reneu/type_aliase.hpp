@@ -16,6 +16,8 @@ using AffinityMap = xt::xtensor<aff_edge_t, 4>;
 using PyAffinityMap = xt::pytensor<aff_edge_t, 4>;
 using Segmentation = xt::xtensor<segid_t, 3>;
 using PySegmentation = xt::pytensor<segid_t, 3>;
+using Segmentation2D = xt::xtensor<segid_t, 2>;
+using Segmentation1D = xt::xtensor<segid_t, 1>;
 
 using ProbabilityMap = xt::xtensor<float, 3>;
 using PyProbabilityMap = xt::pytensor<float, 3>;

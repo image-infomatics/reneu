@@ -73,9 +73,8 @@ def test_watershed_and_fill_background():
     np.testing.assert_array_equal(seg, np.array([[[1,1,1], [2,3,3], [2,3,3]]]))
 
     ws_seg = np.copy(seg)
-    fill_background_with_affinity_guidance(seg, affs)
+    fill_background_with_affinity_guidance(seg, affs, 0.5)
     print('filled voxel number: ', np.count_nonzero(ws_seg - seg))
-   
 
 def test_random_agglomeration():
     sz = 4
