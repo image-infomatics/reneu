@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.12.0)
 set(RENEU_VERSION 0.2.0)
 project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 
+set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+set(CMAKE_HAVE_THREADS_LIBRARY 1)
+set(CMAKE_USE_WIN32_THREADS_INIT 0)
+set(CMAKE_USE_PTHREADS_INIT 1)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 set(CMAKE_VERBOSE_MAKEFILE on)
 # this only works with absolute path!
 # set(CONDA_PREFIX ${HOME}/opt/anaconda3/envs/cf)
@@ -42,7 +48,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu/lib)
 
-
+find_package(BLAS REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
 find_package(Numpy REQUIRED)
@@ -61,7 +67,7 @@ pybind11_add_module(synapse ${CMAKE_CURRENT_SOURCE_DIR}/synapse.cpp)
 # pybind11 do not recognize our NUMPY_INCLUDE_DIR variable
 # we need to add it explicitly
 target_include_directories(skeleton PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
-target_link_libraries(skeleton)
+target_link_libraries(skeleton PRIVATE ${BLAS_LIBRARIES})
 
 message("boost libarries: ${Boost_LIBRARIES}")
 target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
