@@ -29,8 +29,8 @@ PYBIND11_MODULE(segmentation, m) {
     )pbdoc";
 
     m.def("watershed", &py_watershed);
-    m.def("fill_background_with_affinity_guidance", &py_fill_background_with_affinity_guidance);
-    m.def("remove_contact", &py_remove_contact);
+    m.def("fill_background_with_affinity_guidance", &fill_background_with_affinity_guidance, "fill the background with affinity guidance.");
+    m.def("remove_contact", &remove_contact, "remove object contacts.");
 
     py::class_<Dendrogram>(m, "Dendrogram")
         .def(py::init())
