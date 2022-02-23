@@ -174,7 +174,9 @@ def build_fragments(affs: np.ndarray, chunk_size: tuple) -> np.ndarray:
                 ] = fragments_chunk
     return fragments
 
-def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, verbose: bool=True, seed: int=1):
+def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, 
+        verbose: bool=True, seed: int=1, 
+        voxel_num_threshold: int=18446744073709551615):
     
     affs = get_random_affinity_map(sz, seed=seed)
     fragments = build_fragments(affs, chunk_size)
@@ -183,7 +185,7 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float, verbo
     rg = RegionGraph(affs, fragments)
     # print('region graph: ', rg)
     print('gready mean agglomeration...')
-    dend = rg.greedy_merge(fragments, threshold)
+    dend = rg.greedy_merge(fragments, threshold, voxel_num_threshold)
     seg = dend.materialize(fragments, threshold)
     if verbose:
         print('\nsegmentation: \n', seg)
