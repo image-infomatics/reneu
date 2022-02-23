@@ -22,7 +22,7 @@
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
 #include "dendrogram.hpp"
-#include "../utils/priority_queue.hpp"
+#include "priority_queue.hpp"
 
 // BOOST_SERIALIZATION_SPLIT_MEMBER()
 

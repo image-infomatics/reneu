@@ -1,12 +1,16 @@
 #pragma once
 
-#include "../type_aliase.hpp"
-#include "reneu/segmentation/priority_queue.hpp"
+#include "reneu/type_aliase.hpp"
+// #include "reneu/utils/priority_queue.hpp"
+#include <queue>
 
 
 namespace reneu{
 
-void seeded_watershed(PySegmentation& seg, const PyAffinityMap& affs){
+void seeded_watershed(PySegmentation& seg, const PyAffinityMap& affs,   
+        const aff_edge_t& threshold){
+    // z direction
+    PriorityQueue<>
 
 }
 
