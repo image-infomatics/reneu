@@ -1,20 +1,23 @@
 {
     "configurations": [
         {
-            "name": "Mac",
+            "name": "centos",
             "includePath": [
-                "~/code/reneu/cpp/include",
-                "~/opt/anaconda3/envs/cf/include",
-                "~/opt/anaconda3/envs/cf/include/python3.8",
-                "~/opt/anaconda3/envs/cf/lib/python3.8/site-packages/numpy/core/include"
+                "${HOME}/code/reneu/cpp/include",
+                "${HOME}/opt/anaconda3/envs/cf/include",
+                "${HOME}/opt/anaconda3/envs/cf/include/python3.8",
+                "${HOME}/opt/anaconda3/envs/cf/lib/python3.8/site-packages/numpy/core/include",
             ],
             "defines": [],
             "macFrameworkPath": [],
-            "compilerPath": "/usr/bin/c++",
+            "compilerPath": "/cm/shared/sw/nix/store/hmphldjnv7440cwpv29ph5d5bp3lbxz5-gcc-11.2.0/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "c++20",
-            "intelliSenseMode": "${default}",
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "forcedInclude": [
+                "/mnt/home/jwu/anaconda3/envs/cf/include/python3.8/Python.h"
+            ]
         }
     ],
     "version": 4
