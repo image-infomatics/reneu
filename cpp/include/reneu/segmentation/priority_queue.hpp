@@ -27,9 +27,10 @@ struct EdgeInQueue{
 // };
 // using PriorityQueue = std::priority_queue<EdgeInQueue, std::vector<EdgeInQueue>, std::less<EdgeInQueue>>;
 
+template<class E>
 class PriorityQueue{
 private:
-    std::vector<EdgeInQueue> _edges;
+    std::vector<E> _edges;
 
 public:
     PriorityQueue(): _edges({}) { }

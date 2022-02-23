@@ -65,7 +65,7 @@ inline auto _frozen_neighbor_flag(const segid_t& segid0, const aff_edge_t& thres
 
 
 auto _build_priority_queue (const aff_edge_t& threshold) const {
-    PriorityQueue heap;
+    PriorityQueue<EdgeInHeap> heap;
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
