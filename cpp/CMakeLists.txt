@@ -18,6 +18,8 @@ set(xtensor_DIR ${CONDA_PREFIX}/lib/cmake/xtensor)
 set(xtensor-python_DIR ${CONDA_PREFIX}/lib/cmake/xtensor-python)
 set(xtl_DIR ${CONDA_PREFIX}/lib/cmake/xtl)
 
+add_subdirectory(third-party/robin-map)
+
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED OFF)  
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -32,7 +34,6 @@ if(Boost_NO_SYSTEM_PATH)
     message(STATUS "found Boost libraries in ${BOOST_LIBRARYDIR}")
 endif(Boost_NO_SYSTEM_PATH)
 find_package(Boost REQUIRED serialization)
-
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 set(CMAKE_CXX_STANDARD 20)
@@ -52,7 +53,8 @@ find_package(pybind11 REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
 find_package(xtensor-blas REQUIRED)
-find_package(tsl_robin_map REQUIRED)
+#find_package(tsl_robin_map REQUIRED)
+# find_package(tsl-robin-map REQUIRED)
 # find_package(TBB REQUIRED)
 
 set(RENEU_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
