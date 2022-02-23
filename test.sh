@@ -9,7 +9,7 @@ module load cmake
 
 #rm -rf ./build
 #mv python/reneu/lib/segmentation.so /tmp/
-#rm python/reneu/lib/skeleton.so 
+rm python/reneu/lib/skeleton.so 
 rm python/reneu/lib/segmentation.so 
 
 #python setup.py develop

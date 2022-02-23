@@ -2,11 +2,10 @@
 #include <pybind11/stl.h>
 #define FORCE_IMPORT_ARRAY
 
-
 #include "reneu/utils/math.hpp"
 #include "reneu/type_aliase.hpp" 
-#include "reneu/skeleton.hpp"
-#include "reneu/nblast.hpp"
+#include "reneu/skeleton/skeleton.hpp"
+#include "reneu/skeleton/nblast.hpp"
 
 
 namespace py = pybind11;
