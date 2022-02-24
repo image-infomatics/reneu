@@ -2,7 +2,11 @@ from copy import deepcopy
 import numpy as np
 from numpy.random import rand
 
-from reneu.lib.segmentation import remove_contact, fill_background_with_affinity_guidance
+from reneu.lib.segmentation import seeded_watershed, remove_contact, fill_background_with_affinity_guidance
+
+
+def test_seeded_watershed():
+    pass
 
 def test_remove_contact():
     seg1 = np.zeros((2,4,4), dtype=np.uint64)

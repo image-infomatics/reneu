@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.12.0)
 set(RENEU_VERSION 0.2.0)
 project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party/robin-map)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/robin-map/include)
+
 set(CMAKE_THREAD_LIBS_INIT "-lpthread")
 set(CMAKE_HAVE_THREADS_LIBRARY 1)
 set(CMAKE_USE_WIN32_THREADS_INIT 0)
@@ -18,7 +21,6 @@ set(xtensor_DIR ${CONDA_PREFIX}/lib/cmake/xtensor)
 set(xtensor-python_DIR ${CONDA_PREFIX}/lib/cmake/xtensor-python)
 set(xtl_DIR ${CONDA_PREFIX}/lib/cmake/xtl)
 
-add_subdirectory(third-party/robin-map)
 
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED OFF)  
@@ -48,7 +50,7 @@ find_package(BLAS REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
 find_package(Numpy REQUIRED)
-#find_package(Python3 REQUIRED COMPONENTS Numpy)
+# find_package(Python3 REQUIRED COMPONENTS Numpy)
 find_package(pybind11 REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
@@ -72,7 +74,8 @@ target_link_libraries(skeleton PRIVATE ${BLAS_LIBRARIES})
 
 message("boost libarries: ${Boost_LIBRARIES}")
 target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
-target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES} tsl::robin_map)
+#target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES} tsl::robin_map)
+target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES})
 
 # options
 option(BUILD_TESTS "build test suite" OFF)

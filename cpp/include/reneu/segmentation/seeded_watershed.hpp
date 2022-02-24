@@ -25,7 +25,7 @@ struct AffEdge{
     // comparitor for sorting in heap
     // sort by decremental rather than default increamental
     bool operator<(const AffEdge& other) const {
-        return aff > other.aff;
+        return aff < other.aff;
     }
 };
 

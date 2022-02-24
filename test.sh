@@ -7,8 +7,9 @@
 module load gcc/11.2.0
 module load cmake 
 
-#rm -rf ./build
+rm -rf ./build
 rm python/reneu/lib/skeleton*.so 
+rm python/reneu/lib/synapse*.so 
 rm python/reneu/lib/segmentation*.so 
 
 #python setup.py develop

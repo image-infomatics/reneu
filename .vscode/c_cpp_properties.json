@@ -4,9 +4,10 @@
             "name": "centos",
             "includePath": [
                 "${HOME}/code/reneu/cpp/include",
-                "${HOME}/opt/anaconda3/envs/cf/include",
-                "${HOME}/opt/anaconda3/envs/cf/include/python3.8",
-                "${HOME}/opt/anaconda3/envs/cf/lib/python3.8/site-packages/numpy/core/include",
+                "${CONDA_PREFIX}/include/python3.8",
+                "${CONDA_PREFIX}/include",
+                "${CONDA_PREFIX}/lib/python3.8/site-packages/numpy/core/include",
+                "${workspaceFolder}/cpp/third-party/robin-map/include"
             ],
             "defines": [],
             "macFrameworkPath": [],
@@ -14,10 +15,26 @@
             "cStandard": "c17",
             "cppStandard": "c++20",
             "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.cmake-tools",
-            "forcedInclude": [
-                "/mnt/home/jwu/anaconda3/envs/cf/include/python3.8/Python.h"
-            ]
+            "configurationProvider": "ms-vscode.cmake-tools"
+        },
+        {
+            "name": "MacOS",
+            "includePath": [
+                "${workspaceFolder}/cpp/include",
+                "${CONDA_PREFIX}/include/python3.8",
+                "${CONDA_PREFIX}/include/**",
+                // "${HOME}/opt/anaconda3/envs/reneu/include/**",
+                "${CONDA_PREFIX}/lib/python3.8/site-packages/numpy/core/include",
+                "${workspaceFolder}/cpp/third-party/robin-map/include"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/System/Library/Frameworks"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "macos-clang-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4
