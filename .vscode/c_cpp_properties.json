@@ -22,8 +22,8 @@
             "includePath": [
                 "${workspaceFolder}/cpp/include",
                 "${CONDA_PREFIX}/include/python3.8",
-                "${CONDA_PREFIX}/include/**",
-                // "${HOME}/opt/anaconda3/envs/reneu/include/**",
+                "${CONDA_PREFIX}/include",
+                "${HOME}/opt/anaconda3/envs/reneu/include",
                 "${CONDA_PREFIX}/lib/python3.8/site-packages/numpy/core/include",
                 "${workspaceFolder}/cpp/third-party/robin-map/include"
             ],
