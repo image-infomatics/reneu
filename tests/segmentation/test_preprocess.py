@@ -37,7 +37,10 @@ def test_seeded_watershed(shape=96):
     seg2 = deepcopy(seg)
     seeded_watershed_2d(seg2, affs, 0.5)
     assert np.any(seg!=seg2)
-
+    
+    seg3 = deepcopy(seg)
+    seeded_watershed(seg3, affs, 0.5)
+    assert np.any(seg!=seg3)
 
 def test_remove_contact():
     seg1 = np.zeros((2,4,4), dtype=np.uint64)
