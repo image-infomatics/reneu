@@ -96,8 +96,8 @@ auto _build_priority_queue(const SEG& seg, const AFFS& affs,
 template<class HEAP, class SEG, class AFFS>
 void _update_priority_queue(HEAP& heap, const SEG& seg, 
         const AFFS& affs, const aff_edge_t& threshold, 
-        const std::ptrdiff_t& z, const std::ptrdiff_t& y, 
-        const std::ptrdiff_t& x){
+        const std::ptrdiff_t z, const std::ptrdiff_t y, 
+        const std::ptrdiff_t x){
     
     assert(seg(z,y,x)>0);
     // search all the six surrounding directions
@@ -109,6 +109,7 @@ void _update_priority_queue(HEAP& heap, const SEG& seg,
         assert(seg(z-1, y, x)==0);
         assert((sid0==0 && sid1>0) || (sid1==0 && sid0>0));
         heap.emplace(affs(2, z, y, x), 2, z, y, x);
+        assert(seg(z,y,x)>0);
     } 
     if(y>0 && seg(z, y-1, x)==0 && affs(1, z, y, x)>threshold){
         const auto& sid0 = seg(z, y, x);
@@ -116,6 +117,7 @@ void _update_priority_queue(HEAP& heap, const SEG& seg,
         assert(seg(z, y-1, x)==0);
         assert((sid0==0 && sid1>0) || (sid1==0 && sid0>0));
         heap.emplace(affs(1, z, y, x), 1, z, y, x);
+        assert(seg(z,y,x)>0);
     }
     if(x>0 && seg(z, y, x-1)==0 && affs(0, z, y, x)>threshold){
         const auto& sid0 = seg(z, y, x);
@@ -123,6 +125,7 @@ void _update_priority_queue(HEAP& heap, const SEG& seg,
         assert(seg(z, y, x-1)==0);
         assert((sid0==0 && sid1>0) || (sid1==0 && sid0>0));
         heap.emplace(affs(0, z, y, x), 0, z, y, x);
+        assert(seg(z,y,x)>0);
     }
 
     if(z<seg.shape(0)-1 && seg(z+1, y, x)==0 && affs(2, z+1, y, x)>threshold){
@@ -131,13 +134,18 @@ void _update_priority_queue(HEAP& heap, const SEG& seg,
         assert(seg(z+1, y, x)==0);
         assert((sid0==0 && sid1>0) || (sid1==0 && sid0>0));
         heap.emplace(affs(2, z+1, y, x), 2, z+1, y, x);
+        assert(seg(z,y,x)>0);
     }
     if(y<seg.shape(1)-1 && seg(z, y+1, x)==0 && affs(1, z, y+1, x)>threshold){
         const auto& sid0 = seg(z, y+1, x);
         const auto& sid1 = seg(z, y, x);
         assert(seg(z, y+1, x)==0);
         assert((sid0==0 && sid1>0) || (sid1==0 && sid0>0));
+        assert(seg(z,y,x)>0);
+        // std::cout<<"\n"<<seg(z,y,x)<<","<<z<<","<<y<<","<<x<<","<<"-->";
         heap.emplace(affs(1, z, y+1, x), 1, z, y+1, x);
+        // std::cout<<seg(z,y,x)<<","<<z<<","<<y<<","<<x<<std::endl;
+        assert(seg(z,y,x)>0);
     }
     if(x<seg.shape(2)-1 && seg(z, y, x+1)==0 && affs(0, z, y, x+1)>threshold){
         const auto& sid0 = seg(z, y, x+1);
@@ -146,6 +154,7 @@ void _update_priority_queue(HEAP& heap, const SEG& seg,
         assert(seg(z, y, x)>0);
         assert((sid0==0 && sid1>0) || (sid1==0 && sid0>0));
         heap.emplace(affs(0, z, y, x+1), 0, z, y, x+1);
+        assert(seg(z,y,x)>0);
     }
 
 }
@@ -153,19 +162,19 @@ void _update_priority_queue(HEAP& heap, const SEG& seg,
 void seeded_watershed(PySegmentation& seg, const PyAffinityMap& affs,   
         const aff_edge_t& threshold){
     
-    std::cout<< "start building priority queue..."<<std::endl;
+    // std::cout<< "start building priority queue..."<<std::endl;
     auto heap = _build_priority_queue(seg, affs, threshold);
-    std::cout<< "Length of priority queue: "<< heap.size() << std::endl;
+    // std::cout<< "Length of priority queue: "<< heap.size() << std::endl;
 
     while(!heap.empty()){
         const auto& affEdge = heap.top();
         heap.pop();
-        std::cout<< affEdge.aff << ", ";
+        // std::cout<< affEdge.aff << ", ";
 
-        const auto& channel = affEdge.channel;
-        const auto& z = affEdge.z;
-        const auto& y = affEdge.y;
-        const auto& x = affEdge.x;
+        const auto channel = affEdge.channel;
+        const auto z = affEdge.z;
+        const auto y = affEdge.y;
+        const auto x = affEdge.x;
 
         switch(channel){
             case 2:
@@ -190,8 +199,8 @@ void seeded_watershed(PySegmentation& seg, const PyAffinityMap& affs,
                 }
             case 0:
                 if(seg(z, y, x) == 0){
-                    if(seg(z,y,x-1)==0)
-                        std::cout<<"\nposition: "<<z<<", "<<y<<", "<<x<<std::endl;
+                    // if(seg(z,y,x-1)==0)
+                        // std::cout<<"\nposition: "<<z<<", "<<y<<", "<<x<<std::endl;
                     assert(seg(z, y, x-1)>0);
                     seg(z, y, x) = seg(z, y, x-1);
                     _update_priority_queue(heap, seg, affs, threshold, z, y, x);
@@ -201,8 +210,6 @@ void seeded_watershed(PySegmentation& seg, const PyAffinityMap& affs,
                     _update_priority_queue(heap, seg, affs, threshold, z, y, x-1);
                 } 
         }
-
-
     }
 }
 

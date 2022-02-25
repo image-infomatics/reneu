@@ -36,7 +36,6 @@ def test_seeded_watershed(shape=96):
 
     seg2 = deepcopy(seg)
     seeded_watershed_2d(seg2, affs, 0.5)
-    breakpoint()
     assert np.any(seg!=seg2)
 
 
