@@ -75,7 +75,8 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     return sag;
 }
 
-auto divide_plateaus(SteepestAscentGraph& sag){
+template<class S>
+auto divide_plateaus(S& sag){
     std::ptrdiff_t sz = sag.shape(0);
     std::ptrdiff_t sy = sag.shape(1);
     std::ptrdiff_t sx = sag.shape(2);
@@ -134,7 +135,8 @@ auto divide_plateaus(SteepestAscentGraph& sag){
 }
 
 
-auto find_basins(Segmentation& seg){
+template<class SEG>
+auto find_basins(SEG& seg){
     // seg is initially the steepest ascent graph
     // and will be transformed in-place to yield the segmentation into basins
     
@@ -218,7 +220,8 @@ auto find_basins(Segmentation& seg){
     return std::make_tuple(seg, counts);
 }
 
-auto watershed(const AffinityMap& affs, const aff_edge_t& low, const aff_edge_t& high){
+
+auto py_watershed(const PyAffinityMap& affs, const aff_edge_t& low, const aff_edge_t& high){
     std::cout<< "start steepest ascent..." << std::endl;
     auto sag = steepest_ascent(affs, low, high);
     std::cout<< "start divide plateaus..." << std::endl;
@@ -226,10 +229,6 @@ auto watershed(const AffinityMap& affs, const aff_edge_t& low, const aff_edge_t&
     std::cout<< "start find basins ..." << std::endl;
     auto [seg, counts] = find_basins(sag);
     return seg;
-}
-
-auto py_watershed(const PyAffinityMap& affs, const aff_edge_t& low, const aff_edge_t& high){
-    return watershed(affs, low, high);  
 }
 
 } // namespace reneu

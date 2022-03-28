@@ -30,6 +30,30 @@ namespace reneu{
 
 class RegionGraph;
 
+struct EdgeInHeap{
+    segid_t segid0;
+    segid_t segid1;
+    aff_edge_t aff;
+    size_t version;
+
+    // constructor for emplace operation
+    EdgeInHeap(
+        const segid_t& segid0_, const segid_t& segid1_, 
+        const aff_edge_t& aff_, const std::size_t& version_):
+        segid0(segid0_), segid1(segid1_), aff(aff_), version(version_){}
+
+    bool operator<(const EdgeInHeap& other) const {
+        return aff < other.aff;
+    }
+};
+// struct LessThanByAff{
+//     bool operator()(const EdgeInQueue& lhs, const EdgeInQueue& rhs) const {
+//         return lhs.aff < rhs.aff;
+//     }
+// };
+// using PriorityQueue = std::priority_queue<EdgeInQueue, std::vector<EdgeInQueue>, std::less<EdgeInQueue>>;
+
+
 class RegionEdge{
 public:
 // we use the same type for both value for type stability in the average division. 
@@ -170,7 +194,7 @@ inline void _accumulate_edge(const segid_t& segid0, const segid_t& segid1, const
 
 
 auto _build_priority_queue (const aff_edge_t& threshold) const {
-    PriorityQueue heap;
+    PriorityQueue<EdgeInHeap> heap;
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             // the connection is bidirectional, 
@@ -192,7 +216,7 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
 }
 
 auto _merge_segments(segid_t& segid0, segid_t& segid1, const RegionEdge& edge,
-            PriorityQueue& heap, 
+            PriorityQueue<EdgeInHeap>& heap, 
             const aff_edge_t& affinityThreshold){
     
     // always merge object with less neighbors to more neighbors

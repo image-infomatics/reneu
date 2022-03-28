@@ -4,6 +4,7 @@
 
 #include "reneu/type_aliase.hpp"
 #include <xtensor/xview.hpp>
+#include "reneu/utils/print.hpp"
 
 namespace reneu{
 
@@ -15,10 +16,10 @@ void remove_contact_1d(SEG1D seg1d){
         if(seg1d(x)>0 && seg1d(x-1)>0 && seg1d(x)!=seg1d(x-1)){
             seg1d(x) = 0;
             seg1d(x-1) = 0;
-            std::cout<<x<<", ";
+            // std::cout<<x<<", ";
         }
     }
-    std::cout<<std::endl;
+    // std::cout<<std::endl;
 }
 
 /**
@@ -26,7 +27,7 @@ void remove_contact_1d(SEG1D seg1d){
  * 
  * @param seg the input plain segmentation
  */
-void remove_contact(Segmentation&& seg){
+auto remove_contact(PySegmentation& seg){
     // z direction
     for(std::size_t y=0; y<seg.shape(1); y++){
         for(std::size_t x=0; x<seg.shape(2); x++){
@@ -47,14 +48,7 @@ void remove_contact(Segmentation&& seg){
             remove_contact_1d(xt::view(seg, z, y, xt::all()));
         }
     }
-
-}
-
-auto py_remove_contact(PySegmentation& pySeg){
-    remove_contact(pySeg);
-    // remove_contact(std::forward(pySeg));
-    // return std::forward(pySeg);
-    // return pySeg;
+    // reneu::utils::print_array(seg);
 }
 
 /* 
@@ -119,9 +113,9 @@ void fill_background_with_affinity_guidance2d(
     }
 }
 
-template<class SEG, class AFFS, class AFF_EDGE>
 void fill_background_with_affinity_guidance(
-        SEG& seg, const AFFS& affs, const AFF_EDGE& threshold){
+        PySegmentation& seg, const PyAffinityMap& affs, 
+        const aff_edge_t& threshold){
     for(size_t z = 0; z<seg.shape(0); z++){
         auto seg2d = xt::view(seg, z, xt::all(), xt::all());
         auto affx2d = xt::view(affs, 0, z, xt::all(), xt::all());
@@ -130,9 +124,5 @@ void fill_background_with_affinity_guidance(
     }
 }
 
-auto py_fill_background_with_affinity_guidance(PySegmentation& pySeg, const PyAffinityMap& pyAffs, const aff_edge_t& threshold){
-    fill_background_with_affinity_guidance(pySeg, pyAffs, threshold);
-    return pySeg;
-}
 
 } // namespace reneu

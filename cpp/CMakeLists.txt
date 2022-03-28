@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.12.0)
 set(RENEU_VERSION 0.2.0)
 project(libreneu VERSION ${RENEU_VERSION} LANGUAGES CXX)
 
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party/robin-map)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/robin-map/include)
+
 set(CMAKE_THREAD_LIBS_INIT "-lpthread")
 set(CMAKE_HAVE_THREADS_LIBRARY 1)
 set(CMAKE_USE_WIN32_THREADS_INIT 0)
@@ -18,7 +21,6 @@ set(xtensor_DIR ${CONDA_PREFIX}/lib/cmake/xtensor)
 set(xtensor-python_DIR ${CONDA_PREFIX}/lib/cmake/xtensor-python)
 set(xtl_DIR ${CONDA_PREFIX}/lib/cmake/xtl)
 
-add_subdirectory(third-party/robin-map)
 
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED OFF)  
@@ -35,14 +37,10 @@ if(Boost_NO_SYSTEM_PATH)
 endif(Boost_NO_SYSTEM_PATH)
 find_package(Boost REQUIRED serialization)
 
-set(RENEU_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR} 
-                        ${CONDA_PREFIX}/include ${BOOST_INCLUDEDIR})
-
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(PYBIND11_CPP_STANDARD  "-std=c++17")
+set(PYBIND11_CPP_STANDARD  "-std=c++20")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../python/reneu/lib)
@@ -52,13 +50,18 @@ find_package(BLAS REQUIRED)
 find_package(PythonInterp 3 REQUIRED)
 find_package(PythonLibs 3 REQUIRED)
 find_package(Numpy REQUIRED)
-#find_package(Python3 REQUIRED COMPONENTS Numpy)
+# find_package(Python3 REQUIRED COMPONENTS Numpy)
 find_package(pybind11 REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
 find_package(xtensor-blas REQUIRED)
-# find_package(tsl REQUIRED)
+#find_package(tsl_robin_map REQUIRED)
+# find_package(tsl-robin-map REQUIRED)
 # find_package(TBB REQUIRED)
+
+set(RENEU_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR} 
+                        ${CONDA_PREFIX}/include ${BOOST_INCLUDEDIR})
 
 pybind11_add_module(skeleton ${CMAKE_CURRENT_SOURCE_DIR}/skeleton.cpp)
 pybind11_add_module(segmentation ${CMAKE_CURRENT_SOURCE_DIR}/segmentation.cpp)
@@ -71,10 +74,8 @@ target_link_libraries(skeleton PRIVATE ${BLAS_LIBRARIES})
 
 message("boost libarries: ${Boost_LIBRARIES}")
 target_include_directories(segmentation PUBLIC ${NUMPY_INCLUDE_DIR} ${RENEU_INCLUDE_DIR})
-target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES} tsl::robin_map)
-
-# target_link_libraries(segmentation ${Boost_LIBRARIES} )
-# target_link_libraries(segmentation "${Boost_LIBRARIES}/libboost_serialization.dylib" )
+#target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES} tsl::robin_map)
+target_link_libraries(segmentation PRIVATE ${Boost_LIBRARIES})
 
 # options
 option(BUILD_TESTS "build test suite" OFF)

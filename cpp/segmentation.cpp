@@ -14,6 +14,8 @@
 #include "reneu/segmentation/region_graph.hpp"
 #include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/preprocess.hpp"
+#include "reneu/segmentation/seeded_watershed.hpp"
+
 
 namespace py = pybind11;
 using namespace reneu;
@@ -29,8 +31,9 @@ PYBIND11_MODULE(segmentation, m) {
     )pbdoc";
 
     m.def("watershed", &py_watershed);
-    m.def("fill_background_with_affinity_guidance", &py_fill_background_with_affinity_guidance);
-    m.def("remove_contact", &py_remove_contact);
+    m.def("fill_background_with_affinity_guidance", &fill_background_with_affinity_guidance, "fill the background with affinity guidance.");
+    m.def("remove_contact", &remove_contact, "remove object contacts.");
+    m.def("seeded_watershed", &seeded_watershed, "watershed with a segmentation as seed");
 
     py::class_<Dendrogram>(m, "Dendrogram")
         .def(py::init())
