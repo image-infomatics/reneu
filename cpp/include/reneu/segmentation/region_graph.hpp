@@ -362,8 +362,15 @@ auto as_array() const {
     return arr;
 }
 
-
-auto greedy_merge(const Segmentation& seg, const aff_edge_t& affinityThreshold=0., 
+/**
+ * @brief greedy mean affinity agglomeration 
+ * 
+ * @param seg 
+ * @param affinityThreshold 
+ * @param voxelNumThreshold 
+ * @return dendrogram 
+ */
+auto greedy_mean_affinity_agglomeration(const PySegmentation& seg, const aff_edge_t& affinityThreshold=0., 
         const size_t& voxelNumThreshold=std::numeric_limits<size_t>::max()){
 
     std::cout<< "build priority queue..." << std::endl;
@@ -405,12 +412,6 @@ auto greedy_merge(const Segmentation& seg, const aff_edge_t& affinityThreshold=0
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;
     return dend;
-}
-
-
-inline auto py_greedy_merge(const PySegmentation& pyseg, const aff_edge_t& affinityThreshold=0., 
-        const size_t& voxelNumThreshold=std::numeric_limits<size_t>::max()){
-    return greedy_merge(pyseg, affinityThreshold, voxelNumThreshold);
 }
 
 

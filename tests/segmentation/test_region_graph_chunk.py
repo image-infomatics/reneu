@@ -185,7 +185,7 @@ def evaluate_parameter_set(sz: tuple, chunk_size: tuple, threshold: float,
     rg = RegionGraph(affs, fragments)
     # print('region graph: ', rg)
     print('gready mean agglomeration...')
-    dend = rg.greedy_merge(fragments, threshold, voxel_num_threshold)
+    dend = rg.greedy_mean_affinity_agglomeration(fragments, threshold, voxel_num_threshold)
     seg = dend.materialize(fragments, threshold)
     if verbose:
         print('\nsegmentation: \n', seg)

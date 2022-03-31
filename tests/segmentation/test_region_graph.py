@@ -23,7 +23,7 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0
 
     print('region graph before segmentation:', rg)
     print('gready mean agglomeration...')
-    dend = rg.greedy_merge(seg, affinity_threshold, voxel_num_threshold)
+    dend = rg.greedy_mean_affinity_agglomeration(seg, affinity_threshold, voxel_num_threshold)
     seg = dend.materialize(seg, affinity_threshold)
     print('region graph after segmentation: ', rg)
 

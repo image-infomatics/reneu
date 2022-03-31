@@ -90,7 +90,7 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
     return heap;
 }
 
-auto _greedy_merge(const aff_edge_t& threshold){
+auto _greedy_mean_affinity_agglomeration(const aff_edge_t& threshold){
     std::cout<< "build heap/priority queue..." << std::endl;
     auto heap = _build_priority_queue(threshold);
 
@@ -340,7 +340,7 @@ std::string as_string() const {
  * @return reneu::Dendrogram
  */
 auto merge_in_leaf_chunk(const aff_edge_t& threshold){
-    return _greedy_merge(threshold);
+    return _greedy_mean_affinity_agglomeration(threshold);
 }
 
 /** 
@@ -396,7 +396,7 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
 
     // std::cout<< "region graph after merging: "<< as_string() << std::endl;
     // greedy iterative agglomeration
-    return _greedy_merge(threshold); 
+    return _greedy_mean_affinity_agglomeration(threshold); 
 }
 
 }; // class of RegionGraphChunk
