@@ -85,7 +85,7 @@ PYBIND11_MODULE(segmentation, m) {
         .def("greedy_mean_affinity_agglomeration", &RegionGraph::greedy_mean_affinity_agglomeration);
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
-        .def(py::init<const PyAffinityMap&, const PySegmentation&, const std::array<bool, 6>&>())
+        .def(py::init<const PyAffinityMap&, const PySegmentation&>())
         .def("__str__", &RegionGraphChunk::as_string)
         .def(py::pickle(
             [](const RegionGraphChunk& rg){ // __getstate__
