@@ -363,4 +363,5 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
 
 }; // class of RegionGraphChunk
 
+
 } // namespace of reneu
