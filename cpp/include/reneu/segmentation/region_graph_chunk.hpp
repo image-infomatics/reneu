@@ -195,9 +195,9 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
 RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg): 
         RegionGraph(), _segid2frozen({}){
     
-    assert(affs.shape(0)==seg.shape(0)-1);
-    assert(affs.shape(1)==seg.shape(1)-1);
-    assert(affs.shape(2)==seg.shape(2)-1);
+    assert(affs.shape(1)==seg.shape(0)-1);
+    assert(affs.shape(2)==seg.shape(1)-1);
+    assert(affs.shape(3)==seg.shape(2)-1);
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
     // start from 1 since we included the contacting neighbor chunk segmentation
