@@ -65,7 +65,7 @@ PYBIND11_MODULE(segmentation, m) {
 
     py::class_<RegionGraph>(m, "RegionGraph")
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
-        .def_property_readonly("array", &RegionGraph::as_array)
+        .def_property_readonly("arrays", &RegionGraph::to_arrays)
         .def("__repr__", &RegionGraph::as_string)
         .def(py::pickle(
             [](const RegionGraph& rg){ // __getstate__

@@ -342,24 +342,30 @@ std::string as_string() const {
     return stringStream.str(); 
 }
 
-auto as_array() const {
+auto to_arrays() const {
     const auto& edgeNum = get_edge_num();
 
-    xt::xtensor<aff_edge_t, 2>::shape_type sh = {edgeNum, 3};
-    auto arr = xt::empty<aff_edge_t>(sh);
+    xt::xtensor<segid_t, 2>::shape_type sh_arr = {edgeNum, 3};
+    auto arr = xt::empty<segid_t>(sh_arr);
+    
+    xt::xtensor<aff_edge_t, 1>::shape_type sh_sums = {edgeNum};
+    auto sums = xt::empty<aff_edge_t>(sh_sums);
+
 
     std::size_t n = 0;
     for(const auto& [segid0, neighbors0] : _segid2neighbor){
         for(const auto& [segid1, edgeIndex] : neighbors0){
             if(segid0 < segid1){
+                const auto& edge = _edgeList[edgeIndex];
                 arr(n, 0) = segid0;
                 arr(n, 1) = segid1;
-                arr(n, 2) = _edgeList[edgeIndex].get_mean();
+                arr(n, 2) = edge.count;
+                sums(n) = edge.sum;
                 n++;
             }
         }
     }
-    return arr;
+    return std::make_tuple(arr, sums);
 }
 
 /**

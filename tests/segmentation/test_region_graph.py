@@ -19,7 +19,7 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0
     print('construct region graph...')
     rg = RegionGraph(affs, seg)
 
-    print('region graph as array: \n', rg.array)
+    print('region graph as array: \n', rg.arrays)
 
     print('region graph before segmentation:', rg)
     print('gready mean agglomeration...')
