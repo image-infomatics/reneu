@@ -21,3 +21,4 @@ pytest tests/segmentation/test_dendrogram.py -s
 pytest tests/segmentation/test_region_graph.py -s 
 #pytest tests/segmentation/test_region_graph_chunk.py -s --pdb
 
+rm core.*

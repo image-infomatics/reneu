@@ -1,3 +1,5 @@
+import numpy as np
+
 import pickle
 from reneu.lib.segmentation import RegionGraph 
 from reneu.lib.segmentation import watershed, fill_background_with_affinity_guidance 
@@ -8,6 +10,19 @@ from reneu.lib.segmentation import watershed, fill_background_with_affinity_guid
 import numpy as np
 
 np.random.seed(0)
+
+def test_arrays():
+    arr = np.random.randint(0, 8, size=(4,3), dtype=np.uint64)
+    sums = np.random.rand(4)
+    sums = sums.astype(np.float32)
+    rg = RegionGraph()
+    rg.merge_arrays(arr, sums)
+    arr2, sums2 = rg.arrays
+    
+    # the order was not preserved
+    # this assertion will not work
+    # np.testing.assert_equal(arr2, arr)
+    # np.testing.assert_equal(sums, sums2)
 
 
 def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0., 

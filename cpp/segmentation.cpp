@@ -64,8 +64,10 @@ PYBIND11_MODULE(segmentation, m) {
         .def("materialize", &Dendrogram::py_materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")
+        .def(py::init())
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
         .def_property_readonly("arrays", &RegionGraph::to_arrays)
+        .def("merge_arrays", &RegionGraph::merge_arrays)
         .def("__repr__", &RegionGraph::as_string)
         .def(py::pickle(
             [](const RegionGraph& rg){ // __getstate__

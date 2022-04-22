@@ -81,17 +81,18 @@ friend std::ostream& operator<<(std::ostream& os, const RegionEdge& re);
 
 RegionEdge(): count(0), sum(0), segid0(0), segid1(0) {}
 
-RegionEdge(const segid_t& _segid0, const segid_t& _segid1, const aff_edge_t& aff): 
-            count(1), sum(aff), segid0(_segid0), segid1(_segid1), version(1){}
+RegionEdge(const segid_t& _segid0, const segid_t& _segid1, 
+                const aff_edge_t& _sum, aff_edge_t _count = 1.): 
+            count(_count), sum(_sum), segid0(_segid0), segid1(_segid1), version(1){}
 
 
 inline aff_edge_t get_mean() const {
     return sum / count;
 }
 
-inline void accumulate(const aff_edge_t& aff){
-    count++;
-    sum += aff;
+inline void accumulate(const aff_edge_t& newEdgeSum, std::size_t newEdgeNum = 1){
+    count += newEdgeNum;
+    sum += newEdgeSum;
 }
 
 inline void absorb(RegionEdge& re2){
@@ -175,15 +176,15 @@ inline bool _has_connection (const segid_t& sid0, const segid_t& sid1) const {
     return (_segid2neighbor.count(sid0)) && (_segid2neighbor.at(sid0).count(sid1));
 }
 
-inline void _accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& aff){
+inline void _accumulate_edge(const segid_t& segid0, const segid_t& segid1, const aff_edge_t& newEdgeSum, aff_edge_t newEdgeNum= 1){
     // we assume that segid0 is greater than 0 !
     if( (segid1>0) && (segid0 != segid1)){
         if(_has_connection(segid0, segid1)){
             const auto& edgeIndex = _segid2neighbor.at(segid0).at(segid1);
-            _edgeList[edgeIndex].accumulate(aff);
+            _edgeList[edgeIndex].accumulate(newEdgeSum, newEdgeNum);
         } else {
             // create a new edge
-            _edgeList.emplace_back(segid0, segid1, aff);
+            _edgeList.emplace_back(segid0, segid1, newEdgeSum, newEdgeNum);
             const size_t& edgeIndex = _edgeList.size() - 1;
             _segid2neighbor[segid0][segid1] = edgeIndex; 
             _segid2neighbor[segid1][segid0] = edgeIndex;
@@ -366,6 +367,13 @@ auto to_arrays() const {
         }
     }
     return std::make_tuple(arr, sums);
+}
+
+auto merge_arrays(const xt::pytensor<segid_t, 2>& arr, 
+        const xt::pytensor<aff_edge_t, 1>& sums){
+    for(std::size_t i=0; i<sums.shape(0); i++){
+        _accumulate_edge(arr(i, 0), arr(i, 1), sums(i), aff_edge_t(arr(i, 2)));
+    }
 }
 
 /**
