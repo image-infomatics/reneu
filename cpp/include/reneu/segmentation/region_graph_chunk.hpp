@@ -90,7 +90,7 @@ auto _build_priority_queue (const aff_edge_t& threshold) const {
     return heap;
 }
 
-auto _greedy_merge(const aff_edge_t& threshold){
+auto _greedy_mean_affinity_agglomeration(const aff_edge_t& threshold){
     std::cout<< "build heap/priority queue..." << std::endl;
     auto heap = _build_priority_queue(threshold);
 
@@ -190,33 +190,31 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
  * @brief Construct a new Region Graph Chunk object
  * 
  * @param affs affinity map. the starting offset should be (1,1,1) compared with segmentation
- * @param seg segmentation. The size should be larger than affinity map by (1,1,1).
- * @param volumeBoundaryFlags 
+ * @param seg segmentation. The size should be larger than affinity map by (1,1,1). the expanded part is in the negative directions.
  */
-RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::array<bool, 6> &volumeBoundaryFlags): 
+RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg): 
         RegionGraph(), _segid2frozen({}){
     
-    std::array<std::size_t, 3> start;
-    for(std::size_t i=0; i<3; i++){
-        start[i] = !volumeBoundaryFlags[i];
-    }
-    
+    assert(affs.shape(1)==seg.shape(0)-1);
+    assert(affs.shape(2)==seg.shape(1)-1);
+    assert(affs.shape(3)==seg.shape(2)-1);
+
     std::cout<< "accumulate the affinity edges..." << std::endl;
     // start from 1 since we included the contacting neighbor chunk segmentation
-    for(std::size_t z=start[0]; z<seg.shape(0); z++){
-        for(std::size_t y=start[1]; y<seg.shape(1); y++){
-            for(std::size_t x=start[2]; x<seg.shape(2); x++){
+    for(std::size_t z=1; z<seg.shape(0); z++){
+        for(std::size_t y=1; y<seg.shape(1); y++){
+            for(std::size_t x=1; x<seg.shape(2); x++){
                 const auto& segid = seg(z,y,x);
                 // skip background voxels
                 if(segid>0){ 
-                    if (z>start[0])
-                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z-start[0],y-start[1],x-start[2]));
+                    if (z>1)
+                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z,y,x));
                     
-                    if (y>start[1])
-                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z-start[0],y-start[1],x-start[2]));
+                    if (y>1)
+                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y,x));
                     
-                    if (x>start[2])
-                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z-start[0],y-start[1],x-start[2]));
+                    if (x>1)
+                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x));
                 }
             }
         }
@@ -224,99 +222,63 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg, const std::ar
 
     std::cout<< "deal with boundary faces..." << std::endl;
     // negative z 
-    if(!volumeBoundaryFlags[0]){
-        // this face is not a volume boundary
-        // it has a contacting chunk face
-        // we have already included the contacting face here
-        // freeze both contacting face
-        assert(affs.shape(1) == seg.shape(0) - 1);
-        const auto& contactingFaces = xt::view(seg, 
-            xt::range(0,2), xt::range(start[1], _), xt::range(start[2], _));
-        const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        for(const auto& segid: contactingFaceIDs){
-            if(segid) _segid2frozen[segid] |= NEG_Z; 
-        }
-        // accumulate edges
-        for(std::size_t y=start[1]; y<seg.shape(1); y++){
-            for(std::size_t x=start[2]; x<seg.shape(2); x++){
-                const auto& segid = seg(1,y,x);
-                if(segid)
-                    // the three affinity channels are ordered as xyz!
-                    _accumulate_edge(segid, seg(0,y,x), affs(2, 0, y-start[1], x-start[2]));
-            }
+    // it has a contacting chunk face
+    // we have already included the contacting face here
+    // freeze both contacting face
+    assert(affs.shape(1) == seg.shape(0) - 1);
+    const auto& contactingFacesZ = xt::view(seg, 
+        xt::range(0,2), xt::range(1, _), xt::range(1, _));
+    const auto& contactingFaceIDsZ = xt::unique(contactingFacesZ);
+    for(const auto& segid: contactingFaceIDsZ){
+        if(segid) _segid2frozen[segid] |= NEG_Z; 
+    }
+    // accumulate edges
+    for(std::size_t y=1; y<seg.shape(1); y++){
+        for(std::size_t x=1; x<seg.shape(2); x++){
+            const auto& segid = seg(1,y,x);
+            if(segid)
+                // the three affinity channels are ordered as xyz!
+                _accumulate_edge(segid, seg(0,y,x), affs(2, 0, y, x));
         }
     }
 
     // negative y
-    if(!volumeBoundaryFlags[1]){
-        assert(affs.shape(2) == seg.shape(1) - 1);
-        const auto& contactingFaces = xt::view(seg, 
-            xt::range(start[0], _), xt::range(0,2), xt::range(start[2], _));
-        const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        for(const auto& segid: contactingFaceIDs){
-            if(segid) _segid2frozen[segid] |= NEG_Y;
-        }
-        // accumulate edges
-        for(std::size_t z=start[0]; z<seg.shape(0); z++){
-            for(std::size_t x=start[2]; x<seg.shape(2); x++){
-                const auto& segid = seg(z,1,x);
-                if(segid)
-                    // the three affinity channels are ordered as xyz!
-                    _accumulate_edge(segid, seg(z, 0, x), affs(1, z-start[0], 0, x-start[2]));
-            }
+    assert(affs.shape(2) == seg.shape(1) - 1);
+    const auto& contactingFacesY = xt::view(seg, 
+        xt::range(1, _), xt::range(0,2), xt::range(1, _));
+    const auto& contactingFaceIDsY = xt::unique(contactingFacesY);
+    for(const auto& segid: contactingFaceIDsY){
+        if(segid) _segid2frozen[segid] |= NEG_Y;
+    }
+    // accumulate edges
+    for(std::size_t z=1; z<seg.shape(0); z++){
+        for(std::size_t x=1; x<seg.shape(2); x++){
+            const auto& segid = seg(z,1,x);
+            if(segid)
+                // the three affinity channels are ordered as xyz!
+                _accumulate_edge(segid, seg(z, 0, x), affs(1, z, 0, x));
         }
     }
 
     // negative x 
-    if(!volumeBoundaryFlags[2]){
-        assert(affs.shape(3) == seg.shape(2) - 1);
-        const auto& contactingFaces = xt::view(seg, 
-            xt::range(start[0], _), xt::range(start[1], _), xt::range(0,2));
-        const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        for(const auto& segid: contactingFaceIDs){
-            if(segid) _segid2frozen[segid] = NEG_X; 
-        }
- 
-        // accumulate edges
-        for(std::size_t z=start[0]; z<seg.shape(0); z++){
-            for(std::size_t y=start[1]; y<seg.shape(1); y++){
-                const auto& segid = seg(z, y, 1);
-                if(segid)
-                    // the three affinity channels are ordered as xyz!
-                    _accumulate_edge(segid, seg(z, y, 0), affs(0, z-start[0], y-start[1], 0));
-            }
-        }
-    } else {
-        assert(affs.shape(3) == seg.shape(2));
+    assert(affs.shape(3) == seg.shape(2) - 1);
+    const auto& contactingFacesX = xt::view(seg, 
+        xt::range(1, _), xt::range(1, _), xt::range(0,2));
+    const auto& contactingFaceIDsX = xt::unique(contactingFacesX);
+    for(const auto& segid: contactingFaceIDsX){
+        if(segid) _segid2frozen[segid] = NEG_X; 
     }
 
-    // positive Z
-    if(!volumeBoundaryFlags[3]){
-        const auto& contactingFaces = xt::view(seg, 
-            seg.shape(0)-1, xt::range(start[1], _), xt::range(start[2],_));
-        const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        for(const auto& segid: contactingFaceIDs){
-            if(segid) _segid2frozen[segid] |= POS_Z;
+    // accumulate edges
+    for(std::size_t z=1; z<seg.shape(0); z++){
+        for(std::size_t y=1; y<seg.shape(1); y++){
+            const auto& segid = seg(z, y, 1);
+            if(segid)
+                // the three affinity channels are ordered as xyz!
+                _accumulate_edge(segid, seg(z, y, 0), affs(0, z, y, 0));
         }
     }
-    // positive y
-    if(!volumeBoundaryFlags[4]){
-        const auto& contactingFaces = xt::view(seg, 
-            xt::range(start[0], _), seg.shape(1)-1, xt::range(start[2],_));
-        const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        for(const auto& segid: contactingFaceIDs){
-            if(segid) _segid2frozen[segid] |= POS_Y;
-        }
-    }
-    // positive x
-    if(!volumeBoundaryFlags[5]){
-        const auto& contactingFaces = xt::view(seg, 
-            xt::range(start[0], _), xt::range(start[1],_), seg.shape(2)-1);
-        const auto& contactingFaceIDs = xt::unique(contactingFaces);
-        for(const auto& segid: contactingFaceIDs){
-            if(segid) _segid2frozen[segid] |= POS_X;
-        }
-    }
+
 }
 
 std::string as_string() const {
@@ -340,7 +302,7 @@ std::string as_string() const {
  * @return reneu::Dendrogram
  */
 auto merge_in_leaf_chunk(const aff_edge_t& threshold){
-    return _greedy_merge(threshold);
+    return _greedy_mean_affinity_agglomeration(threshold);
 }
 
 /** 
@@ -396,9 +358,10 @@ auto merge_upper_chunk(const RegionGraphChunk& upperRegionGraphChunk,
 
     // std::cout<< "region graph after merging: "<< as_string() << std::endl;
     // greedy iterative agglomeration
-    return _greedy_merge(threshold); 
+    return _greedy_mean_affinity_agglomeration(threshold); 
 }
 
 }; // class of RegionGraphChunk
+
 
 } // namespace of reneu

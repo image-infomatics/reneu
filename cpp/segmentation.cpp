@@ -64,8 +64,10 @@ PYBIND11_MODULE(segmentation, m) {
         .def("materialize", &Dendrogram::py_materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")
+        .def(py::init())
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
-        .def_property_readonly("array", &RegionGraph::as_array)
+        .def_property_readonly("arrays", &RegionGraph::to_arrays)
+        .def("merge_arrays", &RegionGraph::merge_arrays)
         .def("__repr__", &RegionGraph::as_string)
         .def(py::pickle(
             [](const RegionGraph& rg){ // __getstate__
@@ -82,10 +84,10 @@ PYBIND11_MODULE(segmentation, m) {
                 return rg;
             }
         ))
-        .def("greedy_merge", &RegionGraph::py_greedy_merge);
+        .def("greedy_mean_affinity_agglomeration", &RegionGraph::greedy_mean_affinity_agglomeration);
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
-        .def(py::init<const PyAffinityMap&, const PySegmentation&, const std::array<bool, 6>&>())
+        .def(py::init<const PyAffinityMap&, const PySegmentation&>())
         .def("__str__", &RegionGraphChunk::as_string)
         .def(py::pickle(
             [](const RegionGraphChunk& rg){ // __getstate__

@@ -1,3 +1,5 @@
+import numpy as np
+
 import pickle
 from reneu.lib.segmentation import RegionGraph 
 from reneu.lib.segmentation import watershed, fill_background_with_affinity_guidance 
@@ -9,6 +11,19 @@ import numpy as np
 
 np.random.seed(0)
 
+def test_arrays():
+    arr = np.random.randint(0, 8, size=(4,3), dtype=np.uint64)
+    sums = np.random.rand(4)
+    sums = sums.astype(np.float32)
+    rg = RegionGraph()
+    rg.merge_arrays(arr, sums)
+    arr2, sums2 = rg.arrays
+    
+    # the order was not preserved
+    # this assertion will not work
+    # np.testing.assert_equal(arr2, arr)
+    # np.testing.assert_equal(sums, sums2)
+
 
 def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0., 
         voxel_num_threshold: int=18446744073709551615):
@@ -19,11 +34,11 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0
     print('construct region graph...')
     rg = RegionGraph(affs, seg)
 
-    print('region graph as array: \n', rg.array)
+    print('region graph as array: \n', rg.arrays)
 
     print('region graph before segmentation:', rg)
     print('gready mean agglomeration...')
-    dend = rg.greedy_merge(seg, affinity_threshold, voxel_num_threshold)
+    dend = rg.greedy_mean_affinity_agglomeration(seg, affinity_threshold, voxel_num_threshold)
     seg = dend.materialize(seg, affinity_threshold)
     print('region graph after segmentation: ', rg)
 
