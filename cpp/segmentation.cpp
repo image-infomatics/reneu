@@ -34,6 +34,7 @@ PYBIND11_MODULE(segmentation, m) {
     m.def("fill_background_with_affinity_guidance", &fill_background_with_affinity_guidance, "fill the background with affinity guidance.");
     m.def("remove_contact", &remove_contact, "remove object contacts.");
     m.def("seeded_watershed", &seeded_watershed, "watershed with a segmentation as seed");
+    m.def("fragment_id_map", &fragment_id_map, "map the fragment id to agglomerated segmentation id");
 
     py::class_<Dendrogram>(m, "Dendrogram")
         .def(py::init())
