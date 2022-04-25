@@ -15,10 +15,10 @@ rm python/reneu/lib/segmentation*.so
 #python setup.py develop
 python setup.py build --debug
 
-pytest tests/segmentation/test_preprocess.py  
+#pytest tests/segmentation/test_preprocess.py  
 pytest tests/segmentation/test_disjoint_sets.py -s 
-pytest tests/segmentation/test_dendrogram.py -s 
-pytest tests/segmentation/test_region_graph.py -s 
+#pytest tests/segmentation/test_dendrogram.py -s 
+#pytest tests/segmentation/test_region_graph.py -s 
 #pytest tests/segmentation/test_region_graph_chunk.py -s --pdb
 
 rm core.*

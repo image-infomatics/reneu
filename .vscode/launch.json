@@ -2,12 +2,25 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "pytest",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": true,
+            "justMyCode": true,
+            "args":["${workspaceFolder}/tests/segmentation/test_disjoint_sets.py"],
+            "env": {
+                "CONDA_PREFIX": "/Users/jwu/opt/anaconda3/envs/reneu"
+            },
+        },
+        {
             "name": "Python launch",
             "type": "python",
             "request": "launch",
             "stopOnEntry": true,
-            "python": "$HOME/opt/anaconda3/envs/cf/bin/python",
-            "program": "-m pytest ./tests/test_disjoint_sets.py",
+            "python": "/Users/jwu/opt/anaconda3/envs/reneu/bin/python",
+            "program": "-m pytest tests/segmentation/test_disjoint_sets.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "env": {
@@ -15,15 +28,15 @@
             },
         },
         {
-            "name": "cpp",
-            "type": "cppdbg",
+            "name": "cpp part",
+            "type": "lldb-vscode",
             "request": "attach",
-            // "waitFor": true,
-            // "program": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
-            "pid": "${command:pickProcess}",
+            "waitFor": true,
+            "program": "/Users/jwu/opt/anaconda3/envs/cf/bin/python",
+            // "processId": "${command:pickProcess}",
             // "processId": 7758,
             "stopOnEntry": false,
-            // "targetArchitecture": "x86_64"
+            "targetArchitecture": "x86_64"
         },
     ]
 }

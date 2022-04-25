@@ -1,7 +1,7 @@
 from copy import deepcopy
 import numpy as np
 
-from reneu.lib.segmentation import DisjointSets, agglomerated_segmentation_to_disjoint_sets
+from reneu.lib.segmentation import DisjointSets, agglomerated_segmentation_to_merge_pairs
 
 
 def test_disjoint_sets():
@@ -59,16 +59,17 @@ def test_disjoint_sets():
 
 
 
-def test_agglomerated_segmentation_to_disjoint_sets():
+def test_agglomerated_segmentation_to_merge_pair():
     # frag = np.random.randint(5,5,5)
     frag = np.arange(27, dtype=np.uint64)
     frag = np.reshape(frag, (3,3,3))
     seg = deepcopy(frag)
     seg[1,1,1] = seg[1,1,2]
-    seg[2,1,1] = seg[1,1,1]
+    seg[2,2,1] = seg[1,2,1]
     # frag = frag.astype(np.uint64)
     # seg = seg.astype(np.uint64)
 
-    dsets = agglomerated_segmentation_to_disjoint_sets(frag, seg)
-    breakpoint()
-    assert dsets.array.shape[0] == 2 
+    merge_pairs = agglomerated_segmentation_to_merge_pairs(frag, seg)
+    print(f'merge pairs: {merge_pairs}')
+    # breakpoint()
+    assert merge_pairs.shape[0] == 2 
