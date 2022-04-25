@@ -246,7 +246,8 @@ auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
     auto dsets = to_disjoint_sets(threshold);
     
-    auto seg2 = dsets.relabel(std::move(seg));
+    std::cout<<"relabel the segmentation..."<<std::endl;
+    const auto& seg2 = dsets.relabel(std::move(seg));
     return seg2;
 }
 

@@ -11,6 +11,7 @@
 #include "reneu/type_aliase.hpp" 
 #include "reneu/segmentation/watershed.hpp"
 #include "reneu/segmentation/dendrogram.hpp"
+#include "reneu/segmentation/disjoint_sets.hpp"
 #include "reneu/segmentation/region_graph.hpp"
 #include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/preprocess.hpp"
@@ -34,7 +35,7 @@ PYBIND11_MODULE(segmentation, m) {
     m.def("fill_background_with_affinity_guidance", &fill_background_with_affinity_guidance, "fill the background with affinity guidance.");
     m.def("remove_contact", &remove_contact, "remove object contacts.");
     m.def("seeded_watershed", &seeded_watershed, "watershed with a segmentation as seed");
-    m.def("fragment_id_map", &fragment_id_map, "map the fragment id to agglomerated segmentation id");
+    m.def("agglomerated_segmentation_to_disjoint_sets", &agglomerated_segmentation_to_disjoint_sets, "based on the fragments/supervoxels and agglomerated segmentation, get the corresponding disjoint sets.");
 
     py::class_<Dendrogram>(m, "Dendrogram")
         .def(py::init())
@@ -130,7 +131,7 @@ PYBIND11_MODULE(segmentation, m) {
         //     }
         // ))
         .def("merge_array", &DisjointSets::py_merge_array)
-        .def("to_array", &DisjointSets::to_array)
+        .def_property_readonly("array", &DisjointSets::to_array)
         .def("relabel", &DisjointSets::py_relabel);
 
 #ifdef VERSION_INFO
