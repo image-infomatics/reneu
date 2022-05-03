@@ -59,8 +59,6 @@ DisjointSets(const Segmentation& seg):
     }
 }
 
-
-
 // friend class boost::serialization::access;
 // template<class Archive>
 // void serialize(Archive ar, const unsigned int version){
@@ -199,7 +197,7 @@ auto agglomerated_segmentation_to_merge_pairs(const PySegmentation& frag, const 
                 if(z>0){
                     const auto& obj1 = frag(z-1, y, x);
                     if(obj0!=obj1 && seg(z,y,x)==seg(z-1,y,x) && obj0>0 && obj1>0){
-                        std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
+                        // std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
                         // dsets.make_and_union_set(obj0, obj1);
                         pairs.emplace_back(obj0, obj1);
                     }
@@ -208,7 +206,7 @@ auto agglomerated_segmentation_to_merge_pairs(const PySegmentation& frag, const 
                 if(y>0){
                     const auto& obj1 = frag(z,y-1,x);
                     if(obj0!=obj1 && seg(z,y,x)==seg(z,y-1,x) && obj0>0 && obj1>0){
-                        std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
+                        // std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
                         // dsets.make_and_union_set(obj0, obj1);
                         pairs.emplace_back(obj0, obj1);
                     }
@@ -217,7 +215,7 @@ auto agglomerated_segmentation_to_merge_pairs(const PySegmentation& frag, const 
                 if(x>0){
                     const auto& obj1 = frag(z, y, x-1);
                     if(obj0!=obj1 && seg(z,y,x)==seg(z,y,x-1) && obj0>0 && obj1>0){
-                        std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
+                        // std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
                         // dsets.make_and_union_set(obj0, obj1);
                         pairs.emplace_back(obj0, obj1);
                     }

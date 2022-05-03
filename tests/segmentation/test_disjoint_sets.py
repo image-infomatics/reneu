@@ -1,4 +1,6 @@
+import pickle
 from copy import deepcopy
+
 import numpy as np
 
 from reneu.lib.segmentation import DisjointSets, agglomerated_segmentation_to_merge_pairs
@@ -14,6 +16,12 @@ def test_disjoint_sets():
     dsets.union_set(1, 2)
     root = dsets.find_set(1)
     assert root == 2
+
+    # this is not working yet
+    # print('test serialization using pickle')
+    # data = pickle.dumps(dsets)
+    # dsets2 = pickle.loads(data)
+    # np.testing.assert_array_equal(dsets.array, dsets2.array)
 
     # dsets.make_set(3)
     # dsets.union_set(2, 3)
@@ -70,6 +78,6 @@ def test_agglomerated_segmentation_to_merge_pair():
     # seg = seg.astype(np.uint64)
 
     merge_pairs = agglomerated_segmentation_to_merge_pairs(frag, seg)
-    print(f'merge pairs: {merge_pairs}')
+    # print(f'merge pairs: {merge_pairs}')
     # breakpoint()
     assert merge_pairs.shape[0] == 2 
