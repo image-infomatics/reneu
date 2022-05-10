@@ -16,6 +16,7 @@
 #include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/preprocess.hpp"
 #include "reneu/segmentation/seeded_watershed.hpp"
+#include "reneu/segmentation/utils.hpp"
 
 
 namespace py = pybind11;
@@ -31,6 +32,7 @@ PYBIND11_MODULE(segmentation, m) {
            :toctree: _generate
     )pbdoc";
 
+    m.def("get_label_map", &get_label_map);
     m.def("watershed", &py_watershed);
     m.def("fill_background_with_affinity_guidance", &fill_background_with_affinity_guidance, "fill the background with affinity guidance.");
     m.def("remove_contact", &remove_contact, "remove object contacts.");
