@@ -29,7 +29,7 @@ jobs:
       with:
         python-versions: 'cp39-cp39m'
         build-requirements: 'cython numpy'
-        system-packages: 'cmake lrzip-devel zlib-devel libboost-dev'
+        system-packages: 'cmake libboost-dev'
         package-path: ''
         pip-wheel-args: '-w ./dist --no-deps'
     
