@@ -9,13 +9,15 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    arch: x64
+    cmake: 3.20
     steps:
     
     - uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.9
     
     - name: Install dependencies
       run: |
@@ -25,22 +27,22 @@ jobs:
         pip install -r tests/requirements.txt
 
     - name: Python wheels manylinux build
-      uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
+      uses: RalfG/python-wheels-manylinux-build@v0.4.2
       with:
-        python-versions: 'cp37-cp37m'
+        python-versions: 'cp39-cp39m'
         build-requirements: 'cython numpy'
         system-packages: 'lrzip-devel zlib-devel libboost-dev'
         package-path: ''
-        pip-wheel-args: '--no-deps'
+        pip-wheel-args: '-w ./dist --no-deps'
     
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest
+        pytest ./tests
 
     - name: Publish wheels to PyPI
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        twine upload wheelhouse/*-manylinux*.whl
+        twine upload ./dist/*-manylinux*.whl
