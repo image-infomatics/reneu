@@ -24,8 +24,7 @@ def test_disjoint_sets():
     dsets.make_set(2)
     assert dsets.array.shape[0]==0
     dsets.union_set(1, 2)
-    root = dsets.find_set(1)
-    assert root == 2
+    assert dsets.find_set(1) == 2
 
     
     # this is not working yet
