@@ -7,7 +7,24 @@ from chunkflow.chunk import Chunk
 
 from fastremap import unique
 
-from reneu.lib.segmentation import seeded_watershed
+from reneu.lib.segmentation import seeded_watershed, RegionGraph
+
+
+def agglomerate(affs: np.ndarray, seg: np.ndarray, agglomeration_threshold: float = 0., 
+        voxel_num_threshold: int=18446744073709551615):
+    """
+    Parameters:
+    voxel_num_threshold [int]: the default value is the maximum limit of C++ size_t
+    """
+    print('construct region graph...')
+    rg = RegionGraph(affs, seg)
+
+    print('gready mean agglomeration...')
+    dend = rg.greedy_mean_affinity_agglomeration(seg, agglomeration_threshold, voxel_num_threshold)
+    seg = dend.materialize(seg, agglomeration_threshold)
+
+    return seg
+
 
 
 def seeded_watershed_2d(seg: np.ndarray, affs: np.ndarray, threshold: float):

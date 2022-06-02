@@ -421,7 +421,6 @@ auto greedy_mean_affinity_agglomeration(const PySegmentation& seg, const aff_edg
         mergeNum++;
         dend.push_edge(segid0, segid1, edge.get_mean());
         _merge_segments(segid0, segid1, edge, heap, affinityThreshold);
-        
     }
     
     std::cout<< "merged "<< mergeNum << " times." << std::endl;

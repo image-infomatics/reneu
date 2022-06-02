@@ -16,6 +16,14 @@ def test_disjoint_set_root():
     for idx in range(N):
         assert dsets.find_set(idx) == 1
 
+    for idx in range(N+1, 3*N):
+        dsets.make_and_union_set(idx, idx+1)
+
+    assert dsets.find_set(N+1) == N+2
+
+    dsets.union_set(N, N+4)
+    assert dsets.find_set(1) == 1
+
 def test_disjoint_sets():
     print('test make and union set...')
     dsets = DisjointSets()
