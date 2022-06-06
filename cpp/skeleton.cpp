@@ -3,7 +3,7 @@
 #define FORCE_IMPORT_ARRAY
 
 #include "reneu/utils/math.hpp"
-#include "reneu/type_aliase.hpp" 
+#include "reneu/types.hpp" 
 #include "reneu/skeleton/skeleton.hpp"
 #include "reneu/skeleton/nblast.hpp"
 

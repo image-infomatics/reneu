@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <xtensor/xreducer.hpp>
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 #include <xtensor/xbuilder.hpp>
 
 

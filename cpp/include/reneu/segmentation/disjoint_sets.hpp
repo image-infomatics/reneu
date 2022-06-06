@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stack>
 #include <boost/pending/disjoint_sets.hpp>
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 #include "./utils.hpp"
 
 // #include <boost/serialization/serialization.hpp>

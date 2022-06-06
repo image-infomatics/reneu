@@ -4,13 +4,13 @@
 #include <iostream>
 #include <queue>
 #include <variant>
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 #include "xtensor/xview.hpp"
 #include "xtensor/xnorm.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor/xindex_view.hpp"
 
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 #include "reneu/utils/bounding_box.hpp"
 
 namespace reneu{

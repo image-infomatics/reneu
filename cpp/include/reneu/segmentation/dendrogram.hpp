@@ -12,7 +12,7 @@
 
 #include <xtensor/xtensor.hpp>
 #include "disjoint_sets.hpp"
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 
 
 namespace reneu{

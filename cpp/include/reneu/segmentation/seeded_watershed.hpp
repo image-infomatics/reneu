@@ -1,8 +1,8 @@
 #pragma once
 
 #include <queue>
-// #include "reneu/type_aliase.hpp"
-#include "../type_aliase.hpp"
+// #include "reneu/types.hpp"
+#include "../types.hpp"
 // #include "reneu/utils/priority_queue.hpp"
 
 

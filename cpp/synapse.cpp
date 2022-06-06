@@ -3,7 +3,7 @@
 #define FORCE_IMPORT_ARRAY
 
 
-#include "reneu/type_aliase.hpp" 
+#include "reneu/types.hpp" 
 #include "reneu/synapse/detect_tbars.hpp"
 
 

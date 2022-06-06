@@ -3,7 +3,7 @@
 #include <map>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/map.hpp>
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 #include "region_graph.hpp"
 #include "utils.hpp"
 

@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <tuple>
 
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 
 #include <xtensor/xbuilder.hpp>
 #include <xtensor/xfixed.hpp>
@@ -31,10 +31,10 @@ template <> struct watershed_traits<uint64_t>
 
 using traits = watershed_traits<segid_t>;
 
-// direction mask
-const std::array<segid_t, 6> dirmask  = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20};
-// inverse direction mask
-const std::array<segid_t, 6> idirmask = {0x08, 0x10, 0x20, 0x01, 0x02, 0x04};
+// direction mask, +z, +y, +x, -z, -y, -x
+const std::array<segid_t, 6> dirmask  = {0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
+// inverse direction mask, -z, -y, -x, +z, +y, +x
+const std::array<segid_t, 6> idirmask = {0x04, 0x02, 0x01, 0x20, 0x10, 0x08};
 
 auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     // initialize the steepest ascent graph
@@ -54,20 +54,20 @@ auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
                 auto negx = (x==0)      ? low : affs(0, z,y,x);
                 auto negy = (y==0)      ? low : affs(1, z,y,x);
                 auto negz = (z==0)      ? low : affs(2, z,y,x);
-                auto posx = (x>=sx-1)   ? low : affs(0, z, y, x+1);
-                auto posy = (y>=sy-1)   ? low : affs(1, z, y+1, x);
-                auto posz = (z>=sz-1)   ? low : affs(2, z+1, y, x);
+                auto posx = (x==sx-1)   ? low : affs(0, z, y, x+1);
+                auto posy = (y==sy-1)   ? low : affs(1, z, y+1, x);
+                auto posz = (z==sz-1)   ? low : affs(2, z+1, y, x);
 
                 auto m = std::max({negz, negy, negx, posz, posy, posx});
 
                 // keep edges with maximum affinity
                 if(m > low){ // no edges at all if m<=low
-                    if(m==negx || negx >= high) sag(z,y,x) |= 0x01;
-                    if(m==negy || negy >= high) sag(z,y,x) |= 0x02;
-                    if(m==negz || negz >= high) sag(z,y,x) |= 0x04;
-                    if(m==posx || posx >= high) sag(z,y,x) |= 0x08;
-                    if(m==posy || posy >= high) sag(z,y,x) |= 0x10;
                     if(m==posz || posz >= high) sag(z,y,x) |= 0x20;
+                    if(m==posy || posy >= high) sag(z,y,x) |= 0x10;
+                    if(m==posx || posx >= high) sag(z,y,x) |= 0x08;
+                    if(m==negz || negz >= high) sag(z,y,x) |= 0x04;
+                    if(m==negy || negy >= high) sag(z,y,x) |= 0x02;
+                    if(m==negx || negx >= high) sag(z,y,x) |= 0x01;
                 }
             }
         }
@@ -81,8 +81,8 @@ auto divide_plateaus(S& sag){
     std::ptrdiff_t sy = sag.shape(1);
     std::ptrdiff_t sx = sag.shape(2);
     
-    // direction
-    const std::array<std::ptrdiff_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
+    // direction, +z,+y,+x,-z,-y,-x
+    const std::array<std::ptrdiff_t, 6> dir = {sx*sy, sx, 1, -sx*sy, -sx, -1};
 
     // get plato corners 
     // queue all vertices for which a purely outgoing edge exists
@@ -93,13 +93,13 @@ auto divide_plateaus(S& sag){
     for(std::ptrdiff_t idx = 0; idx < sag.size(); idx++){
         for(std::ptrdiff_t d=0; d<6; d++){
             if((sag[idx] & dirmask[d] ) && 
-                        idx+dir[d]>=0 && 
-                        idx+dir[d]<sag.size() && 
-                        (!(sag[idx+dir[d]] & idirmask[d]))){
-                    // outgoing edge exists, no incoming edge
-                    sag[idx] |= traits::sag_visited;
-                    bfs.push_back(idx);
-                    break;
+                    idx+dir[d]>=0 && 
+                    idx+dir[d]<sag.size() && 
+                    (!(sag[idx+dir[d]] & idirmask[d]))){
+                // outgoing edge exists, no incoming edge
+                sag[idx] |= traits::sag_visited;
+                bfs.push_back(idx);
+                break;
             }
         }
     }
@@ -110,7 +110,7 @@ auto divide_plateaus(S& sag){
     while(bfs_index < bfs.size()){
         std::ptrdiff_t idx = bfs[bfs_index];
         segid_t to_set = 0;
-        for(std::ptrdiff_t d=0; d<6; d++){
+        for(std::size_t d=0; d<6; d++){
             if( ( sag[idx] & dirmask[d] ) && 
                         idx+dir[d]>=0 && 
                         idx+dir[d]<sag.size()){

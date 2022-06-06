@@ -15,7 +15,7 @@
 #include "xtensor/xadapt.hpp"
 
 #include "reneu/utils/string.hpp"
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 
 
 using namespace reneu::utils;

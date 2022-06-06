@@ -1,7 +1,7 @@
 #pragma once
 
 #include <queue>
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 
 
 namespace reneu{

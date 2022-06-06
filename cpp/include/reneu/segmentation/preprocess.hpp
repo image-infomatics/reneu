@@ -2,7 +2,7 @@
 
 #include <deque>
 
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 #include <xtensor/xview.hpp>
 #include "reneu/utils/print.hpp"
 

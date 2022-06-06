@@ -7,7 +7,7 @@
 #include "xtensor/xmath.hpp"
 #include "xtensor/xsort.hpp"
 
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 
 
 namespace reneu{

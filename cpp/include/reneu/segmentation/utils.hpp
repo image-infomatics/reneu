@@ -3,7 +3,7 @@
 #include <set>
 #include <tsl/robin_map.h>
 
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 
 namespace reneu{
 

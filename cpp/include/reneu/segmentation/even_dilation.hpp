@@ -3,7 +3,7 @@
 #include <iostream>
 #include <queue>
 
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 
 #include <xtensor/xbuilder.hpp>
 #include <xtensor/xfixed.hpp>
@@ -92,6 +92,17 @@ auto even_dilation_1d(xt::xexpression<E>& seg1d_){
             }
             start = new_start;
         }
+    }
+}
+
+template<class E>
+auto even_dilation_2d_v1(xt::xexpression<E>& seg2d_){
+    E& seg2d = seg2d_.derived_cast();
+
+    for(std::size_t y=0; y<seg2d.shape(0); y++){
+        // std::cout<<"y: "<<y<<std::endl;
+        auto row = xt::view(seg2d, y, xt::all());
+        even_dilation_1d(row);
     }
 }
 

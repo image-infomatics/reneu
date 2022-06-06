@@ -18,7 +18,7 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/unordered_map.hpp>
 
-#include "../type_aliase.hpp"
+#include "../types.hpp"
 #include "utils.hpp"
 #include "disjoint_sets.hpp"
 #include "dendrogram.hpp"

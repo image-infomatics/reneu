@@ -8,7 +8,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-#include "reneu/type_aliase.hpp" 
+#include "reneu/types.hpp" 
 #include "reneu/segmentation/watershed.hpp"
 #include "reneu/segmentation/dendrogram.hpp"
 #include "reneu/segmentation/disjoint_sets.hpp"

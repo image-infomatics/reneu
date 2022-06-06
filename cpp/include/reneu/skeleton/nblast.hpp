@@ -12,7 +12,7 @@
 #include "xtensor/xindex_view.hpp"
 #include "xtensor/xcsv.hpp"
 
-#include "reneu/type_aliase.hpp"
+#include "reneu/types.hpp"
 #include "reneu/utils/math.hpp"
 #include "reneu/utils/kd_tree.hpp"
 
