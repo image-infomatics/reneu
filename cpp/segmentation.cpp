@@ -16,7 +16,6 @@
 #include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/preprocess.hpp"
 #include "reneu/segmentation/seeded_watershed.hpp"
-#include "reneu/segmentation/even_dilation.hpp"
 #include "reneu/segmentation/utils.hpp"
 
 
@@ -45,8 +44,6 @@ PYBIND11_MODULE(segmentation, m) {
     
     m.def("agglomerated_segmentation_to_merge_pairs", &agglomerated_segmentation_to_merge_pairs, "based on the fragments/supervoxels and agglomerated segmentation, get the corresponding merged object pairs.");
     
-    m.def("even_dilation", &even_dilation, "evenly dilate all the objects in a segmentation to fill up all the background voxels.");
-
     py::class_<Dendrogram>(m, "Dendrogram")
         .def(py::init())
         .def(py::init<const aff_edge_t&>())

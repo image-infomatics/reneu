@@ -1,5 +1,5 @@
 #!/bin/bash
-
+rm core.*
 # 10.3.0 used to work to compile reneu
 #module load gcc/10.3.0
 
@@ -18,9 +18,7 @@ python setup.py build --debug
 #pytest tests/segmentation/test_preprocess.py  
 #pytest tests/segmentation/test_disjoint_sets.py -s 
 #pytest tests/segmentation/test_segmentation.py -s 
-pytest tests/segmentation/test_even_dilation.py -s --pdb 
 #pytest tests/segmentation/test_dendrogram.py -s 
 #pytest tests/segmentation/test_region_graph.py -s 
 #pytest tests/segmentation/test_region_graph_chunk.py -s --pdb
 
-rm core.*
