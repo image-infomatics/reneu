@@ -26,7 +26,9 @@ def test_arrays():
 
 
 def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0., 
-        voxel_num_threshold: int=18446744073709551615):
+        min_voxel_num_threshold: int=18446744073709551615,
+        max_voxel_num_threshold: int=18446744073709551615,
+        ):
     """
     Parameters:
     voxel_num_threshold [int]: the default value is the maximum limit of C++ size_t
@@ -38,7 +40,7 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0
 
     print('region graph before segmentation:', rg)
     print('gready mean agglomeration...')
-    dend = rg.greedy_mean_affinity_agglomeration(seg, affinity_threshold, voxel_num_threshold)
+    dend = rg.greedy_mean_affinity_agglomeration(seg, affinity_threshold, min_voxel_num_threshold, max_voxel_num_threshold)
     seg = dend.materialize(seg, affinity_threshold)
     print('region graph after segmentation: ', rg)
 
@@ -85,7 +87,7 @@ def random_3d_affinity_map(sz: tuple):
 def test_watershed_and_fill_background():
     affs = random_2d_affinity_map(3)
     seg = watershed(affs, 0, 0.9)
-    np.testing.assert_array_equal(seg, np.array([[[1,1,1], [2,3,3], [2,3,3]]]))
+    np.testing.assert_array_equal(seg, np.array([[[1,2,3], [1,2,4], [5,6,7]]]))
 
     ws_seg = np.copy(seg)
     fill_background_with_affinity_guidance(seg, affs, 0.5)
@@ -106,8 +108,8 @@ def test_random_agglomeration():
 
 def test_merge_small_fragments():
     sz = (32, 32, 32)
-    voxel_num_threshold = 4
-    affinity_threshold = 0.3
+    min_voxel_num_threshold = 4
+    affinity_threshold = 0.5
 
     affs = random_3d_affinity_map(sz)
     # seg = np.arange(np.product(sz), dtype=np.uint64).reshape((sz))
@@ -121,12 +123,9 @@ def test_merge_small_fragments():
     assert len(segids1) < len(segids0)
     # assert np.min(counts1) > voxel_num_threshold
 
-    # rg = RegionGraph(affs, seg)
-    # dend = rg.merge_small_fragments(seg, 4)
-    # seg2 = dend.materialize(seg, 0.)
-    seg2 = agglomerate(affs, seg1, voxel_num_threshold=voxel_num_threshold)
+    seg2 = agglomerate(affs, seg1, min_voxel_num_threshold=min_voxel_num_threshold)
     segids2, counts2 = np.unique(seg2[seg2>0], return_counts=True)
-    assert np.min(counts2) > voxel_num_threshold
+    assert np.min(counts2) > min_voxel_num_threshold
     assert len(segids2) < len(segids1)
     # the agglomeration should not be too aggressive
     assert len(segids2) > 4

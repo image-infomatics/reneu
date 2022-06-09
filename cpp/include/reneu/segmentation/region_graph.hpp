@@ -20,7 +20,6 @@
 
 #include "../types.hpp"
 #include "utils.hpp"
-#include "disjoint_sets.hpp"
 #include "dendrogram.hpp"
 #include "priority_queue.hpp"
 
@@ -384,8 +383,11 @@ auto merge_arrays(const xt::pytensor<segid_t, 2>& arr,
  * @param voxelNumThreshold 
  * @return dendrogram 
  */
-auto greedy_mean_affinity_agglomeration(const PySegmentation& seg, const aff_edge_t& affinityThreshold=0., 
-        const size_t& voxelNumThreshold=std::numeric_limits<size_t>::max()){
+auto greedy_mean_affinity_agglomeration(
+        const PySegmentation& seg, 
+        const aff_edge_t& affinityThreshold=0., 
+        const size_t& minVoxelNumThreshold=std::numeric_limits<size_t>::max(),
+        const size_t& maxVoxelNumThreshold=std::numeric_limits<size_t>::max()){
 
     std::cout<< "build priority queue..." << std::endl;
     auto heap = _build_priority_queue(affinityThreshold);
@@ -412,7 +414,12 @@ auto greedy_mean_affinity_agglomeration(const PySegmentation& seg, const aff_edg
 
         const auto& voxelNum0 = _segid2voxelNum[segid0];
         const auto& voxelNum1 = _segid2voxelNum[segid1];
-        if(voxelNum0 > voxelNumThreshold && voxelNum1 > voxelNumThreshold){
+        if(voxelNum0 > maxVoxelNumThreshold || voxelNum1 > maxVoxelNumThreshold){
+            // at least one of the objects is too big
+            continue;
+        }
+
+        if(voxelNum0 > minVoxelNumThreshold && voxelNum1 > minVoxelNumThreshold){
             // both objects are too big
             continue;
         }

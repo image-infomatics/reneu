@@ -32,9 +32,11 @@ template <> struct watershed_traits<uint64_t>
 using traits = watershed_traits<segid_t>;
 
 // direction mask, +z, +y, +x, -z, -y, -x
-const std::array<segid_t, 6> dirmask  = {0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
+const std::array<std::ptrdiff_t, 6> dirmask  = {0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 // inverse direction mask, -z, -y, -x, +z, +y, +x
-const std::array<segid_t, 6> idirmask = {0x04, 0x02, 0x01, 0x20, 0x10, 0x08};
+const std::array<std::ptrdiff_t, 6> idirmask = {0x04, 0x02, 0x01, 0x20, 0x10, 0x08};
+ 
+
 
 auto steepest_ascent(const AffinityMap &affs, aff_edge_t low, aff_edge_t high ){
     // initialize the steepest ascent graph
@@ -85,7 +87,6 @@ auto divide_plateaus(S& sag){
     const std::array<std::ptrdiff_t, 6> dir = {sx*sy, sx, 1, -sx*sy, -sx, -1};
 
     // get plato corners 
-    // queue all vertices for which a purely outgoing edge exists
     std::cout<<"queue all vertices for which a purely outgoing edge exists"<<std::endl;
     std::vector<std::ptrdiff_t> bfs;
     //bfs.reserve(sag.size());
@@ -95,7 +96,7 @@ auto divide_plateaus(S& sag){
             if((sag[idx] & dirmask[d] ) && 
                     idx+dir[d]>=0 && 
                     idx+dir[d]<sag.size() && 
-                    (!(sag[idx+dir[d]] & idirmask[d]))){
+                    (sag[idx+dir[d]] & idirmask[d] == 0)){
                 // outgoing edge exists, no incoming edge
                 sag[idx] |= traits::sag_visited;
                 bfs.push_back(idx);
@@ -144,8 +145,8 @@ auto find_basins(SEG& seg){
     std::ptrdiff_t sy = seg.shape(1);
     std::ptrdiff_t sx = seg.shape(2);
     
-    // direction
-    const std::array<std::ptrdiff_t, 6> dir = {-1, -sx, -sx*sy, 1, sx, sx*sy};
+    // direction, +z,+y,+x,-z,-y,-x
+    const std::array<std::ptrdiff_t, 6> dir = {sx*sy, sx, 1, -sx*sy, -sx, -1};
 
     // voxel counts for each basin
     std::vector<size_t> counts = {0};

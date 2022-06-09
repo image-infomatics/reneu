@@ -10,19 +10,33 @@ from fastremap import unique
 from reneu.lib.segmentation import seeded_watershed, RegionGraph
 
 
-def agglomerate(affs: np.ndarray, seg: np.ndarray, agglomeration_threshold: float = 0., 
-        voxel_num_threshold: int=18446744073709551615):
+MAX_INT = 18446744073709551615
+
+def agglomerate(affs: np.ndarray, seg: np.ndarray, 
+        agglomeration_threshold: float = 0., 
+        min_voxel_num_threshold: int=MAX_INT,
+        max_voxel_num_threshold: int=MAX_INT):
     """
     Parameters:
-    voxel_num_threshold [int]: the default value is the maximum limit of C++ size_t
+    agglomeration_threshold [float]: the greedy agglomeration until a threshold.
+    max_voxel_num_threshold [int]: The maximum voxel number an object can grow. 
+        No object can be larger than this number.
+        The default value is the maximum limit of C++ size_t
     """
+    if min_voxel_num_threshold is None:
+        min_voxel_num_threshold = MAX_INT
+    if max_voxel_num_threshold is None:
+        max_voxel_num_threshold = MAX_INT
+        
     print('construct region graph...')
     rg = RegionGraph(affs, seg)
-
     print('gready mean agglomeration...')
-    dend = rg.greedy_mean_affinity_agglomeration(seg, agglomeration_threshold, voxel_num_threshold)
+    dend = rg.greedy_mean_affinity_agglomeration(
+        seg, agglomeration_threshold,
+        min_voxel_num_threshold=min_voxel_num_threshold, 
+        max_voxel_num_threshold=max_voxel_num_threshold)
     seg = dend.materialize(seg, agglomeration_threshold)
-
+    
     return seg
 
 

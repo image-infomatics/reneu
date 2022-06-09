@@ -21,6 +21,7 @@
 
 namespace py = pybind11;
 using namespace reneu;
+using namespace pybind11::literals;
 
 PYBIND11_MODULE(segmentation, m) {
     xt::import_numpy();
@@ -93,7 +94,12 @@ PYBIND11_MODULE(segmentation, m) {
                 return rg;
             }
         ))
-        .def("greedy_mean_affinity_agglomeration", &RegionGraph::greedy_mean_affinity_agglomeration);
+        .def("greedy_mean_affinity_agglomeration", 
+            &RegionGraph::greedy_mean_affinity_agglomeration,
+            "seg"_a, 
+            "affinity_threshold"_a=0., 
+            "min_voxel_num_threshold"_a=std::numeric_limits<size_t>::max(),
+            "max_voxel_num_threshold"_a=std::numeric_limits<size_t>::max());
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
