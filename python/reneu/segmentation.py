@@ -90,24 +90,3 @@ def contacting_and_inner_obj_ids(seg: Union[Chunk, np.ndarray]) -> tuple:
     return contacting, inner
 
 
-def split_consensus(seg0: np.ndarray, seg1: np.ndarray) -> np.ndarray:
-    """given two segmentations, get the split consensus.
-    construct the contingency table. Each non-zero item in that table is 
-    a new object in the split consensus.
-
-    Args:
-        seg0 (np.ndarray): the first segmentation volume
-        seg1 (np.ndarray): the second segmentation volume
-
-    Raises:
-        NotImplementedError: _description_
-
-    Returns:
-        np.ndarray: the split consensus
-    """
-    assert np.issubdtype(seg0.dtype, np.integer)
-    assert np.issubdtype(seg1.dtype, np.integer)
-    assert seg0.dtype == seg1.dtype
-    assert seg0.shape == seg1.shape
-
-    raise NotImplementedError('will be done later.')
