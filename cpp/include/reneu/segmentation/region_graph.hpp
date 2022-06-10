@@ -416,11 +416,13 @@ auto greedy_mean_affinity_agglomeration(
         const auto& voxelNum1 = _segid2voxelNum[segid1];
         if(voxelNum0 > maxVoxelNumThreshold || voxelNum1 > maxVoxelNumThreshold){
             // at least one of the objects is too big
+            // std::cout<< "either object is too big: "<< voxelNum0<<", "<<voxelNum1<<std::endl;
             continue;
         }
 
         if(voxelNum0 > minVoxelNumThreshold && voxelNum1 > minVoxelNumThreshold){
             // both objects are too big
+            // std::cout<< "both object is too big: "<< voxelNum0<<", "<<voxelNum1<<std::endl;
             continue;
         }
         
