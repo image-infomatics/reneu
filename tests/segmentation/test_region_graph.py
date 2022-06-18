@@ -67,7 +67,7 @@ def test_agglomeration():
 
     print('segmentation after agglomeration: ', seg)
     
-    np.testing.assert_array_equal(seg, np.array([[[2,2],[4,4]]]))
+    np.testing.assert_array_equal(seg, np.array([[[1,1],[3,3]]]))
     
 def random_2d_affinity_map(sz: int):
     # make sure that the random array is consistent

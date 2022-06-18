@@ -41,7 +41,7 @@ def test_dendrogram():
 
     dend1.push_edge(22, 21, 0.4)
     # dend1.print()
-    assert dend1.edge_num == 2
+    assert dend1.edge_num == 3
     dend1.keep_only_contacting_edges(seg, margin_size)
     # dend1.print()
-    assert dend1.edge_num == 1
+    assert dend1.edge_num == 2
