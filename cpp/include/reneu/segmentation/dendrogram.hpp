@@ -197,7 +197,7 @@ auto merge(Dendrogram other){
 
 auto to_disjoint_sets(const aff_edge_t& threshold) const {
     std::cout<< "build disjoint set..." << std::endl;
-    auto dsets = DisjointSets();
+    auto dsets = DisjointSets<segid_t>();
 
     for(const auto& edge : _edgeList){
         if(edge.affinity >= threshold){
