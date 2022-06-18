@@ -7,8 +7,8 @@
 
 #include <set>
 #include <tsl/robin_map.h>
-#include <boost/serialization/serialization.hpp>
-// #include <boost/serialization/map.hpp>
+#include <boost/serialization/vector.hpp>
+#include "../utils/serialization.hpp"
 
 
 namespace reneu{
@@ -21,6 +21,14 @@ struct Ele{
 
     Ele(){};
     Ele(const T& id_, const std::size_t& parentIndex_, const std::size_t& size_): id(id_), parentIndex(parentIndex_), size(size_){};
+
+    template <typename Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & id;
+        ar & parentIndex;
+        ar & size;
+    }
 };
 
 template<class T>
@@ -63,9 +71,16 @@ DisjointSets(const PySegmentation& seg){
 }
 
 friend class boost::serialization::access;
-// BOOST_SERIALIZATION_SPLIT_MEMBER()
+BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 template<class Archive>
-void serialize(Archive& ar, const unsigned int version) const {
+void save(Archive& ar, const unsigned int /*version*/) const {
+    ar & _id2index;
+    ar & _elements;
+}
+
+template<class Archive>
+void load(Archive& ar, const unsigned int /*version*/) {
     ar & _id2index;
     ar & _elements;
 }

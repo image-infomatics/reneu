@@ -52,24 +52,31 @@ def seeded_watershed_2d(seg: np.ndarray, affs: np.ndarray, threshold: float):
         seg[z, :, :] = seg2d
 
 
-def contacting_and_inner_obj_ids(seg: Union[Chunk, np.ndarray]) -> tuple:
+def contacting_and_inner_obj_ids(
+        seg: Union[Chunk, np.ndarray],
+        including_neighboring_neg_face: bool = True) -> tuple:
     """get the contacting object id set from a segmentation chunk. 
-    This chunk should cover one more voxel in the neighboring chunk.
+    This chunk could cover one more voxel in the neighboring chunk.
     since the affinity map is defined in the negative direction.
     As a result, the size of this chunk should be 1+block.shape.
 
     Args:
         seg (Union[Chunk, np.ndarray]): the segmentation chunk covering one voxel of neighboring chunk
+        including_neighboring_neg_face (bool): The negative side includes one-voxel thick face of neighboring chunk.
 
     Returns:
         tuple: the inner object IDs and contacting seg IDs.
     """
     if isinstance(seg, Chunk):
         seg = seg.array
+    if including_neighboring_neg_face:
+        stop = 2
+    else:
+        stop = 1
 
-    uniq_neg_z = unique(seg[0:2, 1:, 1:], return_counts=False)
-    uniq_neg_y = unique(seg[1:, 0:2, 1:], return_counts=False)
-    uniq_neg_x = unique(seg[1:, 1:, 0:2], return_counts=False)
+    uniq_neg_z = unique(seg[:stop, 1:, 1:], return_counts=False)
+    uniq_neg_y = unique(seg[1:, :stop, 1:], return_counts=False)
+    uniq_neg_x = unique(seg[1:, 1:, :stop], return_counts=False)
 
     uniq_pos_z = unique(seg[-1, 1:, 1:], return_counts=False)
     uniq_pos_y = unique(seg[1:, -1, 1:], return_counts=False)

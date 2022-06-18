@@ -1,4 +1,5 @@
 from copy import deepcopy
+import pickle
 
 import numpy as np
 
@@ -24,6 +25,11 @@ def test_disjoint_set_root():
     dsets.union_set(N, N+4)
     assert dsets.find_set(N+4) == N+1
 
+    # test pickle
+    data = pickle.dumps(dsets)
+    dsets2 = pickle.loads(data)
+    np.testing.assert_array_equal(dsets.array, dsets2.array)
+
 def test_disjoint_sets():
     print('test make and union set...')
     dsets = DisjointSets()
@@ -37,10 +43,10 @@ def test_disjoint_sets():
 
     
     # this is not working yet
-    # print('test serialization using pickle')
-    # data = pickle.dumps(dsets)
-    # dsets2 = pickle.loads(data)
-    # np.testing.assert_array_equal(dsets.array, dsets2.array)
+    print('test serialization using pickle')
+    data = pickle.dumps(dsets)
+    dsets2 = pickle.loads(data)
+    np.testing.assert_array_equal(dsets.array, dsets2.array)
 
     # dsets.make_set(3)
     # dsets.union_set(2, 3)

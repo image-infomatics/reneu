@@ -13,8 +13,7 @@
 #include <xtensor/xsort.hpp>
 #include <xtensor/xview.hpp>
 
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/split_member.hpp>
+#include "../utils/serialization.hpp"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/unordered_map.hpp>
 
@@ -141,26 +140,14 @@ friend class boost::serialization::access;
 BOOST_SERIALIZATION_SPLIT_MEMBER()
 template<class Archive>
 void save(Archive& ar, const unsigned int version) const {
-    // invoke serialization of the base class 
-    // ar << boost::serialization::base_object<const base_class_of_T>(*this);
     ar & _edgeList;
-    
-    // ar & _segid2neighbor;
-    auto serializer = [&ar](const auto& v) { ar & v; };
-    _segid2neighbor.serialize(serializer);
-
+    ar & _segid2neighbor;
 }
 
 template<class Archive>
 void load(Archive& ar, const unsigned int version){
-    // invoke serialization of the base class 
-    // ar >> boost::serialization::base_object<base_class_of_T>(*this);
     ar & _edgeList;
-    // _segid2neighbor.deserialize(ar);
-
-    auto deserializer = [&ar]<typename U>() { U u; ar & u; return u; };
-    _segid2neighbor = Segid2Neighbor::deserialize(deserializer);
-
+    ar & _segid2neighbor;
 }
 
 

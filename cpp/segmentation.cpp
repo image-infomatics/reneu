@@ -113,21 +113,21 @@ PYBIND11_MODULE(segmentation, m) {
         .def("make_and_union_set", 
             &DisjointSets<segid_t>::make_and_union_set,
             "id0"_a, "id1"_a, "by_size"_a=true)
-        // .def(py::pickle(
-        //     [](const DisjointSets& djs){ // __getstate__
-        //         std::string ss;
-        //         boost::archive::text_oarchive oa(ss);
-        //         oa << djs;
-        //         return ss.str();
-        //     },
-        //     [](const std::string str){ // __setstate__
-        //         std::stringstream ss(str);
-        //         boost::archive::text_iarchive ia(ss);
-        //         DisjointSets djs;
-        //         ia >> (djs);
-        //         return djs;
-        //     }
-        // ))
+        .def(py::pickle(
+            [](const DisjointSets<segid_t>& djs){ // __getstate__
+                std::stringstream ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << djs;
+                return ss.str();
+            },
+            [](const std::string str){ // __setstate__
+                std::stringstream ss(str);
+                boost::archive::text_iarchive ia(ss);
+                DisjointSets<segid_t> djs;
+                ia >> (djs);
+                return djs;
+            }
+        ))
         .def("merge_array", 
             &DisjointSets<segid_t>::merge_array,
             "arr"_a, 
