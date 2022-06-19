@@ -13,7 +13,6 @@
 #include "reneu/segmentation/dendrogram.hpp"
 #include "reneu/segmentation/disjoint_sets.hpp"
 #include "reneu/segmentation/region_graph.hpp"
-#include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/preprocess.hpp"
 #include "reneu/segmentation/seeded_watershed.hpp"
 #include "reneu/segmentation/utils.hpp"
@@ -100,27 +99,6 @@ PYBIND11_MODULE(segmentation, m) {
             "affinity_threshold"_a=0., 
             "min_voxel_num_threshold"_a=std::numeric_limits<size_t>::max(),
             "max_voxel_num_threshold"_a=std::numeric_limits<size_t>::max());
-
-    py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
-        .def(py::init<const PyAffinityMap&, const PySegmentation&>())
-        .def("__str__", &RegionGraphChunk::as_string)
-        .def(py::pickle(
-            [](const RegionGraphChunk& rg){ // __getstate__
-                std::stringstream ss;
-                boost::archive::text_oarchive oa(ss);
-                oa << rg;
-                return ss.str();
-            },
-            [](const std::string str){ // __setstate__
-                std::stringstream ss(str);
-                boost::archive::text_iarchive ia(ss);
-                RegionGraphChunk rg;
-                ia >> (rg);
-                return rg;
-            }
-        ))
-        .def("merge_in_leaf_chunk", &RegionGraphChunk::merge_in_leaf_chunk)
-        .def("merge_upper_chunk", &RegionGraphChunk::merge_upper_chunk);
 
     py::class_<DisjointSets>(m, "DisjointSets")
         .def(py::init())
