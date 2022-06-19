@@ -68,7 +68,7 @@ def test_disjoint_sets_merge_array():
     print('test merge seg pairs in an array...')
     arr = np.arange(1,7, dtype=np.uint64).reshape(3, 2)
     dsets = DisjointSets()
-    dsets.merge_array(arr, has_root=True)
+    dsets.merge_array(arr, has_root=False)
     assert dsets.find_set(2) == 1
     assert dsets.find_set(4) == 3
     assert dsets.find_set(6) == 5
@@ -77,7 +77,7 @@ def test_disjoint_sets_merge_array():
     assert arr2.shape[0] == np.prod(arr.shape)
 
     arr3 = np.arange(7,13, dtype=np.uint64).reshape(3, 2)
-    dsets.merge_array(arr3, has_root=True)
+    dsets.merge_array(arr3, has_root=False)
     arr4 = np.arange(1,13, dtype=np.uint64).reshape(6, 2)
     # np.testing.assert_equal(dsets.array, arr4)
 

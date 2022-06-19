@@ -166,7 +166,7 @@ void make_and_union_set(const T& id0, const T& id1,
 auto merge_array(const xt::pytensor<T, 2>& arr,
         bool hasRoot=false){
 
-    if(hasRoot){
+    if(!hasRoot){
         // make all the set
         for(std::size_t i=0; i<arr.shape(0); i++){
             const auto& id0 = arr(i, 0);
