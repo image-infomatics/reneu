@@ -85,11 +85,11 @@ void load(Archive& ar, const unsigned int /*version*/) {
     ar & _elements;
 }
 
-inline auto size(){
+inline auto size() const {
     return _elements.size();
 }
 
-bool contains(const T& id){
+bool contains(const T& id) const {
     const auto& search = _id2index.find(id);
     return search != _id2index.end();
 }
@@ -106,8 +106,10 @@ inline auto find_root_element_index(const T& id){
         auto& grandParentIndex = parent.parentIndex;
         auto& grandParent = _elements[grandParentIndex];
         ele.parentIndex = grandParentIndex;
-        ele = _elements[parentIndex];
+        
+        // go to parent node
         idx = parentIndex;
+        ele = _elements[idx];
     }
     // return std::make_pair(ele, idx);
     return idx;
@@ -158,9 +160,11 @@ void union_set(const T& id0, const T& id1,
 
 void make_and_union_set(const T& id0, const T& id1,
         bool bySize=true){
-    make_set(id0);
-    make_set(id1);
-    union_set(id0, id1, bySize=bySize);
+    if(id0 != id1){
+        make_set(id0);
+        make_set(id1);
+        union_set(id0, id1, bySize=bySize);
+    }
 }
 
 auto merge_array(const xt::pytensor<T, 2>& arr,
