@@ -171,11 +171,20 @@ auto merge_array(const xt::pytensor<T, 2>& arr,
         bool hasRoot=false){
 
     if(!hasRoot){
+        std::set<T> ids = {};
+        for(std::size_t i=0; i<arr.shape(0); i++){
+            ids.insert(arr(i, 0));
+            if(arr(i,0)!=arr(i,1)) ids.insert(arr(i, 1));
+        }
+
         // make all the set
+        for(const auto& id: ids) 
+            make_set(id);
+
         for(std::size_t i=0; i<arr.shape(0); i++){
             const auto& id0 = arr(i, 0);
             const auto& id1 = arr(i, 1);
-            make_and_union_set(id0, id1);
+            union_set(id0, id1);
         } 
     } else {
         // make all the set
