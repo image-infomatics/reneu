@@ -15,6 +15,7 @@
 #include "reneu/segmentation/region_graph.hpp"
 #include "reneu/segmentation/preprocess.hpp"
 #include "reneu/segmentation/seeded_watershed.hpp"
+#include "reneu/segmentation/fragments.hpp"
 #include "reneu/segmentation/utils.hpp"
 
 

@@ -104,4 +104,4 @@ def test_agglomerated_segmentation_to_merge_pair():
     merge_pairs = agglomerated_segmentation_to_merge_pairs(frag, seg)
     # print(f'merge pairs: {merge_pairs}')
     # breakpoint()
-    assert merge_pairs.shape[0] == 2 
+    assert merge_pairs.shape[0] == 26 
