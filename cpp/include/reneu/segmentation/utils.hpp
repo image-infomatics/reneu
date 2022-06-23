@@ -31,6 +31,34 @@ inline auto get_nonzero_segids(const PySegmentation& seg){
 }
 
 auto get_label_map(const PySegmentation& frag, const PySegmentation& seg){
+    std::set<std::pair<segid_t, segid_t>> pairs = {};
+
+    if(seg(0)>0){
+        pairs.emplace(frag(0), seg(0));
+    }
+
+    for(std::size_t idx = 1; idx < seg.size(); idx ++){
+        // skip most of repetitive voxels and speed it up
+        if(seg(idx)!=seg(idx-1) && frag(idx)!=seg(idx) && seg(idx)>0){
+            pairs.emplace(frag(idx), seg(idx));
+        }
+    }
+
+    std::cout<<"build array from the set..."<<std::endl;
+    xt::pytensor<segid_t, 2>::shape_type sh = {pairs.size(), 2};
+    auto labelMapArray = xt::empty<segid_t>(sh);
+    std::size_t idx = 0;
+    for(const auto& [sid0, root]: pairs){
+        labelMapArray(idx, 0) = sid0;
+        labelMapArray(idx, 1) = root;
+        idx ++;
+    }
+
+    return labelMapArray;
+}
+
+
+auto get_label_map_v1(const PySegmentation& frag, const PySegmentation& seg){
     tsl::robin_map<segid_t, segid_t> labelMap = {};
 
     for(std::size_t idx = 0; idx < frag.size(); idx ++){
@@ -38,7 +66,7 @@ auto get_label_map(const PySegmentation& frag, const PySegmentation& seg){
         const auto& search = labelMap.find(sid0);
         if(search == labelMap.end()){
             const auto& sid1 = seg(idx);
-            if(sid0!=sid1 && sid0>0){
+            if(sid0!=sid1 && sid0>0 && sid1>0){
                 labelMap[sid0] = sid1;
             }
         }
@@ -57,7 +85,6 @@ auto get_label_map(const PySegmentation& frag, const PySegmentation& seg){
     return labelMapArray;
 }
 
-
 // using SegPairs = std::vector<std::pair<segid_t, segid_t>>;
 // auto seg_pairs_to_array(SegPairs& pairs){
 //     // std::cout<<"convert to array."<<std::endl;
@@ -72,7 +99,6 @@ auto get_label_map(const PySegmentation& frag, const PySegmentation& seg){
 //     }
 //     return arr;
 // }
-
 
 
 } // namespace reneu

@@ -29,6 +29,7 @@ auto agglomerated_segmentation_to_merge_pairs(
         for(std::ptrdiff_t y=0; y<seg.shape(1); y++){
             for(std::ptrdiff_t x=0; x<seg.shape(2); x++){
                 const auto& obj0 = frag(z, y, x);
+                // if(obj0==0) continue;
                 if(z>0){
                     const auto& obj1 = frag(z-1, y, x);
                     if(obj0!=obj1 && seg(z,y,x)==seg(z-1,y,x) && obj0>0 && obj1>0){
