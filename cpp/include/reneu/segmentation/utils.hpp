@@ -45,7 +45,7 @@ auto get_label_map(const PySegmentation& frag, const PySegmentation& seg){
     }
 
     std::cout<<"build array from the set..."<<std::endl;
-    xt::pytensor<segid_t, 2>::shape_type sh = {pairs.size(), 2};
+    xt::xtensor<segid_t, 2>::shape_type sh = {pairs.size(), 2};
     auto labelMapArray = xt::empty<segid_t>(sh);
     std::size_t idx = 0;
     for(const auto& [sid0, root]: pairs){
@@ -73,7 +73,7 @@ auto get_label_map_v1(const PySegmentation& frag, const PySegmentation& seg){
     }
 
     std::cout<<"build array from the map..."<<std::endl;
-    xt::pytensor<segid_t, 2>::shape_type sh = {labelMap.size(), 2};
+    xt::xtensor<segid_t, 2>::shape_type sh = {labelMap.size(), 2};
     auto labelMapArray = xt::empty<segid_t>(sh);
     std::size_t idx = 0;
     for(const auto& [sid0, root]: labelMap){
