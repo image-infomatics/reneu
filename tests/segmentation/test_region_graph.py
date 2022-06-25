@@ -67,7 +67,7 @@ def test_agglomeration():
 
     print('segmentation after agglomeration: ', seg)
     
-    np.testing.assert_array_equal(seg, np.array([[[2,2],[4,4]]]))
+    np.testing.assert_array_equal(seg, np.array([[[1,1],[3,3]]]))
     
 def random_2d_affinity_map(sz: int):
     # make sure that the random array is consistent
@@ -87,7 +87,7 @@ def random_3d_affinity_map(sz: tuple):
 def test_watershed_and_fill_background():
     affs = random_2d_affinity_map(3)
     seg = watershed(affs, 0, 0.9)
-    np.testing.assert_array_equal(seg, np.array([[[1,2,3], [1,2,4], [5,6,7]]]))
+    np.testing.assert_array_equal(seg, np.array([[[1,1,1], [2,3,3], [2,3,3]]]))
 
     ws_seg = np.copy(seg)
     fill_background_with_affinity_guidance(seg, affs, 0.5)
@@ -100,10 +100,10 @@ def test_random_agglomeration():
 
     seg = agglomerate(affs, seg, affinity_threshold = 0.3)
     np.testing.assert_array_equal(seg,
-            np.array([[[0, 2, 2,  3], 
-                       [2, 2, 11, 11],
-                       [2, 9, 11, 11],
-                       [2, 11,11, 11]]])
+            np.array([[[0, 4, 4,  3], 
+                       [4, 4, 14, 14],
+                       [4, 9, 14, 14],
+                       [4, 14,14, 14]]])
     )
 
 def test_merge_small_fragments():

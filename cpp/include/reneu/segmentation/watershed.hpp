@@ -89,14 +89,14 @@ auto divide_plateaus(S& sag){
     // get plato corners 
     std::cout<<"queue all vertices for which a purely outgoing edge exists"<<std::endl;
     std::vector<std::ptrdiff_t> bfs;
-    //bfs.reserve(sag.size());
+    bfs.reserve(sag.size()+1);
     
     for(std::ptrdiff_t idx = 0; idx < sag.size(); idx++){
         for(std::ptrdiff_t d=0; d<6; d++){
             if((sag[idx] & dirmask[d] ) && 
                     idx+dir[d]>=0 && 
                     idx+dir[d]<sag.size() && 
-                    (sag[idx+dir[d]] & idirmask[d] == 0)){
+                    ((sag[idx+dir[d]] & idirmask[d]) == 0)){
                 // outgoing edge exists, no incoming edge
                 sag[idx] |= traits::sag_visited;
                 bfs.push_back(idx);

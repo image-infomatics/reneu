@@ -1,145 +1,233 @@
 #pragma once
 
-#include <assert.h>
-#include <iostream>
-#include <stack>
-#include <boost/pending/disjoint_sets.hpp>
+// #include <assert.h>
+// #include <iostream>
 #include "../types.hpp"
 #include "./utils.hpp"
-
-// #include <boost/serialization/serialization.hpp>
-// #include <boost/serialization/map.hpp>
+#include <set>
+#include <tsl/robin_map.h>
+#include <boost/serialization/vector.hpp>
+#include "../utils/serialization.hpp"
 
 
 namespace reneu{
 
-using SegPairs = std::vector<std::pair<segid_t, segid_t>>;
-auto seg_pairs_to_array(SegPairs& pairs){
-    // std::cout<<"convert to array."<<std::endl;
-    const auto& pairNum = pairs.size();
-    xt::xtensor<segid_t, 2>::shape_type sh = {pairNum, 2};
-    auto arr = xt::empty<segid_t>(sh);
-    for(std::size_t idx=0; idx<pairNum; idx++){
-        const auto& [segid0, root] = pairs[idx];
-        arr(idx, 0) = segid0;
-        arr(idx, 1) = root;
-        // std::cout<<"merge "<<segid0<<", "<<root<<std::endl;
-    }
-    return arr;
-}
+template<class T>
+struct Ele{
+    T id;
+    std::size_t parentIndex;
+    std::size_t size;
 
+    Ele(){};
+    Ele(const T& id_, const std::size_t& parentIndex_, const std::size_t& size_): id(id_), parentIndex(parentIndex_), size(size_){};
+
+    template <typename Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & id;
+        ar & parentIndex;
+        ar & size;
+    }
+};
+
+template<class T>
 class DisjointSets{
 
-private:
-using Rank_t = std::map<segid_t, size_t>;
-using Parent_t = std::map<segid_t, segid_t>;
-using PropMapRank_t = boost::associative_property_map<Rank_t>;
-using PropMapParent_t = boost::associative_property_map<Parent_t>;
-using BoostDisjointSets = boost::disjoint_sets<PropMapRank_t, PropMapParent_t>; 
-
-Rank_t _mapRank;
-Parent_t _mapParent;
-PropMapRank_t _propMapRank;
-PropMapParent_t _propMapParent;
-BoostDisjointSets _dsets;
+protected:
+tsl::robin_map<T, std::size_t> _id2index;
+std::vector<Ele<T>> _elements;
 
 public:
-DisjointSets():
-    _propMapRank(_mapRank), _propMapParent(_mapParent),
-    _dsets(_propMapRank, _propMapParent){}
 
+DisjointSets(): _id2index({}), _elements({}){}
+DisjointSets(std::size_t n): _id2index({}), _elements({}){
+    _elements.reserve(n);
+}
+DisjointSets(std::set<T> ids): _id2index({}), _elements({}){
+    _elements.reserve(ids.size());
 
-DisjointSets(const Segmentation& seg):
-        _propMapRank(_mapRank), _propMapParent(_mapParent),
-        _dsets(_propMapRank, _propMapParent){
-    
-    auto segids = get_nonzero_segids(seg);
-    for(const auto& segid : segids){
-        _dsets.make_set(segid);
+    std::size_t idx=0;
+    for(const auto& id : ids){
+        _elements.emplace_back(id, idx, 1);
+        _id2index[id] = idx;
+        idx++;
     }
 }
 
-// friend class boost::serialization::access;
-// template<class Archive>
-// void serialize(Archive ar, const unsigned int version){
-//     ar & _mapRank;
-//     ar & _mapParent;
-//     ar & _propMapRank;
-//     ar & _propMapParent;
-//     ar & _dsets;
-// }
+DisjointSets(const PySegmentation& seg){
+    auto ids = get_nonzero_segids(seg);
 
-void make_set(const segid_t& segid ){
-    // To-Do: use contain function in C++20
-    const auto& search = _mapRank.find(segid);
-    if(search == _mapRank.end())
-        _dsets.make_set(segid);
-}
+    // this code is a duplicate of DisjointSets(std::set<T>)
+    // To-Do: remove this duplicate
+    _elements.reserve(ids.size());
 
-void union_set(const segid_t s0, const segid_t s1){
-    _dsets.union_set(s0, s1);
-}
-
-void make_and_union_set(const segid_t s0, const segid_t s1){
-    make_set(s0);
-    make_set(s1);
-    union_set(s0, s1);
-}
-
-segid_t find_set(segid_t sid){
-    const auto& root = _dsets.find_set(sid);
-    if(root == 0)
-        return sid;
-    else
-        return root;
-}
-
-auto merge_array(const xt::xtensor<segid_t, 2>& arr){
-    std::set<std::pair<segid_t, segid_t>> pairs = {};
-    assert(arr.shape(1) == 2);
-
-    // in case there exist a lot of duplicates in this array
-    // we make a small set first to make it more efficient
-    for(std::size_t idx=0; idx<arr.shape(0); idx++){
-        const auto& segid0 = arr(idx, 0);
-        const auto& segid1 = arr(idx, 1);
-        // const auto& pair = std::make_tuple(segid0, segid1);
-        pairs.emplace(segid0, segid1);
-    }
-
-    for(const auto& [segid0, segid1] : pairs){
-        make_and_union_set(segid0, segid1);
+    std::size_t idx=0;
+    for(const auto& id : ids){
+        _elements.emplace_back(id, idx, 1);
+        _id2index[id] = idx;
+        idx++;
     }
 }
 
-inline auto py_merge_array(xt::pytensor<segid_t, 2>& pyarr){
-    return merge_array(std::move(pyarr));
+friend class boost::serialization::access;
+BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+template<class Archive>
+void save(Archive& ar, const unsigned int /*version*/) const {
+    ar & _id2index;
+    ar & _elements;
 }
 
+template<class Archive>
+void load(Archive& ar, const unsigned int /*version*/) {
+    ar & _id2index;
+    ar & _elements;
+}
 
+inline auto size() const {
+    return _elements.size();
+}
 
-auto to_array(){
-    // std::cout<<"find the root for each segment."<<std::endl;
-    SegPairs pairs = {};
-    for(const auto& [segid0, parent]: _mapParent){
-        const auto& root = find_set(segid0);
-        if(root != segid0){
-            // std::cout<<"add pair to stack: "<<segid0<<", "<< root<<std::endl;
-            pairs.emplace_back(segid0, root);
+bool contains(const T& id) const {
+    const auto& search = _id2index.find(id);
+    return search != _id2index.end();
+}
+
+inline auto find_root_element_index(const T& id){
+    assert(id > 0);
+    auto idx = _id2index[id];
+    auto ele = _elements[idx];
+
+    // Path halving
+    while(ele.parentIndex != idx){
+        auto& parentIndex = ele.parentIndex;
+        auto& parent = _elements[parentIndex];
+        auto& grandParentIndex = parent.parentIndex;
+        auto& grandParent = _elements[grandParentIndex];
+        ele.parentIndex = grandParentIndex;
+        
+        // go to parent node
+        idx = parentIndex;
+        ele = _elements[idx];
+    }
+    // return std::make_pair(ele, idx);
+    return idx;
+}
+
+T find_set(const T& id){
+    if(!this->contains(id)){
+        return id;
+    } else {
+        const auto& idx = find_root_element_index(id);
+        const auto& ele = _elements[idx];
+        return ele.id;
+    }
+}
+
+void make_set(const T& id){
+    if(!this->contains(id)){
+        const auto& newIndex = _elements.size();
+        _id2index[id] = newIndex;
+        // add a new element, the parent is itself
+        _elements.emplace_back(id, newIndex, 1); 
+    }
+}
+
+void union_set(const T& id0, const T& id1,
+        bool bySize = true){
+    const auto& rootIndex0 = find_root_element_index(id0);
+    const auto& rootIndex1 = find_root_element_index(id1);
+
+    auto& rootEle0 = _elements[rootIndex0];
+    auto& rootEle1 = _elements[rootIndex1];
+
+    if(rootIndex0 == rootIndex1){
+        // they have already in the same set
+        return;
+    } else {
+        if(bySize && rootEle0.size < rootEle1.size){
+            // merge rootEle0 to rootEle1
+            rootEle0.parentIndex = rootIndex1;
+            rootEle1.size += rootEle0.size;
+        } else {
+            // merge rootEle1 to rootEle0
+            rootEle1.parentIndex = rootIndex0;
+            rootEle0.size += rootEle1.size;
         }
     }
+}
 
-    const auto& arr = seg_pairs_to_array(pairs);
+void make_and_union_set(const T& id0, const T& id1,
+        bool bySize=true){
+    if(id0 != id1){
+        make_set(id0);
+        make_set(id1);
+        union_set(id0, id1, bySize=bySize);
+    }
+}
+
+auto merge_array(const xt::pytensor<T, 2>& arr,
+        bool hasRoot=false){
+
+    if(!hasRoot){
+        std::set<T> ids = {};
+        for(std::size_t i=0; i<arr.shape(0); i++){
+            ids.insert(arr(i, 0));
+            if(arr(i,0)!=arr(i,1)) ids.insert(arr(i, 1));
+        }
+
+        // make all the set
+        for(const auto& id: ids) 
+            make_set(id);
+
+        for(std::size_t i=0; i<arr.shape(0); i++){
+            const auto& id0 = arr(i, 0);
+            const auto& id1 = arr(i, 1);
+            union_set(id0, id1);
+        } 
+    } else {
+        // make all the set
+        for(std::size_t i=0; i<arr.shape(0); i++){
+            const auto& id0 = arr(i, 0);
+            const auto& id1 = arr(i, 1);
+            if(id0 == id1) make_set(id0);
+        }
+
+        for(std::size_t i=0; i<arr.shape(0); i++){
+            const auto& id0 = arr(i, 0);
+            const auto& id1 = arr(i, 1);
+            // we assume that all the identical set is made.
+            // otherwise, we'll get a wrong result.
+            // make_and_union_set will fix it but slower.
+            if(id0!=id1) union_set(id0, id1);
+        }
+    }
+}
+
+auto to_array(){
+    xt::pytensor<segid_t, 2>::shape_type sh = {
+        static_cast<long>(this->size()), 2};
+    auto arr = xt::empty<segid_t>(sh);
+
+    for(std::size_t i=0; i<this->size(); i++){
+        auto& ele = _elements[i];
+        arr(i,0) = ele.id;
+        arr(i,1) = find_set(ele.id);
+    }
     return arr;
+}
+
+void compress_sets(){
+    for(std::size_t i=0; i<this->size(); i++){
+        auto& ele = _elements[i];
+        auto& root = find_set(ele.id);
+        auto& rootIndex = _id2index[root.id]; 
+        ele.parentIndex = rootIndex;
+    }
 }
 
 auto relabel(Segmentation&& seg){
     auto segids = get_nonzero_segids(seg);
-    // Flatten the parents tree so that the parent of every element is its representative.
-    _dsets.compress_sets(segids.begin(), segids.end());
-    std::cout<< "get "<< 
-                _dsets.count_sets(segids.begin(), segids.end()) << 
-                " final objects."<< std::endl;
 
     std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
     const auto& [sz, sy, sx] = seg.shape();
@@ -158,11 +246,6 @@ auto relabel(Segmentation&& seg){
         }
     }
 
-    // this implementation will mask out all the objects that is not in the set!
-    // We should not do it in the global materialization stage.
-    // std::transform(seg.begin(), seg.end(), seg.begin(), 
-    //    [this](segid_t segid)->segid_t{return this->find_set(segid);}
-    // );
     return seg;
 }
 
@@ -171,63 +254,5 @@ inline auto py_relabel(PySegmentation& pyseg){
 }
 
 }; // class of DisjointSets
-
-/**
- * @brief given a fragment array and plain segmentation, find the disjoint sets. 
- * 
- * @param frag The fragment segmentation containing super voxels.
- * @param seg The plain segmentation generated by agglomerating framgents
- * @return The corresponding object pairs that need to be merged 
- */
-auto agglomerated_segmentation_to_merge_pairs(const PySegmentation& frag, const PySegmentation& seg){
-    assert(frag.shape(0) == seg.shape(0));
-    assert(frag.shape(1) == seg.shape(1));
-    assert(frag.shape(2) == seg.shape(2));
-
-    SegPairs pairs = {};
-    // auto dsets = DisjointSets();
-    // for(const auto& obj: frag){
-    //     if(obj > 0) dsets.make_set(obj);
-    // }
-    
-    for(std::ptrdiff_t z=0; z<seg.shape(0); z++){
-        for(std::ptrdiff_t y=0; y<seg.shape(1); y++){
-            for(std::ptrdiff_t x=0; x<seg.shape(2); x++){
-                const auto& obj0 = frag(z, y, x);
-                if(z>0){
-                    const auto& obj1 = frag(z-1, y, x);
-                    if(obj0!=obj1 && seg(z,y,x)==seg(z-1,y,x) && obj0>0 && obj1>0){
-                        // std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
-                        // dsets.make_and_union_set(obj0, obj1);
-                        pairs.emplace_back(obj0, obj1);
-                    }
-                }
-
-                if(y>0){
-                    const auto& obj1 = frag(z,y-1,x);
-                    if(obj0!=obj1 && seg(z,y,x)==seg(z,y-1,x) && obj0>0 && obj1>0){
-                        // std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
-                        // dsets.make_and_union_set(obj0, obj1);
-                        pairs.emplace_back(obj0, obj1);
-                    }
-                }
-
-                if(x>0){
-                    const auto& obj1 = frag(z, y, x-1);
-                    if(obj0!=obj1 && seg(z,y,x)==seg(z,y,x-1) && obj0>0 && obj1>0){
-                        // std::cout<<"merge :"<<obj0<<", "<<obj1<<std::endl;
-                        // dsets.make_and_union_set(obj0, obj1);
-                        pairs.emplace_back(obj0, obj1);
-                    }
-                }
-            }
-        }
-    }
-
-    std::cout<<"transform to array."<<std::endl;
-    auto arr = seg_pairs_to_array(pairs);
-
-    return arr;
-}
 
 } // namespace reneu

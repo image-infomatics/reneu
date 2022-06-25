@@ -15,6 +15,7 @@
 #include "reneu/segmentation/region_graph.hpp"
 #include "reneu/segmentation/preprocess.hpp"
 #include "reneu/segmentation/seeded_watershed.hpp"
+#include "reneu/segmentation/fragments.hpp"
 #include "reneu/segmentation/utils.hpp"
 
 
@@ -100,31 +101,42 @@ PYBIND11_MODULE(segmentation, m) {
             "min_voxel_num_threshold"_a=std::numeric_limits<size_t>::max(),
             "max_voxel_num_threshold"_a=std::numeric_limits<size_t>::max());
 
-    py::class_<DisjointSets>(m, "DisjointSets")
+    py::class_<DisjointSets<segid_t>>(m, "DisjointSets")
         .def(py::init())
         .def(py::init<const PySegmentation&>())
-        .def("make_set", &DisjointSets::make_set)
-        .def("union_set", &DisjointSets::union_set)
-        .def("find_set", &DisjointSets::find_set)
-        .def("make_and_union_set", &DisjointSets::make_and_union_set)
-        // .def(py::pickle(
-        //     [](const DisjointSets& djs){ // __getstate__
-        //         std::string ss;
-        //         boost::archive::text_oarchive oa(ss);
-        //         oa << djs;
-        //         return ss.str();
-        //     },
-        //     [](const std::string str){ // __setstate__
-        //         std::stringstream ss(str);
-        //         boost::archive::text_iarchive ia(ss);
-        //         DisjointSets djs;
-        //         ia >> (djs);
-        //         return djs;
-        //     }
-        // ))
-        .def("merge_array", &DisjointSets::py_merge_array)
-        .def_property_readonly("array", &DisjointSets::to_array)
-        .def("relabel", &DisjointSets::py_relabel);
+        .def("make_set", 
+            &DisjointSets<segid_t>::make_set)
+        .def("union_set", 
+            &DisjointSets<segid_t>::union_set,
+            "id0"_a, "id1"_a, "by_size"_a=true)
+        .def("find_set", 
+            &DisjointSets<segid_t>::find_set)
+        .def("make_and_union_set", 
+            &DisjointSets<segid_t>::make_and_union_set,
+            "id0"_a, "id1"_a, "by_size"_a=true)
+        .def(py::pickle(
+            [](const DisjointSets<segid_t>& djs){ // __getstate__
+                std::stringstream ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << djs;
+                return ss.str();
+            },
+            [](const std::string str){ // __setstate__
+                std::stringstream ss(str);
+                boost::archive::text_iarchive ia(ss);
+                DisjointSets<segid_t> djs;
+                ia >> (djs);
+                return djs;
+            }
+        ))
+        .def("merge_array", 
+            &DisjointSets<segid_t>::merge_array,
+            "arr"_a, 
+            "has_root"_a=false)
+        .def_property_readonly("array", 
+            &DisjointSets<segid_t>::to_array)
+        .def("relabel", 
+            &DisjointSets<segid_t>::py_relabel);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

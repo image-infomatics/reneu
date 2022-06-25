@@ -31,6 +31,9 @@ def test_get_label_map():
     np.testing.assert_array_equal(label_map, expected_label_map)
 
     dsets = DisjointSets()
+    # since dsets always merge the right one to the left one, 
+    # we need to switch the left and right to make it consisitent
+    expected_label_map[:, [0,1]] = expected_label_map[:, [1,0]]
     dsets.merge_array(expected_label_map)
     seg2 = dsets.relabel(frag)
     np.testing.assert_array_equal(seg, seg2)
