@@ -2,7 +2,7 @@
 
 #include <deque>
 
-#include "reneu/types.hpp"
+#include "../types.hpp"
 #include <xtensor/xview.hpp>
 #include "reneu/utils/print.hpp"
 
@@ -10,45 +10,38 @@ namespace reneu{
 
 // using namespace xt::placeholders;  // required for `_` in range view to work
 
-template<class SEG1D>
-void remove_contact_1d(SEG1D seg1d){
-    for(std::size_t x = 1; x < seg1d.shape(0); x++){
-        if(seg1d(x)>0 && seg1d(x-1)>0 && seg1d(x)!=seg1d(x-1)){
-            seg1d(x) = 0;
-            seg1d(x-1) = 0;
-            // std::cout<<x<<", ";
-        }
-    }
-    // std::cout<<std::endl;
-}
 
-/**
- * @brief remove the object boundary voxel if it contacted another object
- * 
- * @param seg the input plain segmentation
- */
 auto remove_contact(PySegmentation& seg){
-    // z direction
-    for(std::size_t y=0; y<seg.shape(1); y++){
-        for(std::size_t x=0; x<seg.shape(2); x++){
-            remove_contact_1d(xt::view(seg, xt::all(), y, x));
+    std::ptrdiff_t sz = seg.shape(0);
+    std::ptrdiff_t sy = seg.shape(1);
+    std::ptrdiff_t sx = seg.shape(2);
+    
+    // direction, +z,+y,+x,-z,-y,-x
+    const std::array<std::ptrdiff_t, 6> dir = {sx*sy, sx, 1, -sx*sy, -sx, -1};
+
+    assert(seg.size()==sz*sy*sx);
+    std::vector<std::ptrdiff_t> contact_indices = {};
+    for(std::ptrdiff_t idx=0; idx<seg.size(); idx++){
+        const auto& sid0 = seg[idx];
+        if(sid0 > 0){
+            for(std::ptrdiff_t d=0; d<6; d++){
+                auto idx1 = idx+dir[d];
+                if(idx1>=0 && idx1<seg.size()){
+                    const auto& sid1 = seg[idx1];
+                    if(sid1>0 && sid0!=sid1){
+                        contact_indices.push_back(idx);
+                        break;
+                    }
+                }
+            }
         }
     }
 
-    // y direction
-    for(std::size_t z=0; z<seg.shape(0); z++){
-        for(std::size_t x=0; x<seg.shape(2); x++){
-            remove_contact_1d(xt::view(seg, z, xt::all(), x));
-        }
+    std::cout<<"number of voxels to be black out: "<< contact_indices.size()<<std::endl;
+    for(const auto& idx: contact_indices){
+        seg[idx] = 0;
     }
-    
-    // x direction
-    for(std::size_t z=0; z<seg.shape(0); z++){
-        for(std::size_t y=0; y<seg.shape(1); y++){
-            remove_contact_1d(xt::view(seg, z, y, xt::all()));
-        }
-    }
-    // reneu::utils::print_array(seg);
+    return seg;
 }
 
 /* 
