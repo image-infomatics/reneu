@@ -48,6 +48,7 @@ def test_remove_contact():
     seg1[..., 2:] = 2
 
     seg2 = deepcopy(seg1)
+    # seg2 = remove_contact(seg2)
     remove_contact(seg2)
     assert np.any(seg1!=seg2)
 
