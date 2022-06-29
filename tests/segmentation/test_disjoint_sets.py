@@ -59,7 +59,8 @@ def test_disjoint_sets():
 
     print('test relabel...')
     seg = np.arange(0, 27).reshape(3,3,3)
-    seg2 = dsets.relabel(seg)
+    seg2 = np.copy(seg)
+    seg2 = dsets.relabel(seg2)
     seg3 = deepcopy(seg)
     seg3[0, 0, 2] = 1
     np.testing.assert_array_equal(seg2, seg3)
@@ -98,10 +99,22 @@ def test_agglomerated_segmentation_to_merge_pair():
     seg = deepcopy(frag)
     seg[1,1,1] = seg[1,1,2]
     seg[2,2,1] = seg[1,2,1]
-    # frag = frag.astype(np.uint64)
-    # seg = seg.astype(np.uint64)
 
     merge_pairs = agglomerated_segmentation_to_merge_pairs(frag, seg)
     # print(f'merge pairs: {merge_pairs}')
     # breakpoint()
     assert merge_pairs.shape[0] == 26 
+
+def test_frag_seg_to_disjoint_sets():
+    # frag = np.random.randint(5,5,5)
+    frag = np.arange(27, dtype=np.uint64)
+    frag = np.reshape(frag, (3,3,3))
+    seg = deepcopy(frag)
+    seg[1,1,1] = seg[1,1,2]
+    seg[2,2,1] = seg[1,2,1]
+
+    dsets = DisjointSets(frag, seg)
+    # print(dsets.array)
+    arr = dsets.array
+    assert arr[13, 1] == 13
+    assert arr[24, 1] == 16

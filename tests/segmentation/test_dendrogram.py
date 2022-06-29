@@ -45,3 +45,8 @@ def test_dendrogram():
     dend1.keep_only_contacting_edges(seg, margin_size)
     # dend1.print()
     assert dend1.edge_num == 2
+
+
+def test_materialize():
+    frag = np.arange(1, 5).reshape(2,2)
+    

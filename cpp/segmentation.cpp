@@ -16,6 +16,7 @@
 #include "reneu/segmentation/preprocess.hpp"
 #include "reneu/segmentation/seeded_watershed.hpp"
 #include "reneu/segmentation/fragments.hpp"
+#include "reneu/segmentation/region_graph_chunk.hpp"
 #include "reneu/segmentation/utils.hpp"
 
 
@@ -71,7 +72,7 @@ PYBIND11_MODULE(segmentation, m) {
         ))
         .def("to_disjoint_sets", &Dendrogram::to_disjoint_sets)
         .def("split_objects", &Dendrogram::split_objects)
-        .def("materialize", &Dendrogram::py_materialize);
+        .def("materialize", &Dendrogram::materialize);
 
     py::class_<RegionGraph>(m, "RegionGraph")
         .def(py::init())
@@ -104,6 +105,7 @@ PYBIND11_MODULE(segmentation, m) {
     py::class_<DisjointSets<segid_t>>(m, "DisjointSets")
         .def(py::init())
         .def(py::init<const PySegmentation&>())
+        .def(py::init<const PySegmentation&, const PySegmentation&>())
         .def("make_set", 
             &DisjointSets<segid_t>::make_set)
         .def("union_set", 
@@ -136,7 +138,28 @@ PYBIND11_MODULE(segmentation, m) {
         .def_property_readonly("array", 
             &DisjointSets<segid_t>::to_array)
         .def("relabel", 
-            &DisjointSets<segid_t>::py_relabel);
+            &DisjointSets<segid_t>::relabel);
+
+    py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
+        .def(py::init<const PyAffinityMap&, const PySegmentation&>())
+        .def("__str__", &RegionGraphChunk::as_string)
+        .def(py::pickle(
+            [](const RegionGraphChunk& rg){ // __getstate__
+                std::stringstream ss;
+                boost::archive::text_oarchive oa(ss);
+                oa << rg;
+                return ss.str();
+            },
+            [](const std::string str){ // __setstate__
+                std::stringstream ss(str);
+                boost::archive::text_iarchive ia(ss);
+                RegionGraphChunk rg;
+                ia >> (rg);
+                return rg;
+            }
+        ))
+        .def("merge_in_leaf_chunk", &RegionGraphChunk::merge_in_leaf_chunk)
+        .def("merge_upper_chunk", &RegionGraphChunk::merge_upper_chunk);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;

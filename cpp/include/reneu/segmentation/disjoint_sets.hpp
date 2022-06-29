@@ -54,18 +54,57 @@ DisjointSets(std::set<T> ids): _id2index({}), _elements({}){
     }
 }
 
-DisjointSets(const PySegmentation& seg){
-    auto ids = get_nonzero_segids(seg);
+DisjointSets(const PySegmentation& frag){
+    auto ids = get_nonzero_segids(frag);
 
-    // this code is a duplicate of DisjointSets(std::set<T>)
-    // To-Do: remove this duplicate
     _elements.reserve(ids.size());
 
-    std::size_t idx=0;
     for(const auto& id : ids){
-        _elements.emplace_back(id, idx, 1);
-        _id2index[id] = idx;
-        idx++;
+        make_set(id);
+    }
+}
+
+/**
+ * @brief Construct a new Disjoint Sets object
+ *      some of the objects are merged according to the segmentation.
+ * 
+ * @param frag 
+ * @param seg 
+ */
+DisjointSets(const PySegmentation& frag, const PySegmentation& seg){
+    assert(seg.shape(0) == frag.shape(0));
+    assert(seg.shape(1) == frag.shape(1));
+    assert(seg.shape(2) == frag.shape(2));
+    
+    // initialize the unique sets
+    auto ids = get_nonzero_segids(frag);
+
+    _elements.reserve(ids.size());
+
+    for(const auto& id : ids){
+        make_set(id);
+    }
+
+    // merge the objects according to the segmentation
+    std::ptrdiff_t sz = seg.shape(0);
+    std::ptrdiff_t sy = seg.shape(1);
+    std::ptrdiff_t sx = seg.shape(2);
+
+    const std::array<std::ptrdiff_t, 3> dir = {sx*sy, sx, 1};
+
+    for(std::ptrdiff_t idx=0; idx<frag.size(); idx++){
+        const auto& sid0 = frag[idx];
+        if(sid0>0){
+            for(std::ptrdiff_t d: dir){
+                auto idx1 = idx+d;
+                if(idx1>=0 && idx1<frag.size()){
+                    const auto& sid1 = frag[idx1];
+                    if(sid1>0 && sid0!=sid1 && seg[idx]==seg[idx1]){
+                        union_set(sid0, sid1);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -226,31 +265,28 @@ void compress_sets(){
     }
 }
 
-auto relabel(Segmentation&& seg){
-    auto segids = get_nonzero_segids(seg);
+auto relabel(PySegmentation& frag){
+    auto segids = get_nonzero_segids(frag);
 
     std::cout<< "relabel the fragments to a flat segmentation." << std::endl;
-    const auto& [sz, sy, sx] = seg.shape();
+    const auto& [sz, sy, sx] = frag.shape();
     for(std::size_t z=0; z<sz; z++){
         for(std::size_t y=0; y<sy; y++){
             for(std::size_t x=0; x<sx; x++){
-                const auto& sid = seg(z,y,x);
+                const auto& sid = frag(z,y,x);
                 if(sid > 0){
                     const auto& rootID = find_set(sid);
                     if(sid!=rootID){
                         assert(rootID > 0);
-                        seg(z,y,x) = rootID;
+                        frag(z,y,x) = rootID;
                     }
                 }
             }
         }
     }
 
-    return seg;
-}
-
-inline auto py_relabel(PySegmentation& pyseg){
-    return relabel(std::move(pyseg));
+    // return std::forward(frag);
+    return frag;
 }
 
 }; // class of DisjointSets

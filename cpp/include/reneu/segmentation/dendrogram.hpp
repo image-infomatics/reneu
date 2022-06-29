@@ -242,17 +242,13 @@ auto split_objects(
     }
 }
 
-auto materialize(Segmentation&& seg, const aff_edge_t& threshold) const {
+auto materialize(PySegmentation& frag, const aff_edge_t& threshold) const {
     assert(threshold >= _minThreshold);
     auto dsets = to_disjoint_sets(threshold);
     
     std::cout<<"relabel the segmentation..."<<std::endl;
-    const auto& seg2 = dsets.relabel(std::move(seg));
-    return seg2;
-}
-
-inline auto py_materialize(PySegmentation& pySeg, const aff_edge_t& threshold) const {
-    return materialize(std::move(pySeg), threshold);
+    dsets.relabel(frag);
+    return frag;
 }
 
 }; // class of Dendrogram

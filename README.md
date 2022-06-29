@@ -1,6 +1,9 @@
 [![Build Status](https://travis-ci.org/jingpengw/reneu.svg?branch=master)](https://travis-ci.org/jingpengw/reneu)
 ![Python Package](https://github.com/jingpengw/reneu/workflows/Python%20package/badge.svg)
 
+
+> :warning: **This package is still under development, it was customized to process a Electron Microscopy volume. The Software is provided "as is" without warranty of any kind, either express or implied. Use at your own risk.**
+
 Computation for REal NEUral networks
 
 # Features
