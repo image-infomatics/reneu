@@ -47,6 +47,7 @@ def test_dendrogram():
     assert dend1.edge_num == 2
 
 
-def test_materialize():
-    frag = np.arange(1, 5).reshape(2,2)
+# def test_materialize():
+#     frag = np.arange(1, 5).reshape(2,2)
+
     

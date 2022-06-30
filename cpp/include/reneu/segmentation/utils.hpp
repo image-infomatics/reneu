@@ -1,6 +1,8 @@
 #pragma once
 #include <initializer_list>
 #include <set>
+#include <limits.h>
+
 #include <tsl/robin_map.h>
 #include "disjoint_sets.hpp"
 #include "../types.hpp"
@@ -8,6 +10,96 @@
 namespace reneu{
 
 using Segid2VoxelNum = tsl::robin_map<segid_t, size_t>;
+
+auto get_nonzero_bounding_box(const PySegmentation& seg){
+    std::array<std::size_t, 3> start = {
+        seg.shape(0)-1, 
+        seg.shape(1)-1, 
+        seg.shape(2)-1
+    };
+    std::array<std::size_t, 3> stop = {0, 0, 0};
+
+    // find start of x
+    for(std::size_t z=0; z<seg.shape(0); z++){
+        for(std::size_t y=0; y<seg.shape(1); y++){
+            for(std::size_t x=0; x<start[2]; x++){
+                if(seg(z,y,x)>0 && x<start[2]){
+                    start[2] = x;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // find start of y
+    for(std::size_t z=0; z<seg.shape(0); z++){
+        for(std::size_t x=0; x<seg.shape(2); x++){
+            for(std::size_t y=0; y<start[1]; y++){
+                if(seg(z,y,x)>0 && y<start[1]){
+                    start[1] = x;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // find start of z
+    for(std::size_t y=0; y<seg.shape(1); y++){
+        for(std::size_t x=0; x<seg.shape(2); x++){
+            for(std::size_t z=0; z<start[0]; z++){
+                if(seg(z,y,x)>0 && z<start[0]){
+                    start[0] = z;
+                    break;
+                }
+            }
+        }
+    }
+
+    // find stop of x
+    for(std::size_t z=0; z<seg.shape(0); z++){
+        for(std::size_t y=0; y<seg.shape(1); y++){
+            for(std::size_t x=seg.shape(2)-1; x>stop[2]; x--){
+                if(seg(z,y,x)>0 && x>stop[2]){
+                    stop[2] = x;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // find stop of y
+    for(std::size_t z=0; z<seg.shape(0); z++){
+        for(std::size_t x=0; x<seg.shape(2); x++){
+            for(std::size_t y=seg.shape(1)-1; y>stop[1]; y--){
+                if(seg(z,y,x)>0 && y>stop[1]){
+                    stop[1] = y;
+                    break;
+                }
+            }
+        }
+    }
+ 
+    // find stop of z
+    for(std::size_t y=0; y<seg.shape(1); y++){
+        for(std::size_t x=0; x<seg.shape(2); x++){
+            for(std::size_t z=seg.shape(0)-1; z>stop[0]; z--){
+                if(seg(z,y,x)>0 && z>stop[0]){
+                    stop[0] = z;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // stop should not be inclusive
+    for(std::size_t i=0; i<3; i++)
+        stop[i] += 1;
+
+    assert(start[0]<stop[0]);
+    assert(start[1]<stop[1]);
+    assert(start[2]<stop[2]);
+    return std::make_pair(start, stop);
+}
 
 inline auto get_segid_to_voxel_num(const Segmentation& seg){
     Segid2VoxelNum id2count;

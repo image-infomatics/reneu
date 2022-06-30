@@ -34,6 +34,8 @@ PYBIND11_MODULE(segmentation, m) {
            :toctree: _generate
     )pbdoc";
 
+    m.def("get_nonzero_bounding_box", &get_nonzero_bounding_box);
+
     m.def("get_label_map", &get_label_map);
 
     m.def("watershed", &py_watershed);

@@ -4,13 +4,22 @@ import numpy as np
 from tqdm import tqdm
 
 from chunkflow.chunk import Chunk
+from chunkflow.lib.bounding_boxes import BoundingBox
 
 from fastremap import unique
 
 from reneu.lib.segmentation import seeded_watershed, RegionGraph
 
+import reneu.lib.segmentation as rls 
+
 
 MAX_INT = 18446744073709551615
+
+def get_nonzero_bounding_box(seg: np.ndarray):
+    start, stop = rls.get_nonzero_bounding_box(seg)
+    bbox = BoundingBox.from_list([*start, *stop])
+    return bbox
+
 
 def agglomerate(affs: np.ndarray, seg: np.ndarray, 
         agglomeration_threshold: float = 0., 

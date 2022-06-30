@@ -192,29 +192,29 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
  * @param affs affinity map. the starting offset should be (1,1,1) compared with segmentation
  * @param seg segmentation. The size should be larger than affinity map by (1,1,1). the expanded part is in the negative directions.
  */
-RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg): 
+RegionGraphChunk(const AffinityMap& affs, const Segmentation& frag): 
         RegionGraph(), _segid2frozen({}){
     
-    assert(affs.shape(1)==seg.shape(0)-1);
-    assert(affs.shape(2)==seg.shape(1)-1);
-    assert(affs.shape(3)==seg.shape(2)-1);
+    assert(affs.shape(1)==frag.shape(0)-1);
+    assert(affs.shape(2)==frag.shape(1)-1);
+    assert(affs.shape(3)==frag.shape(2)-1);
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
     // start from 1 since we included the contacting neighbor chunk segmentation
-    for(std::size_t z=1; z<seg.shape(0); z++){
-        for(std::size_t y=1; y<seg.shape(1); y++){
-            for(std::size_t x=1; x<seg.shape(2); x++){
-                const auto& segid = seg(z,y,x);
+    for(std::size_t z=1; z<frag.shape(0); z++){
+        for(std::size_t y=1; y<frag.shape(1); y++){
+            for(std::size_t x=1; x<frag.shape(2); x++){
+                const auto& segid = frag(z,y,x);
                 // skip background voxels
                 if(segid>0){ 
                     if (z>1)
-                        _accumulate_edge(segid, seg(z-1,y,x), affs(2,z,y,x));
+                        _accumulate_edge(segid, frag(z-1,y,x), affs(2,z,y,x));
                     
                     if (y>1)
-                        _accumulate_edge(segid, seg(z,y-1,x), affs(1,z,y,x));
+                        _accumulate_edge(segid, frag(z,y-1,x), affs(1,z,y,x));
                     
                     if (x>1)
-                        _accumulate_edge(segid, seg(z,y,x-1), affs(0,z,y,x));
+                        _accumulate_edge(segid, frag(z,y,x-1), affs(0,z,y,x));
                 }
             }
         }
@@ -225,44 +225,41 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg):
     // it has a contacting chunk face
     // we have already included the contacting face here
     // freeze both contacting face
-    assert(affs.shape(1) == seg.shape(0) - 1);
-    const auto& contactingFacesZ = xt::view(seg, 
+    const auto& contactingFacesZ = xt::view(frag, 
         xt::range(0,2), xt::range(1, _), xt::range(1, _));
     const auto& contactingFaceIDsZ = xt::unique(contactingFacesZ);
     for(const auto& segid: contactingFaceIDsZ){
         if(segid) _segid2frozen[segid] |= NEG_Z; 
     }
     // accumulate edges
-    for(std::size_t y=1; y<seg.shape(1); y++){
-        for(std::size_t x=1; x<seg.shape(2); x++){
-            const auto& segid = seg(1,y,x);
+    for(std::size_t y=1; y<frag.shape(1); y++){
+        for(std::size_t x=1; x<frag.shape(2); x++){
+            const auto& segid = frag(1,y,x);
             if(segid)
                 // the three affinity channels are ordered as xyz!
-                _accumulate_edge(segid, seg(0,y,x), affs(2, 0, y, x));
+                _accumulate_edge(segid, frag(0,y,x), affs(2, 0, y, x));
         }
     }
 
     // negative y
-    assert(affs.shape(2) == seg.shape(1) - 1);
-    const auto& contactingFacesY = xt::view(seg, 
+    const auto& contactingFacesY = xt::view(frag, 
         xt::range(1, _), xt::range(0,2), xt::range(1, _));
     const auto& contactingFaceIDsY = xt::unique(contactingFacesY);
     for(const auto& segid: contactingFaceIDsY){
         if(segid) _segid2frozen[segid] |= NEG_Y;
     }
     // accumulate edges
-    for(std::size_t z=1; z<seg.shape(0); z++){
-        for(std::size_t x=1; x<seg.shape(2); x++){
-            const auto& segid = seg(z,1,x);
+    for(std::size_t z=1; z<frag.shape(0); z++){
+        for(std::size_t x=1; x<frag.shape(2); x++){
+            const auto& segid = frag(z,1,x);
             if(segid)
                 // the three affinity channels are ordered as xyz!
-                _accumulate_edge(segid, seg(z, 0, x), affs(1, z, 0, x));
+                _accumulate_edge(segid, frag(z, 0, x), affs(1, z, 0, x));
         }
     }
 
     // negative x 
-    assert(affs.shape(3) == seg.shape(2) - 1);
-    const auto& contactingFacesX = xt::view(seg, 
+    const auto& contactingFacesX = xt::view(frag, 
         xt::range(1, _), xt::range(1, _), xt::range(0,2));
     const auto& contactingFaceIDsX = xt::unique(contactingFacesX);
     for(const auto& segid: contactingFaceIDsX){
@@ -270,12 +267,12 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& seg):
     }
 
     // accumulate edges
-    for(std::size_t z=1; z<seg.shape(0); z++){
-        for(std::size_t y=1; y<seg.shape(1); y++){
-            const auto& segid = seg(z, y, 1);
+    for(std::size_t z=1; z<frag.shape(0); z++){
+        for(std::size_t y=1; y<frag.shape(1); y++){
+            const auto& segid = frag(z, y, 1);
             if(segid)
                 // the three affinity channels are ordered as xyz!
-                _accumulate_edge(segid, seg(z, y, 0), affs(0, z, y, 0));
+                _accumulate_edge(segid, frag(z, y, 0), affs(0, z, y, 0));
         }
     }
 

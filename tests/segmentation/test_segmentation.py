@@ -1,11 +1,27 @@
 import numpy as np
 
 from chunkflow.chunk import Chunk
+from chunkflow.lib.bounding_boxes import Cartesian
 
-from reneu.segmentation import contacting_and_inner_obj_ids
+
+from reneu.segmentation import contacting_and_inner_obj_ids, get_nonzero_bounding_box
+
 from reneu.lib.segmentation import get_label_map, DisjointSets
 
+def test_get_nonzero_bounding_box():
+    x = np.arange(125, dtype=np.uint64)
+    x = x.reshape(5,5,5)
+    bbox = get_nonzero_bounding_box(x)
+    assert bbox.start == Cartesian(0, 0, 0)
+    assert bbox.stop == Cartesian(5,5,5)
 
+    x = np.zeros((5,5,5), dtype=np.uint64)
+    tmp = np.arange(27, dtype=np.uint64)
+    tmp = tmp.reshape(3,3,3)
+    x[1:4, 1:4, 1:4] = tmp
+    bbox = get_nonzero_bounding_box(x)
+    assert bbox.start == Cartesian(1,1,1)
+    assert bbox.stop == Cartesian(4,4,4)
 
 def test_contacting_and_inner_obj_ids():
     seg = Chunk.create(size=(19, 19, 19), pattern='random', dtype=np.float32)
