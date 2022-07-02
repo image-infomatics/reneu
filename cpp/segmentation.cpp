@@ -79,6 +79,7 @@ PYBIND11_MODULE(segmentation, m) {
     py::class_<RegionGraph>(m, "RegionGraph")
         .def(py::init())
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
+        .def(py::init<const PyAffinityMap&, const PySegmentation&, const PySegmentation&>())
         .def_property_readonly("arrays", &RegionGraph::to_arrays)
         .def("merge_arrays", &RegionGraph::merge_arrays)
         .def("__repr__", &RegionGraph::as_string)
@@ -108,9 +109,9 @@ PYBIND11_MODULE(segmentation, m) {
         .def(py::init())
         .def(py::init<const PySegmentation&>())
         .def(py::init<const PySegmentation&, const PySegmentation&>())
-        .def("make_set", 
+        .def("make_set",
             &DisjointSets<segid_t>::make_set)
-        .def("union_set", 
+        .def("union_set",
             &DisjointSets<segid_t>::union_set,
             "id0"_a, "id1"_a, "by_size"_a=true)
         .def("find_set", 
@@ -144,6 +145,7 @@ PYBIND11_MODULE(segmentation, m) {
 
     py::class_<RegionGraphChunk, RegionGraph>(m, "RegionGraphChunk")
         .def(py::init<const PyAffinityMap&, const PySegmentation&>())
+        // .def(py::init<const PyAffinityMap&, const PySegmentation&, const PySegmentation&>())
         .def("__str__", &RegionGraphChunk::as_string)
         .def(py::pickle(
             [](const RegionGraphChunk& rg){ // __getstate__

@@ -11,18 +11,6 @@ import numpy as np
 
 np.random.seed(0)
 
-def test_arrays():
-    arr = np.random.randint(0, 8, size=(4,3), dtype=np.uint64)
-    sums = np.random.rand(4)
-    sums = sums.astype(np.float32)
-    rg = RegionGraph()
-    rg.merge_arrays(arr, sums)
-    arr2, sums2 = rg.arrays
-    
-    # the order was not preserved
-    # this assertion will not work
-    # np.testing.assert_equal(arr2, arr)
-    # np.testing.assert_equal(sums, sums2)
 
 
 def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0., 
@@ -82,7 +70,28 @@ def random_3d_affinity_map(sz: tuple):
     np.random.seed(23)
     affs = np.random.rand(3, *sz).astype(np.float32)
     # print('random affinity map \n: ', affs)
-    return affs 
+    return affs
+
+def test_arrays():
+    arr = np.random.randint(0, 8, size=(4,3), dtype=np.uint64)
+    sums = np.random.rand(4)
+    sums = sums.astype(np.float32)
+    rg = RegionGraph()
+    rg.merge_arrays(arr, sums)
+    edges2, sums2 = rg.arrays
+    
+    # the order was not preserved
+    # this assertion will not work
+    # np.testing.assert_equal(arr2, arr)
+    # np.testing.assert_equal(sums, sums2)
+    affs = random_3d_affinity_map((4,4,4))
+    frag = np.arange(125, dtype=np.uint64).reshape((5,5,5))
+    seg = np.copy(frag)
+    seg[1,1,1] = seg[1,1,2]
+    seg[2,2,2] = seg[2,2,3]
+    rg = RegionGraph(affs, frag, seg)
+    edges3, sums3 = rg.arrays
+    print(f'region graph with restriction of segmentation: edges: {edges3}, sums: {sums3}')
 
 def test_watershed_and_fill_background():
     affs = random_2d_affinity_map(3)

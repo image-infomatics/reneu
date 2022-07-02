@@ -270,7 +270,7 @@ RegionGraph(const Segid2VoxelNum& segid2voxelNum, const Segid2Neighbor& segid2ne
  * @param affs 
  * @param fragments 
  */
-RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
+RegionGraph(const PyAffinityMap& affs, const PySegmentation& fragments) {
     // only contains x,y,z affinity 
     // Note that our format of affinity channels are ordered by x,y,z
     // although we are using C order with z,y,x in indexing!
@@ -303,6 +303,47 @@ RegionGraph(const AffinityMap& affs, const Segmentation& fragments) {
         }
     }
     std::cout<<"total edge number: "<< _edgeList.size() <<std::endl;
+}
+
+/**
+ * @brief Construct a new Region Graph Chunk object
+ * 
+ * @param affs affinity map. the starting offset should be (1,1,1) compared with segmentation
+ * @param frag segmentation. The size should be larger than affinity map by (1,1,1). the expanded part is in the negative directions.
+ * @param seg segmentation. The size should be larger than affinity map by (1,1,1). the expanded part is in the negative directions.
+ */
+RegionGraph(
+        const PyAffinityMap& affs, 
+        const PySegmentation& frag, 
+        const PySegmentation& seg){
+    
+    assert(affs.shape(1)==frag.shape(0)-1);
+    assert(affs.shape(2)==frag.shape(1)-1);
+    assert(affs.shape(3)==frag.shape(2)-1);
+    assert(frag.shape(0) == seg.shape(0));
+    assert(frag.shape(1) == seg.shape(1));
+    assert(frag.shape(2) == seg.shape(2));
+
+    std::cout<< "accumulate the affinity edges..." << std::endl;
+    // start from 1 since we included the contacting neighbor chunk segmentation
+    for(std::size_t z=0; z<frag.shape(0); z++){
+        for(std::size_t y=0; y<frag.shape(1); y++){
+            for(std::size_t x=0; x<frag.shape(2); x++){
+                const auto& segid = frag(z,y,x);
+                // skip background voxels
+                if(segid>0){ 
+                    if (z>0 && frag(z-1,y,x)>0 && frag(z-1,y,x)!=segid && seg(z-1,y,x)==seg(z,y,x))
+                        _accumulate_edge(segid, frag(z-1,y,x), affs(2,z,y,x));
+                    
+                    if (y>0 && frag(z,y-1,x)>0 && frag(z,y-1,x)!=segid && seg(z,y-1,x)==seg(z,y,x))
+                        _accumulate_edge(segid, frag(z,y-1,x), affs(1,z,y,x));
+                    
+                    if (x>0 && frag(z,y,x-1)>0 && frag(z,y,x-1)!=segid && seg(z,y,x-1)==seg(z,y,x))
+                        _accumulate_edge(segid, frag(z,y,x-1), affs(0,z,y,x));
+                }
+            }
+        }
+    }
 }
 
 std::size_t get_edge_num() const {

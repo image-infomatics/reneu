@@ -192,7 +192,7 @@ RegionGraphChunk(const RegionGraph& rg, const SegID2Frozen& segid2frozen):
  * @param affs affinity map. the starting offset should be (1,1,1) compared with segmentation
  * @param seg segmentation. The size should be larger than affinity map by (1,1,1). the expanded part is in the negative directions.
  */
-RegionGraphChunk(const AffinityMap& affs, const Segmentation& frag): 
+RegionGraphChunk(const PyAffinityMap& affs, const PySegmentation& frag): 
         RegionGraph(), _segid2frozen({}){
     
     assert(affs.shape(1)==frag.shape(0)-1);
@@ -277,6 +277,9 @@ RegionGraphChunk(const AffinityMap& affs, const Segmentation& frag):
     }
 
 }
+
+
+
 
 std::string as_string() const {
     std::ostringstream stringStream;

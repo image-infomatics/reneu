@@ -23,6 +23,18 @@ def get_random_affinity_map(sz: tuple, seed: int=1):
     print('random affinity map \n: ', affs)
     return affs
 
+def test_array():
+    affs = get_random_affinity_map((5,5,5))
+    frag = np.arange(125, dtype=np.uint64).reshape(5,5,5)
+    seg = np.arange(125, dtype=np.uint64).reshape(5,5,5)
+    seg[1,1,1] = seg[1,1,2]
+    seg[2,2,2] = seg[2,2,3]
+
+    rgc = RegionGraphChunk(affs, frag)
+    # rgc = RegionGraphChunk(affs, frag, seg)
+    print(rgc.array)
+
+
 def distributed_agglomeration(
         fragments: np.ndarray, 
         affs: np.ndarray, 
