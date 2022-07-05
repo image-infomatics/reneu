@@ -325,21 +325,29 @@ RegionGraph(
     assert(frag.shape(2) == seg.shape(2));
 
     std::cout<< "accumulate the affinity edges..." << std::endl;
-    // start from 1 since we included the contacting neighbor chunk segmentation
-    for(std::size_t z=0; z<frag.shape(0); z++){
-        for(std::size_t y=0; y<frag.shape(1); y++){
-            for(std::size_t x=0; x<frag.shape(2); x++){
-                const auto& segid = frag(z,y,x);
+    for(std::size_t z=0; z<affs.shape(1); z++){
+        for(std::size_t y=0; y<affs.shape(2); y++){
+            for(std::size_t x=0; x<affs.shape(3); x++){
+                const auto& segid = frag(z+1,y+1,x+1);
                 // skip background voxels
                 if(segid>0){ 
-                    if (z>0 && frag(z-1,y,x)>0 && frag(z-1,y,x)!=segid && seg(z-1,y,x)==seg(z,y,x))
-                        _accumulate_edge(segid, frag(z-1,y,x), affs(2,z,y,x));
+                    if (frag(z,y+1,x+1)>0 && 
+                            frag(z,y+1,x+1)!=segid && 
+                            seg(z,y+1,x+1)==seg(z+1,y+1,x+1))
+                        _accumulate_edge(
+                            segid, frag(z,y+1,x+1), affs(2,z,y,x));
                     
-                    if (y>0 && frag(z,y-1,x)>0 && frag(z,y-1,x)!=segid && seg(z,y-1,x)==seg(z,y,x))
-                        _accumulate_edge(segid, frag(z,y-1,x), affs(1,z,y,x));
+                    if (frag(z+1,y,x+1)>0 && 
+                            frag(z+1,y,x+1)!=segid && 
+                            seg(z+1,y,x+1)==seg(z+1,y+1,x+1))
+                        _accumulate_edge(
+                            segid, frag(z+1,y,x+1), affs(1,z,y,x));
                     
-                    if (x>0 && frag(z,y,x-1)>0 && frag(z,y,x-1)!=segid && seg(z,y,x-1)==seg(z,y,x))
-                        _accumulate_edge(segid, frag(z,y,x-1), affs(0,z,y,x));
+                    if (frag(z+1,y+1,x)>0 && 
+                            frag(z+1,y+1,x)!=segid && 
+                            seg(z+1,y+1,x)==seg(z+1,y+1,x+1))
+                        _accumulate_edge(
+                            segid, frag(z+1,y+1,x), affs(0,z,y,x));
                 }
             }
         }

@@ -24,18 +24,18 @@ def agglomerate(affs: np.ndarray, seg: np.ndarray, affinity_threshold: float = 0
     print('construct region graph...')
     rg = RegionGraph(affs, seg)
 
-    print('region graph as array: \n', rg.arrays)
+    # print('region graph as array: \n', rg.arrays)
 
-    print('region graph before segmentation:', rg)
+    # print('region graph before segmentation:', rg)
     print('gready mean agglomeration...')
     dend = rg.greedy_mean_affinity_agglomeration(seg, affinity_threshold, min_voxel_num_threshold, max_voxel_num_threshold)
     seg = dend.materialize(seg, affinity_threshold)
-    print('region graph after segmentation: ', rg)
+    # print('region graph after segmentation: ', rg)
 
     print("shape of segmentation: ", seg.shape)
     # print(seg)
 
-    print('dendrogram as array: \n', dend.array)
+    # print('dendrogram as array: \n', dend.array)
     return seg
 
 
@@ -50,10 +50,10 @@ def test_agglomeration():
     affs[0, 0, 1, 1] = 0.8
     affs[1, 0, 1, 1] = 0.5
 
-    print('affinity map: \n', affs)
+    # print('affinity map: \n', affs)
     seg = agglomerate(affs, seg, affinity_threshold = 0.7)
 
-    print('segmentation after agglomeration: ', seg)
+    # print('segmentation after agglomeration: ', seg)
     
     np.testing.assert_array_equal(seg, np.array([[[1,1],[3,3]]]))
     
@@ -62,7 +62,7 @@ def random_2d_affinity_map(sz: int):
     np.random.seed(23)
     affs = np.random.rand(3, 1, sz, sz).astype(np.float32)
     affs[2,...] = 0
-    print('random affinity map \n: ', affs)
+    # print('random affinity map \n: ', affs)
     return affs
 
 def random_3d_affinity_map(sz: tuple):
@@ -92,6 +92,8 @@ def test_arrays():
     rg = RegionGraph(affs, frag, seg)
     edges3, sums3 = rg.arrays
     print(f'region graph with restriction of segmentation: edges: {edges3}, sums: {sums3}')
+    assert len(sums3) == 2
+    # breakpoint()
 
 def test_watershed_and_fill_background():
     affs = random_2d_affinity_map(3)
